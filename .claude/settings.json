@@ -1,0 +1,7 @@
+{
+  "model": "claude-opus-4-6",
+  "experimental_agent_team": 1,
+  "permissions": {
+    "network": "trusted"
+  }
+}

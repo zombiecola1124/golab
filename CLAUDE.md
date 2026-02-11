@@ -8,17 +8,19 @@
 
 ```
 golab/
-├── main.py              # 애플리케이션 진입점
-├── requirements.txt     # Python 의존성 목록
-├── README.md            # 프로젝트 설명
-├── CLAUDE.md            # AI 어시스턴트 가이드라인 (이 파일)
-├── .gitignore           # Python 표준 gitignore
-├── logs/                # 전체 모듈 통합 로그 폴더
-├── finance/             # 재무 관리 모듈 (회계, 수입/지출)
-├── inventory/           # 재고 관리 모듈 (상품, 재고 추적)
-├── memo/                # 메모 및 노트 모듈
-├── research/            # 리서치 및 분석 모듈
-└── sales/               # 매출 관리 모듈 (주문, 고객)
+├── main.py                    # 애플리케이션 진입점
+├── requirements.txt           # Python 의존성 목록
+├── development_strategy.md    # 개발 전략 워크플로우 (Plan → Agent Team → Action)
+├── README.md                  # 프로젝트 설명
+├── CLAUDE.md                  # AI 어시스턴트 가이드라인 (이 파일)
+├── .claude/settings.json      # Claude Code 에이전트 설정
+├── .gitignore                 # Python 표준 gitignore
+├── logs/                      # 전체 모듈 통합 로그 폴더
+├── finance/                   # 재무 관리 모듈 (회계, 수입/지출)
+├── inventory/                 # 재고 관리 모듈 (상품, 재고 추적)
+├── memo/                      # 메모 및 노트 모듈
+├── research/                  # 리서치 및 분석 모듈
+└── sales/                     # 매출 관리 모듈 (주문, 고객)
 ```
 
 Each module directory currently contains a `.gitkeep` placeholder. The architecture follows a domain-driven layout organized by business function.
@@ -54,6 +56,12 @@ Each module directory currently contains a `.gitkeep` placeholder. The architect
   - 각 모듈 디렉토리 내에 `tests/` 폴더를 만들어 테스트 파일 배치
   - 테스트 파일명: `test_<모듈명>.py`
   - 실행 명령어: `pytest`
+
+### 에러 처리 규칙
+
+- 에러 발생 시 **반드시 `logs/` 폴더에 로그를 기록**한다 (Python `logging` 모듈 사용)
+- 에러를 발견하면 **해결 방안을 먼저 보고**한 뒤, 사용자 확인 후 수정한다
+- 로그 파일명: `logs/golab.log` (전체 통합), 심각한 에러는 `logs/error.log`에 별도 기록
 
 ### 모듈 구조 규칙
 
