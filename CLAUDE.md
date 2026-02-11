@@ -8,14 +8,17 @@
 
 ```
 golab/
-├── README.md          # 프로젝트 설명
-├── CLAUDE.md          # AI 어시스턴트 가이드라인 (이 파일)
-├── .gitignore         # Python 표준 gitignore
-├── finance/           # 재무 관리 모듈 (회계, 수입/지출)
-├── inventory/         # 재고 관리 모듈 (상품, 재고 추적)
-├── memo/              # 메모 및 노트 모듈
-├── research/          # 리서치 및 분석 모듈
-└── sales/             # 매출 관리 모듈 (주문, 고객)
+├── main.py              # 애플리케이션 진입점
+├── requirements.txt     # Python 의존성 목록
+├── README.md            # 프로젝트 설명
+├── CLAUDE.md            # AI 어시스턴트 가이드라인 (이 파일)
+├── .gitignore           # Python 표준 gitignore
+├── logs/                # 전체 모듈 통합 로그 폴더
+├── finance/             # 재무 관리 모듈 (회계, 수입/지출)
+├── inventory/           # 재고 관리 모듈 (상품, 재고 추적)
+├── memo/                # 메모 및 노트 모듈
+├── research/            # 리서치 및 분석 모듈
+└── sales/               # 매출 관리 모듈 (주문, 고객)
 ```
 
 Each module directory currently contains a `.gitkeep` placeholder. The architecture follows a domain-driven layout organized by business function.
@@ -39,19 +42,27 @@ Each module directory currently contains a `.gitkeep` placeholder. The architect
 
 ### 코드 규칙 (필수)
 
-- **모든 코드에 한글 주석 필수** — 함수, 클래스, 주요 로직 블록에 반드시 한글로 주석을 작성한다
+- **모든 주석은 한글로 작성** — 함수, 클래스, 주요 로직 블록에 반드시 한글로 주석을 작성한다
   - 함수/클래스: docstring을 한글로 작성
   - 복잡한 로직: 인라인 주석을 한글로 작성
   - 모듈 상단: 모듈 설명을 한글 주석으로 작성
+- **변수명은 snake_case 사용** — 함수, 변수, 파일명 모두 snake_case를 따른다
+  - 예: `total_price`, `customer_name`, `calculate_vat()`
+  - 클래스명만 PascalCase 사용: `SalesOrder`, `InventoryItem`
 - **테스트 코드 작성 권장** — 새로운 기능을 추가할 때 반드시 테스트를 함께 작성한다
   - 테스트 프레임워크: `pytest`
   - 각 모듈 디렉토리 내에 `tests/` 폴더를 만들어 테스트 파일 배치
   - 테스트 파일명: `test_<모듈명>.py`
   - 실행 명령어: `pytest`
 
-### Module Organization
+### 모듈 구조 규칙
 
-Code should be organized by business domain:
+- 각 모듈(finance, inventory, memo, research, sales)은 **독립적으로 작동**한다
+- 모듈 간 의존이 필요한 경우, 명시적 import를 사용한다
+- **로그는 `logs/` 폴더에 통합 관리** — 각 모듈이 개별 로그 파일을 생성하지 않고, 프로젝트 루트의 `logs/` 폴더에 통합 기록한다
+
+### 모듈별 역할
+
 - `finance/` — 수입, 지출, 세금 계산, 재무 보고서
 - `inventory/` — 상품 카탈로그, 재고 수준, 재주문 추적
 - `memo/` — 메모, 리마인더, 텍스트 저장
@@ -75,9 +86,18 @@ Follow this pattern: concise, lowercase descriptions of what changed.
 ## Commands
 
 ```bash
+# 빌드 (실행)
+python main.py            # 애플리케이션 실행
+
+# 테스트
 pytest                    # 전체 테스트 실행
 pytest finance/tests/     # 특정 모듈 테스트 실행
 pytest --cov              # 커버리지 포함 테스트 실행
+
+# 가상환경 설정
+python -m venv venv       # 가상환경 생성
+source venv/bin/activate  # 가상환경 활성화 (Linux/Mac)
+pip install -r requirements.txt  # 의존성 설치
 ```
 
 ## 개발 로드맵
