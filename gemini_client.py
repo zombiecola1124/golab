@@ -1,4 +1,5 @@
 import os
+import socket
 import urllib.request
 import urllib.error
 import json
@@ -20,5 +21,5 @@ def ping():
             return True
     except urllib.error.HTTPError as e:
         raise RuntimeError(f"Gemini API 호출 실패 (HTTP {e.code})") from e
-    except urllib.error.URLError as e:
-        raise RuntimeError(f"Gemini API 연결 실패: {e.reason}") from e
+    except (urllib.error.URLError, socket.timeout, OSError) as e:
+        raise RuntimeError(f"Gemini API 네트워크 오류 (CI 환경 확인 필요): {e}") from e
