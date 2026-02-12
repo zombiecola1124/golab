@@ -41,7 +41,7 @@ golab/
 ├── sales/               ← .gitkeep + README.md만 존재
 ├── research/            ← 보고서 8건 축적 (조직 운영 자산)
 ├── .claude/agents/      ← 에이전트 지침 3건 (chief, trump, park)
-└── CLAUDE.md            ← OS v4.0 (린 테크스펙 + 5라운드 + 토큰 다이어트 + 안전장치)
+└── CLAUDE.md            ← OS v4.3 (린 테크스펙 + 5라운드 + 토큰 다이어트 + 안전장치 + 콘텐츠팀 잠복)
 ```
 
 **Python 소스 코드: 0줄. 아직 아무것도 구현되지 않았다.**
