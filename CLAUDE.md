@@ -134,6 +134,7 @@ R3 (제작)     → R4 (시각화)      → R5 (최종보고)
 │   ├── trump.md      # 트럼프 — 재무/비판 지침
 │   └── park.md       # 박이사 — 영업/시장 지침
 ├── commands/
+│   ├── 김비서.md       # 비서실 기획 총괄 커맨드
 │   ├── 구매싼거.md
 │   ├── 구매좋은거.md
 │   ├── 구매가성비.md
@@ -326,7 +327,38 @@ R3 (제작)     → R4 (시각화)      → R5 (최종보고)
 
 ---
 
-## 13. 개발 규칙
+## 13. 멀티 AI 엔진 (GPT / Gemini 연동)
+
+golab은 Claude 단독이 아닌 **멀티 AI 엔진** 체계로 운영한다.
+
+### 엔진 구성
+
+| 엔진 | 용도 | 패키지 |
+|------|------|--------|
+| **Claude (Opus)** | 메인 오케스트레이터. 기획·설계·코드 생성·보고서 작성 | Claude Code CLI |
+| **OpenAI GPT** | 보조 분석. 번역·요약·외부 데이터 처리 | `openai` |
+| **Google Gemini** | 보조 분석. 멀티모달(이미지·PDF)·대량 텍스트 처리 | `google-generativeai` |
+
+### 환경 변수 (`.env`)
+
+```
+OPENAI_API_KEY=sk-...    # OpenAI API 키
+GEMINI_API_KEY=AI...     # Google Gemini API 키
+```
+
+- `.env` 파일은 `.gitignore`에 등록 — **절대 커밋 금지**
+- API 키는 대표님이 직접 입력
+
+### 사용 규칙
+
+1. **주엔진은 Claude** — GPT/Gemini는 Claude가 판단하여 필요 시 호출하는 보조 엔진
+2. **비용 의식** — GPT/Gemini API 호출 시 예상 비용을 사전 고지. 대량 호출 전 대표님 승인
+3. **팩트 교차 검증** — 중요 데이터는 2개 이상 엔진으로 교차 검증 가능
+4. **코드 위치** — AI 클라이언트 코드는 프로젝트 루트에 `gpt_client.py`, `gemini_client.py`로 관리
+
+---
+
+## 14. 개발 규칙
 
 - **Python**, PEP 8 준수
 - 주석 한글, 변수명 snake_case, 클래스명 PascalCase
