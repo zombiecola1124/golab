@@ -34,7 +34,7 @@ def run():
 
         # 키가 없으면 SKIP
         if not api_key:
-            print(f"[SKIP] {name:10s} | {env_key} 미설정 — 건너뜀")
+            print(f"[SKIP] {name:10s} | {env_key} 미설정 - 건너뜀")
             skipped += 1
             continue
 
@@ -50,7 +50,7 @@ def run():
             warned += 1
         except EnvironmentError:
             # 키 검증은 위에서 했으므로 여기까지 올 일 없지만 방어
-            print(f"[SKIP] {name:10s} | 환경변수 문제 — 건너뜀")
+            print(f"[SKIP] {name:10s} | 환경변수 문제 - 건너뜀")
             skipped += 1
         except Exception as e:
             # 인증 실패 등 실제 오류 → FAIL
@@ -71,7 +71,7 @@ def run():
         print("네트워크 오류가 있었으나 CI 환경 문제로 판단, 통과 처리합니다.")
 
     if passed == 0 and skipped == total:
-        print("경고: API 키 미설정 — GitHub Secrets 등록 후 재실행하세요.")
+        print("경고: API 키 미설정 - GitHub Secrets 등록 후 재실행하세요.")
 
     print("smoke test 완료!")
     sys.exit(0)
