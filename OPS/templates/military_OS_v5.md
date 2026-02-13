@@ -246,71 +246,58 @@
 
 ---
 
-## 12. 파일 저장 체계 (v6.0 최종)
+## 12. 파일 저장 체계 (v6.0 → HQ 지휘 체계)
 
-### 루트 폴더 구조
+### HQ (사령부) 폴더 구조
 
 ```
-golab/
-├── HQ/                          # 작전실 (안건 상태 관리)
-│   └── WAR_ROOM/
-│       ├── CRITICAL/            # 🔴 긴급
-│       ├── IN_PROGRESS/         # 🟡 진행 중 (안건 시작점)
-│       ├── READY/               # 🟢 실행 대기
-│       ├── HOLD/                # ⚫ 보류
-│       └── DONE/                # 🔵 완료
-├── OPS/                         # 운영 (템플릿, 프로세스)
-│   └── templates/               # 보고서/회의 템플릿
-├── INTEL/                       # 정보부 (조사/연구)
-│   ├── market/                  # 시장 조사
-│   ├── tech/                    # 기술 R&D
-│   ├── supplier/                # 공급처 조사
-│   └── exhibition/              # 전시회/박람회
-├── SALES/                       # 영업
-├── FINANCE/                     # 재무
-├── SUPPLY/                      # 구매
-├── INVENTORY/                   # 재고
-├── MEMO/                        # 기록 (결론 중심)
-│   └── decision_log/            # 의사결정 기록
-├── ARCHIVE/                     # 종료 안건 보관
-├── scripts/                     # 엔진 코드
-└── docs/                        # 군단 OS 운영 문서
+HQ/
+├── WAR_ROOM/           # 안건 상태 관리 (작전실)
+│   ├── CRITICAL/       # 🔴 긴급 안건
+│   ├── IN_PROGRESS/    # 🟡 진행 중
+│   ├── READY/          # 🟢 실행 대기
+│   ├── HOLD/           # ⚫ 보류
+│   └── DONE/           # 🔵 완료
+├── INTEL/              # 정보/조사 (research)
+│   ├── market/         # 시장 조사
+│   ├── tech/           # 기술 R&D
+│   ├── supplier/       # 공급처 조사
+│   └── exhibition/     # 전시회/박람회
+├── FINANCE/            # 재무
+├── SALES/              # 영업
+├── SUPPLY/             # 구매/재고
+├── STRATEGY/           # 전략
+└── ARCHIVE/            # 종료 안건 보관
 ```
-
-### 안건 규칙
-
-1. 모든 안건은 **HQ/WAR_ROOM/IN_PROGRESS**에서 시작
-2. 상태 변경은 **파일 이동으로만** 표현
-3. 부서별 근거 자료는 INTEL/SALES/FINANCE/SUPPLY/INVENTORY에 저장
-4. 템플릿은 OPS/templates에 보관
-5. 의사결정 기록은 MEMO/decision_log에 결론 중심으로만
 
 ### 안건 흐름
 
 ```
-IN_PROGRESS → DONE → ARCHIVE
-    ↕
-CRITICAL (긴급 격상)
-    ↕
- HOLD (보류)
-    ↕
-READY (실행 대기)
+READY → IN_PROGRESS → DONE → ARCHIVE
+          ↕
+     CRITICAL (긴급 격상)
+          ↕
+       HOLD (보류)
 ```
 
 ### 주관 부서
 
 | 폴더 | 주관 |
 |------|------|
-| HQ/WAR_ROOM | 김비서 (안건 상태 관리) |
-| OPS | 김비서 (운영/템플릿) |
+| WAR_ROOM | 김비서 (안건 상태 관리) |
 | INTEL | 연구소 (이소장) |
-| SALES | 영업본부 (박이사) |
 | FINANCE | 재무본부 (트럼프 이사) |
+| SALES | 영업본부 (박이사) |
 | SUPPLY | 구매팀 (서차장) |
-| INVENTORY | 구매팀 (서차장) |
-| MEMO | 김비서 (결론 기록) |
+| STRATEGY | 사장 직할 / 김비서 보좌 |
 | ARCHIVE | 김비서 (보관 관리) |
-| scripts | 개발팀 (최차장) |
+
+### 기존 폴더 (운영 문서용 유지)
+
+| 폴더 | 용도 |
+|------|------|
+| `docs/` | 군단 OS 운영 문서, 조직도 |
+| `memo/` | 결론 중심 기록 |
 
 ---
 
