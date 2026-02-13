@@ -1,0 +1,69 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GOLAB — 재고 현황</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <!-- 상단 탭 네비게이션 -->
+  <nav class="top-nav">
+    <span class="logo">GOLAB</span>
+    <ul class="tabs">
+      <li><a href="index.html" class="active">재고 현황</a></li>
+      <li><a href="purchases.html">입고/원가</a></li>
+      <li><a href="#" style="opacity:0.4">정산/증빙</a></li>
+      <li><a href="#" style="opacity:0.4">거래처</a></li>
+    </ul>
+  </nav>
+
+  <!-- KPI 카드 3개 -->
+  <div class="kpi-bar">
+    <div class="kpi-card blue">
+      <div class="kpi-label">총 재고가치</div>
+      <div class="kpi-value" id="kpi-asset">₩0</div>
+    </div>
+    <div class="kpi-card green" id="kpi-receivable-card">
+      <div class="kpi-label">미수금 합계</div>
+      <div class="kpi-value" id="kpi-receivable">₩0</div>
+    </div>
+    <div class="kpi-card green" id="kpi-risk-card">
+      <div class="kpi-label">위험 품목</div>
+      <div class="kpi-value" id="kpi-risk">0건</div>
+    </div>
+  </div>
+
+  <!-- 메인 레이아웃 -->
+  <div class="main-layout">
+    <!-- 좌측: 리스트 -->
+    <div class="list-panel">
+      <div class="list-toolbar">
+        <input type="text" class="search-input" id="search-input" placeholder="품목명 / SKU 검색...">
+        <div class="filter-row">
+          <button class="filter-btn active" data-filter="ALL">전체</button>
+          <button class="filter-btn" data-filter="NORMAL">정상</button>
+          <button class="filter-btn" data-filter="RISK">위험</button>
+          <button class="filter-btn" data-filter="RESERVED">고객지정</button>
+          <button class="filter-btn" data-filter="OUT">품절</button>
+          <button class="filter-btn toggle-shortage" data-filter="SHORTAGE">부족만</button>
+        </div>
+      </div>
+      <div class="list-scroll" id="item-list">
+        <!-- 동적 렌더링 -->
+      </div>
+    </div>
+
+    <!-- 우측: 상세 -->
+    <div class="detail-panel" id="detail-panel">
+      <div class="detail-empty">
+        ← 좌측 리스트에서 품목을 선택하세요
+      </div>
+    </div>
+  </div>
+
+  <!-- 품목 추가/수정 폼 (상세 패널 내에서 사용) -->
+
+  <script type="module" src="js/inventory.js"></script>
+</body>
+</html>

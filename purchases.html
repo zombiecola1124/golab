@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>GOLAB — 입고/원가</title>
+  <link rel="stylesheet" href="css/app.css">
+</head>
+<body>
+  <!-- 상단 탭 네비게이션 -->
+  <nav class="top-nav">
+    <span class="logo">GOLAB</span>
+    <ul class="tabs">
+      <li><a href="index.html">재고 현황</a></li>
+      <li><a href="purchases.html" class="active">입고/원가</a></li>
+      <li><a href="#" style="opacity:0.4">정산/증빙</a></li>
+      <li><a href="#" style="opacity:0.4">거래처</a></li>
+    </ul>
+  </nav>
+
+  <!-- 메인 레이아웃 -->
+  <div class="main-layout">
+    <!-- 좌측: 매입 이력 리스트 -->
+    <div class="list-panel">
+      <div class="list-toolbar">
+        <input type="text" class="search-input" id="purchase-search" placeholder="품목명 / 공급사 검색...">
+        <div class="filter-row">
+          <button class="btn btn-primary btn-sm" id="btn-new-purchase">+ 새 매입 등록</button>
+        </div>
+      </div>
+      <div class="list-scroll" id="purchase-list">
+        <!-- 동적 렌더링 -->
+      </div>
+    </div>
+
+    <!-- 우측: 입력/상세 -->
+    <div class="detail-panel" id="purchase-detail">
+      <div class="detail-empty">
+        ← 매입 내역을 선택하거나 "새 매입 등록"을 클릭하세요
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/purchases.js"></script>
+</body>
+</html>
