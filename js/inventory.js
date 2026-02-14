@@ -584,8 +584,11 @@ function bindEvents() {
     });
   }
 
-  // 품목 추가 버튼 (빈 상태에서)
-  // "+" 버튼은 리스트가 비었을 때 동적으로 생성됨 → 이벤트 위임 사용
+  // 품목 추가 버튼 (상단 툴바 상시 표시)
+  const addBtn = document.getElementById('btn-add-item');
+  if (addBtn) addBtn.addEventListener('click', () => showAddForm());
+
+  // 빈 상태 버튼 (이벤트 위임)
   document.getElementById('item-list').addEventListener('click', (e) => {
     if (e.target.id === 'btn-add-first' || e.target.closest('#btn-add-first')) {
       showAddForm();

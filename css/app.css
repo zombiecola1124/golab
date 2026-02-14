@@ -150,6 +150,23 @@ body {
   gap: 8px;
 }
 
+/* 검색바 + 추가 버튼 가로 배치 */
+.toolbar-top {
+  display: flex;
+  gap: 8px;
+  align-items: center;
+}
+
+.toolbar-top .search-input {
+  flex: 1;
+  min-width: 0;
+}
+
+.toolbar-top .btn {
+  white-space: nowrap;
+  flex-shrink: 0;
+}
+
 .search-input {
   width: 100%;
   padding: 10px 14px;

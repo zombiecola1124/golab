@@ -3,8 +3,15 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="GOLAB">
   <title>GOLAB — 재고 현황</title>
   <link rel="stylesheet" href="css/app.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon-192.png">
 </head>
 <body>
   <!-- 상단 탭 네비게이션 -->
@@ -35,11 +42,14 @@
   </div>
 
   <!-- 메인 레이아웃 -->
-  <div class="main-layout">
+  <div class="main-layout" id="main-layout">
     <!-- 좌측: 리스트 -->
     <div class="list-panel">
       <div class="list-toolbar">
-        <input type="text" class="search-input" id="search-input" placeholder="품목명 / SKU 검색...">
+        <div class="toolbar-top">
+          <input type="text" class="search-input" id="search-input" placeholder="품목명 / SKU 검색...">
+          <button class="btn btn-primary btn-sm" id="btn-add-item" title="새 품목 (Ctrl+N)">+ 품목</button>
+        </div>
         <div class="filter-row">
           <button class="filter-btn active" data-filter="ALL">전체</button>
           <button class="filter-btn" data-filter="NORMAL">정상</button>
@@ -62,8 +72,14 @@
     </div>
   </div>
 
-  <!-- 품목 추가/수정 폼 (상세 패널 내에서 사용) -->
-
   <script type="module" src="js/inventory.js"></script>
+  <script>
+    // PWA Service Worker 등록
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js')
+        .then(() => console.log('[PWA] Service Worker 등록 완료'))
+        .catch((err) => console.warn('[PWA] SW 등록 실패:', err));
+    }
+  </script>
 </body>
 </html>
