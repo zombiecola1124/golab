@@ -52,8 +52,11 @@ async function loadItems() {
 
 // ── KPI 계산 ──
 function renderKPI() {
+  // DELETED(보관) 품목은 KPI에서 제외
+  const activeItems = allItems.filter(i => i.status !== 'DELETED');
+
   // 총 재고가치
-  const totalAsset = allItems.reduce((sum, i) => sum + (i.asset_value || (i.qty_on_hand || 0) * (i.avg_cost || 0)), 0);
+  const totalAsset = activeItems.reduce((sum, i) => sum + (i.asset_value || (i.qty_on_hand || 0) * (i.avg_cost || 0)), 0);
   document.getElementById('kpi-asset').textContent = formatCurrency(totalAsset);
 
   // 미수금 (v1: invoices 아직 없으므로 0, 구조만 준비)
@@ -64,7 +67,7 @@ function renderKPI() {
   recCard.className = totalReceivable > 0 ? 'kpi-card red' : 'kpi-card green';
 
   // 위험 품목 수
-  const riskCount = allItems.filter(i =>
+  const riskCount = activeItems.filter(i =>
     i.status === 'RISK' || i.status === 'OUT' || (i.qty_on_hand || 0) < (i.qty_min || 0)
   ).length;
   document.getElementById('kpi-risk').textContent = `${riskCount}건`;
@@ -76,8 +79,15 @@ function renderKPI() {
 // ── 필터 / 검색 ──
 function applyFilters() {
   filteredItems = allItems.filter(item => {
+    // DELETED(보관) 품목은 '보관됨' 필터일 때만 표시
+    if (currentFilter === 'DELETED') {
+      if (item.status !== 'DELETED') return false;
+    } else {
+      if (item.status === 'DELETED') return false;
+    }
+
     // 상태 필터
-    if (currentFilter !== 'ALL' && currentFilter !== 'SHORTAGE') {
+    if (currentFilter !== 'ALL' && currentFilter !== 'SHORTAGE' && currentFilter !== 'DELETED') {
       if (item.status !== currentFilter) return false;
     }
 
@@ -197,11 +207,15 @@ function selectItem(itemId) {
       </div>
 
       <div class="action-row">
+        ${item.status === 'DELETED' ? `
+        <button class="btn btn-primary btn-sm" id="btn-restore-item">복원</button>
+        ` : `
         <button class="btn btn-secondary btn-sm" id="btn-change-status">상태 변경</button>
         <button class="btn btn-secondary btn-sm" id="btn-edit-min">최소수량 수정</button>
         <button class="btn btn-secondary btn-sm" id="btn-quick-out">빠른 출고</button>
         <button class="btn btn-secondary btn-sm" id="btn-edit-item">품목 수정</button>
-        <button class="btn btn-danger btn-sm" id="btn-delete-item">삭제</button>
+        <button class="btn btn-danger btn-sm" id="btn-delete-item">보관</button>
+        `}
       </div>
     </div>
 
@@ -220,11 +234,15 @@ function selectItem(itemId) {
   document.getElementById('detail-status-tag').appendChild(createStatusTag(item.status || 'NORMAL'));
 
   // 버튼 이벤트
-  document.getElementById('btn-change-status').onclick = () => changeStatus(item);
-  document.getElementById('btn-edit-min').onclick = () => editMinQty(item);
-  document.getElementById('btn-quick-out').onclick = () => quickDelivery(item);
-  document.getElementById('btn-edit-item').onclick = () => showEditForm(item);
-  document.getElementById('btn-delete-item').onclick = () => deleteItem(item);
+  if (item.status === 'DELETED') {
+    document.getElementById('btn-restore-item').onclick = () => restoreItem(item);
+  } else {
+    document.getElementById('btn-change-status').onclick = () => changeStatus(item);
+    document.getElementById('btn-edit-min').onclick = () => editMinQty(item);
+    document.getElementById('btn-quick-out').onclick = () => quickDelivery(item);
+    document.getElementById('btn-edit-item').onclick = () => showEditForm(item);
+    document.getElementById('btn-delete-item').onclick = () => deleteItem(item);
+  }
 
   // 최근 이력 로드
   loadRecentPurchases(item.id);
@@ -541,11 +559,11 @@ function showEditForm(item) {
   document.getElementById('btn-cancel-edit').onclick = () => selectItem(item.id);
 }
 
-// ── 품목 삭제 ──
+// ── 품목 보관(소프트 삭제) ──
 async function deleteItem(item) {
-  if (!confirm(`"${item.name}" 을(를) 정말 삭제하시겠습니까?`)) return;
+  if (!confirm(`"${item.name}" 을(를) 보관 처리하시겠습니까?\n(리스트에서 숨겨지며, '보관됨' 필터에서 복원 가능)`)) return;
 
-  const reason = await askReason('삭제 사유');
+  const reason = await askReason('보관 사유');
   if (reason === null) return;
 
   await writeLog({
@@ -553,12 +571,33 @@ async function deleteItem(item) {
     before: item, reason
   });
   await updateDocument(COLLECTIONS.ITEMS, item.id, { status: 'DELETED' });
-  // 실제 삭제 대신 소프트 삭제 (audit 추적 가능)
 
-  showToast(`"${item.name}" 삭제 완료`, 'success');
-  selectedItemId = null;
-  document.getElementById('detail-panel').innerHTML = '<div class="detail-empty">← 좌측 리스트에서 품목을 선택하세요</div>';
+  showToast(`"${item.name}" 보관 완료 (보관됨 필터에서 복원 가능)`, 'success');
+
+  // 보관 후 다음 품목 자동 선택 (세션 유지)
   await loadItems();
+  const nextItem = filteredItems.length > 0 ? filteredItems[0] : null;
+  if (nextItem) {
+    selectItem(nextItem.id);
+  } else {
+    selectedItemId = null;
+    document.getElementById('detail-panel').innerHTML = '<div class="detail-empty">← 좌측 리스트에서 품목을 선택하세요</div>';
+  }
+}
+
+// ── 품목 복원 (보관 해제) ──
+async function restoreItem(item) {
+  const newStatus = evaluateStatus(item.qty_on_hand || 0, item.qty_min || 0, 'NORMAL');
+  await updateDocument(COLLECTIONS.ITEMS, item.id, { status: newStatus });
+  await writeLog({
+    entityType: 'item', entityId: item.id, action: 'UPDATE',
+    before: { status: 'DELETED' }, after: { status: newStatus },
+    reason: '보관 해제(복원)'
+  });
+
+  showToast(`"${item.name}" 복원 완료`, 'success');
+  await loadItems();
+  selectItem(item.id);
 }
 
 // ── 사용자 관리 (관리자 전용) ──

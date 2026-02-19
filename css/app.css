@@ -388,6 +388,15 @@ body {
   color: white;
 }
 
+.filter-btn.filter-archived {
+  border-color: var(--c-text-sub);
+  color: var(--c-text-sub);
+}
+.filter-btn.filter-archived.active {
+  background: var(--c-text-sub);
+  color: white;
+}
+
 .list-scroll {
   flex: 1;
   overflow-y: auto;
