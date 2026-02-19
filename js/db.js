@@ -37,7 +37,7 @@ let _initialized = false;
 let _currentUser = null;
 
 // 관리자 이메일 (최초 설정)
-const ADMIN_EMAIL = 'zombiecola2@gmail.com';
+const ADMIN_EMAIL = 'master@golabc.com';
 
 /**
  * Firebase 초기화 (인증은 별도)
