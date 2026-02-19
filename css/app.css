@@ -803,6 +803,205 @@ body {
   font-size: 1rem;
 }
 
+/* --- 정산/증빙 전용 스타일 --- */
+
+/* KPI 4컬럼 */
+.kpi-bar-4 {
+  grid-template-columns: repeat(4, 1fr);
+}
+
+.kpi-card.stl-warning { background: var(--c-warning-light); border-color: var(--c-warning); }
+.kpi-card.stl-warning .kpi-value { color: var(--c-warning); }
+
+/* 업체 태그 */
+.stl-partner-tag {
+  display: inline-block;
+  padding: 3px 10px;
+  border-radius: 12px;
+  font-size: 0.7rem;
+  font-weight: 700;
+  letter-spacing: 0.3px;
+  white-space: nowrap;
+}
+
+.stl-partner-tag.sm { padding: 2px 8px; font-size: 0.65rem; }
+
+.stl-partner-tag.partner-golab { background: var(--c-primary-light); color: var(--c-primary); }
+.stl-partner-tag.partner-jn    { background: #fef3c7; color: #92400e; }
+.stl-partner-tag.partner-ju    { background: #ede9fe; color: #7c3aed; }
+.stl-partner-tag.partner-wj    { background: #dcfce7; color: #16a34a; }
+.stl-partner-tag.partner-uh    { background: #fce7f3; color: #be185d; }
+.stl-partner-tag.partner-al    { background: #e0f2fe; color: #0369a1; }
+
+/* 증빙 뱃지 (미입금, 미발행) */
+.stl-badge {
+  display: inline-block;
+  padding: 1px 6px;
+  border-radius: 8px;
+  font-size: 0.65rem;
+  font-weight: 700;
+  margin-left: 4px;
+  vertical-align: middle;
+}
+
+.stl-badge.unpaid { background: var(--c-danger-light); color: var(--c-danger); }
+.stl-badge.no-invoice { background: var(--c-warning-light); color: #92400e; }
+
+/* 분배 바 (친구몫/내몫) */
+.stl-split-bar {
+  display: flex;
+  gap: 12px;
+  margin: 16px 0;
+}
+
+.stl-split-item {
+  flex: 1;
+  padding: 14px;
+  background: var(--c-bg);
+  border-radius: var(--radius);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+}
+
+.stl-split-item.highlight {
+  background: var(--c-primary-light);
+  border: 2px solid var(--c-primary);
+}
+
+.stl-split-label {
+  font-size: 0.85rem;
+  color: var(--c-text-sub);
+  font-weight: 600;
+}
+
+.stl-split-value {
+  font-size: 1.25rem;
+  font-weight: 800;
+}
+
+.stl-split-item.highlight .stl-split-value { color: var(--c-primary); }
+
+/* 증빙 섹션 */
+.stl-evidence-section {
+  margin-top: 16px;
+  padding: 14px;
+  background: var(--c-bg);
+  border-radius: var(--radius);
+}
+
+.stl-evidence-section h3 {
+  font-size: 0.85rem;
+  font-weight: 700;
+  color: var(--c-text-sub);
+  margin-bottom: 8px;
+}
+
+.stl-evidence-grid {
+  display: flex;
+  gap: 16px;
+  flex-wrap: wrap;
+}
+
+.stl-evidence-item {
+  display: flex;
+  align-items: center;
+  gap: 6px;
+  font-size: 0.9rem;
+  cursor: pointer;
+}
+
+.stl-evidence-item input[type="checkbox"] {
+  width: 18px;
+  height: 18px;
+  accent-color: var(--c-primary);
+}
+
+/* 자동계산 프리뷰 */
+.stl-calc-preview {
+  padding: 16px;
+  background: var(--c-bg);
+  border-radius: var(--radius);
+  border: 2px solid var(--c-primary);
+  margin: 16px 0;
+}
+
+.stl-calc-row {
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  padding: 6px 0;
+  font-size: 0.9rem;
+}
+
+.stl-calc-row span { color: var(--c-text-sub); font-weight: 600; }
+.stl-calc-row strong { font-size: 1.1rem; }
+
+.stl-calc-row.highlight {
+  border-top: 2px solid var(--c-primary);
+  margin-top: 8px;
+  padding-top: 12px;
+}
+
+.stl-calc-row.highlight strong { color: var(--c-primary); font-size: 1.3rem; }
+
+/* 업체별 집계 테이블 */
+.stl-summary-total {
+  display: flex;
+  gap: 16px;
+  margin: 16px 0;
+}
+
+.stl-summary-total-item {
+  flex: 1;
+  padding: 14px;
+  background: var(--c-bg);
+  border-radius: var(--radius);
+  display: flex;
+  justify-content: space-between;
+  align-items: center;
+  font-size: 0.9rem;
+}
+
+.stl-summary-total-item strong { font-size: 1.25rem; font-weight: 800; }
+
+.stl-summary-table {
+  width: 100%;
+  border-collapse: collapse;
+  margin-top: 12px;
+  font-size: 0.85rem;
+}
+
+.stl-summary-table th {
+  text-align: left;
+  padding: 8px 6px;
+  font-size: 0.75rem;
+  color: var(--c-text-sub);
+  font-weight: 700;
+  text-transform: uppercase;
+  letter-spacing: 0.3px;
+  border-bottom: 2px solid var(--c-border);
+}
+
+.stl-summary-table td {
+  padding: 10px 6px;
+  border-bottom: 1px solid var(--c-border);
+}
+
+.stl-summary-table .stl-col-my {
+  font-weight: 800;
+  color: var(--c-primary);
+}
+
+/* 기간 필터 날짜 입력 */
+.stl-date-input {
+  border-radius: 20px !important;
+}
+
+.stl-period-select {
+  border-radius: 20px;
+}
+
 /* ============================================
    반응형 — 1024px 이하: 좌우 → 상하
    ============================================ */
@@ -823,11 +1022,16 @@ body {
     min-height: 50vh;
   }
 
-  .kpi-bar {
-    grid-template-columns: 1fr;
+  .kpi-bar, .kpi-bar-4 {
+    grid-template-columns: repeat(2, 1fr);
     gap: 10px;
     padding: 12px 16px;
   }
+
+  .stl-split-bar { flex-direction: column; }
+  .stl-summary-total { flex-direction: column; }
+  .stl-summary-table { font-size: 0.75rem; }
+  .stl-summary-table th, .stl-summary-table td { padding: 6px 4px; }
 
   .kpi-card .kpi-value { font-size: 1.5rem; }
 
@@ -851,4 +1055,7 @@ body {
   .detail-panel { padding: 16px; }
   .detail-card { padding: 16px; }
   .detail-card h2 { font-size: 1.25rem; }
+
+  .kpi-bar-4 { grid-template-columns: 1fr; }
+  .stl-evidence-grid { flex-direction: column; gap: 8px; }
 }

@@ -1,0 +1,132 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <meta name="theme-color" content="#2563eb">
+  <meta name="apple-mobile-web-app-capable" content="yes">
+  <meta name="apple-mobile-web-app-status-bar-style" content="default">
+  <meta name="apple-mobile-web-app-title" content="GOLAB">
+  <title>GOLAB — 정산/증빙</title>
+  <link rel="stylesheet" href="css/app.css">
+  <link rel="manifest" href="manifest.json">
+  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
+  <link rel="apple-touch-icon" href="icons/icon.svg">
+</head>
+<body>
+  <!-- 로그인 오버레이 -->
+  <div class="auth-overlay" id="auth-overlay">
+    <div class="auth-card">
+      <div class="auth-logo">GOLAB</div>
+      <div class="auth-sub">영업관리 · 재고 · 정산</div>
+      <div id="auth-login-form">
+        <div class="auth-field">
+          <input type="email" class="form-input" id="auth-email" placeholder="이메일" autocomplete="email">
+        </div>
+        <div class="auth-field">
+          <input type="password" class="form-input" id="auth-pw" placeholder="비밀번호" autocomplete="current-password">
+        </div>
+        <button class="btn btn-primary auth-btn" id="btn-login">로그인</button>
+      </div>
+      <div class="auth-error" id="auth-error" style="display:none"></div>
+      <div class="auth-denied" id="auth-denied" style="display:none">
+        <p>접근 권한이 없습니다</p>
+        <p class="auth-denied-sub">관리자에게 이메일 등록을 요청하세요</p>
+        <button class="btn btn-secondary btn-sm" id="btn-auth-retry">다른 계정으로 로그인</button>
+      </div>
+      <div class="auth-loading" id="auth-loading" style="display:none">
+        <div class="loading-spinner"></div>
+        <p>로그인 확인 중...</p>
+      </div>
+    </div>
+  </div>
+
+  <!-- 상단 탭 네비게이션 -->
+  <nav class="top-nav">
+    <span class="logo">GOLAB</span>
+    <ul class="tabs">
+      <li><a href="index.html">재고 현황</a></li>
+      <li><a href="purchases.html">입고/원가</a></li>
+      <li><a href="settlements.html" class="active">정산/증빙</a></li>
+      <li><a href="#" style="opacity:0.4">거래처</a></li>
+    </ul>
+    <div class="user-info" id="user-info" style="display:none">
+      <span class="user-email" id="user-email"></span>
+      <button class="btn-logout" id="btn-logout">로그아웃</button>
+    </div>
+  </nav>
+
+  <!-- KPI 카드 4개 -->
+  <div class="kpi-bar kpi-bar-4">
+    <div class="kpi-card blue">
+      <div class="kpi-label">내 순수익</div>
+      <div class="kpi-value" id="kpi-my-profit">₩0</div>
+    </div>
+    <div class="kpi-card green">
+      <div class="kpi-label">총 매출</div>
+      <div class="kpi-value" id="kpi-revenue">₩0</div>
+    </div>
+    <div class="kpi-card" id="kpi-deduction-card">
+      <div class="kpi-label">공제(세금/리베이트)</div>
+      <div class="kpi-value" id="kpi-deduction">₩0</div>
+    </div>
+    <div class="kpi-card" id="kpi-unpaid-card">
+      <div class="kpi-label">미입금</div>
+      <div class="kpi-value" id="kpi-unpaid">0건</div>
+    </div>
+  </div>
+
+  <!-- 메인 레이아웃 -->
+  <div class="main-layout">
+    <!-- 좌측: 정산 리스트 -->
+    <div class="list-panel">
+      <div class="list-toolbar">
+        <div class="toolbar-top">
+          <input type="text" class="search-input" id="stl-search" placeholder="판매처 / 물품 / 업체 검색...">
+          <button class="btn btn-primary btn-sm" id="btn-new-stl" title="새 정산 (Ctrl+N)">+ 정산</button>
+        </div>
+        <div class="filter-row">
+          <button class="filter-btn active" data-filter="ALL">전체</button>
+          <button class="filter-btn" data-filter="고랩컴퍼니">고랩</button>
+          <button class="filter-btn" data-filter="제이앤컴퍼니">제이앤</button>
+          <button class="filter-btn" data-filter="제이유니버스">제이유니</button>
+          <button class="filter-btn" data-filter="우진">우진</button>
+          <button class="filter-btn" data-filter="어반에이치">어반에이치</button>
+          <button class="filter-btn" data-filter="에이라이프">에이라이프</button>
+        </div>
+        <div class="filter-row" style="margin-top:4px">
+          <button class="filter-btn stl-evidence-filter" data-ev="UNPAID">미입금만</button>
+          <button class="filter-btn stl-evidence-filter" data-ev="NO_INVOICE">미발행만</button>
+          <select class="form-select stl-period-select" id="stl-period" style="padding:5px 10px;font-size:0.8rem;width:auto;border-radius:20px">
+            <option value="ALL">전체 기간</option>
+            <option value="THIS_MONTH">이번 달</option>
+            <option value="LAST_MONTH">지난 달</option>
+            <option value="THIS_QUARTER">이번 분기</option>
+            <option value="THIS_YEAR">올해</option>
+            <option value="CUSTOM">기간 지정</option>
+          </select>
+          <input type="date" class="form-input stl-date-input" id="stl-date-from" style="display:none;padding:5px 8px;font-size:0.8rem;width:auto">
+          <input type="date" class="form-input stl-date-input" id="stl-date-to" style="display:none;padding:5px 8px;font-size:0.8rem;width:auto">
+        </div>
+      </div>
+      <div class="list-scroll" id="stl-list">
+        <!-- 동적 렌더링 -->
+      </div>
+    </div>
+
+    <!-- 우측: 상세/입력 -->
+    <div class="detail-panel" id="stl-detail">
+      <div id="stl-summary-panel">
+        <!-- 초기: 업체별 집계 요약 -->
+      </div>
+    </div>
+  </div>
+
+  <script type="module" src="js/settlements.js"></script>
+  <script>
+    if ('serviceWorker' in navigator) {
+      navigator.serviceWorker.register('./sw.js').catch(() => {});
+    }
+  </script>
+</body>
+</html>

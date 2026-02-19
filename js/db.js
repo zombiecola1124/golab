@@ -203,7 +203,8 @@ export const COLLECTIONS = {
   CUSTOMERS: 'customers',
   INVOICES: 'invoices',
   AUDIT_LOG: 'audit_log',
-  STOCKTAKES: 'stocktakes'
+  STOCKTAKES: 'stocktakes',
+  SETTLEMENTS: 'settlements'
 };
 
 // ── CRUD 래퍼 ──
