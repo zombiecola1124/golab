@@ -592,6 +592,10 @@ function bindEvents() {
     }
   });
 
+  // 상단 "+ 새 품목" 버튼
+  const addBtn = document.getElementById('btn-add-item');
+  if (addBtn) addBtn.addEventListener('click', () => showAddForm());
+
   // 키보드 단축키: Ctrl+N = 새 품목
   document.addEventListener('keydown', (e) => {
     if (e.ctrlKey && e.key === 'n') {

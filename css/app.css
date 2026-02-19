@@ -34,6 +34,8 @@ body {
   color: var(--c-text);
   line-height: 1.5;
   min-height: 100vh;
+  display: flex;
+  flex-direction: column;
 }
 
 /* --- 상단 탭 네비게이션 --- */
@@ -129,7 +131,8 @@ body {
 .main-layout {
   display: grid;
   grid-template-columns: 420px 1fr;
-  height: calc(100vh - 56px);
+  flex: 1;
+  min-height: 0;
   overflow: hidden;
 }
 
@@ -611,6 +614,7 @@ body {
 @media (max-width: 1024px) {
   .main-layout {
     grid-template-columns: 1fr;
+    flex: none;
     height: auto;
     overflow: visible;
   }
