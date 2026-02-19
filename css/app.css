@@ -36,6 +36,178 @@ body {
   min-height: 100vh;
 }
 
+/* --- 로그인 오버레이 --- */
+.auth-overlay {
+  position: fixed;
+  inset: 0;
+  background: var(--c-bg);
+  z-index: 9999;
+  display: flex;
+  align-items: center;
+  justify-content: center;
+}
+
+.auth-overlay.hidden { display: none; }
+
+.auth-card {
+  background: var(--c-surface);
+  border-radius: 16px;
+  padding: 48px 40px;
+  text-align: center;
+  box-shadow: var(--shadow-lg);
+  max-width: 400px;
+  width: 90vw;
+}
+
+.auth-logo {
+  font-size: 2.5rem;
+  font-weight: 900;
+  color: var(--c-primary);
+  letter-spacing: -1px;
+  margin-bottom: 4px;
+}
+
+.auth-sub {
+  font-size: 0.9rem;
+  color: var(--c-text-sub);
+  margin-bottom: 36px;
+}
+
+.auth-field {
+  margin-bottom: 12px;
+}
+
+.auth-field .form-input {
+  width: 100%;
+  text-align: left;
+}
+
+.auth-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 1rem;
+  margin-top: 4px;
+}
+
+.auth-error {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--c-danger-light);
+  color: var(--c-danger);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  font-weight: 600;
+}
+
+.auth-denied {
+  margin-top: 24px;
+  padding: 20px;
+  background: var(--c-danger-light);
+  border-radius: var(--radius);
+}
+
+.auth-denied p {
+  font-weight: 700;
+  color: var(--c-danger);
+  font-size: 1rem;
+}
+
+.auth-denied .auth-denied-sub {
+  font-weight: 400;
+  font-size: 0.85rem;
+  color: var(--c-text-sub);
+  margin: 8px 0 12px;
+}
+
+.auth-loading {
+  margin-top: 24px;
+  display: flex;
+  flex-direction: column;
+  align-items: center;
+  gap: 12px;
+  color: var(--c-text-sub);
+}
+
+/* 로그인된 사용자 정보 (네비 우측) */
+.user-info {
+  margin-left: auto;
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-size: 0.85rem;
+  color: var(--c-text-sub);
+}
+
+.user-info .user-email {
+  font-weight: 600;
+  max-width: 180px;
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.user-info .btn-logout {
+  padding: 4px 10px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  background: transparent;
+  font-size: 0.75rem;
+  font-weight: 600;
+  color: var(--c-text-sub);
+  cursor: pointer;
+  transition: all 0.15s;
+}
+
+.user-info .btn-logout:hover {
+  background: var(--c-danger-light);
+  color: var(--c-danger);
+  border-color: var(--c-danger);
+}
+
+/* --- 사용자 관리 패널 --- */
+.user-mgmt {
+  background: var(--c-surface);
+  border-radius: var(--radius);
+  padding: 20px;
+  box-shadow: var(--shadow);
+  margin-bottom: 16px;
+}
+
+.user-mgmt h3 {
+  font-size: 1rem;
+  font-weight: 700;
+  margin-bottom: 12px;
+}
+
+.user-mgmt-list {
+  list-style: none;
+}
+
+.user-mgmt-list li {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 10px 0;
+  border-bottom: 1px solid var(--c-border);
+  font-size: 0.9rem;
+}
+
+.user-mgmt-list li:last-child { border-bottom: none; }
+
+.user-mgmt-add {
+  display: flex;
+  gap: 8px;
+  margin-top: 12px;
+}
+
+.user-mgmt-add input {
+  flex: 1;
+  padding: 8px 12px;
+  border: 1px solid var(--c-border);
+  border-radius: var(--radius);
+  font-size: 0.9rem;
+}
+
 /* --- 상단 탭 네비게이션 --- */
 .top-nav {
   background: var(--c-surface);
