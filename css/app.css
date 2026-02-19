@@ -73,24 +73,30 @@ body {
   margin-bottom: 36px;
 }
 
-.btn-google {
-  display: inline-flex;
-  align-items: center;
-  gap: 12px;
-  padding: 14px 32px;
-  border: 2px solid var(--c-border);
-  border-radius: var(--radius);
-  background: var(--c-surface);
-  font-size: 1rem;
-  font-weight: 700;
-  color: var(--c-text);
-  cursor: pointer;
-  transition: all 0.2s;
+.auth-field {
+  margin-bottom: 12px;
 }
 
-.btn-google:hover {
-  border-color: var(--c-primary);
-  box-shadow: 0 2px 8px rgba(37,99,235,0.15);
+.auth-field .form-input {
+  width: 100%;
+  text-align: left;
+}
+
+.auth-btn {
+  width: 100%;
+  padding: 14px;
+  font-size: 1rem;
+  margin-top: 4px;
+}
+
+.auth-error {
+  margin-top: 12px;
+  padding: 10px 14px;
+  background: var(--c-danger-light);
+  color: var(--c-danger);
+  border-radius: var(--radius);
+  font-size: 0.85rem;
+  font-weight: 600;
 }
 
 .auth-denied {

@@ -14,8 +14,8 @@ import {
   onSnapshot, serverTimestamp, Timestamp, writeBatch
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import {
-  getAuth, signInWithPopup, signOut as firebaseSignOut,
-  GoogleAuthProvider, onAuthStateChanged
+  getAuth, signInWithEmailAndPassword, signOut as firebaseSignOut,
+  onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 // ── Firebase Config ──
@@ -74,13 +74,14 @@ export function checkAuth() {
 }
 
 /**
- * 구글 로그인
+ * 이메일/비밀번호 로그인
+ * @param {string} email
+ * @param {string} password
  * @returns {Promise<object>} Firebase user
  */
-export async function signInWithGoogle() {
+export async function signInWithEmail(email, password) {
   if (!auth) throw new Error('Firebase 미초기화');
-  const provider = new GoogleAuthProvider();
-  const result = await signInWithPopup(auth, provider);
+  const result = await signInWithEmailAndPassword(auth, email, password);
   _currentUser = result.user;
   return result.user;
 }
