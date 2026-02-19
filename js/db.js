@@ -14,7 +14,8 @@ import {
   onSnapshot, serverTimestamp, Timestamp, writeBatch
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js';
 import {
-  getAuth, signInAnonymously, onAuthStateChanged
+  getAuth, signInWithPopup, signOut as firebaseSignOut,
+  GoogleAuthProvider, onAuthStateChanged
 } from 'https://www.gstatic.com/firebasejs/10.12.0/firebase-auth.js';
 
 // ── Firebase Config ──
@@ -33,15 +34,18 @@ let app = null;
 let db = null;
 let auth = null;
 let _initialized = false;
+let _currentUser = null;
+
+// 관리자 이메일 (최초 설정)
+const ADMIN_EMAIL = 'zombiecola2@gmail.com';
 
 /**
- * Firebase 초기화 + 익명 인증
+ * Firebase 초기화 (인증은 별도)
  * @returns {Promise<void>}
  */
 export async function initDB() {
   if (_initialized) return;
 
-  // config 미설정 시 데모 모드
   if (!firebaseConfig.apiKey) {
     console.warn('[DB] Firebase config 미설정 — 로컬 데모 모드로 전환');
     _initialized = true;
@@ -51,19 +55,135 @@ export async function initDB() {
   app = initializeApp(firebaseConfig);
   db = getFirestore(app);
   auth = getAuth(app);
+  _initialized = true;
+  console.log('[DB] Firebase 초기화 완료 (인증 대기)');
+}
 
-  // v1: 익명 인증 (단일 사용자)
-  await signInAnonymously(auth);
-
+/**
+ * 현재 로그인 상태 확인
+ * @returns {Promise<object|null>} Firebase user 또는 null
+ */
+export function checkAuth() {
   return new Promise((resolve) => {
+    if (!auth) { resolve(null); return; }
     onAuthStateChanged(auth, (user) => {
-      if (user) {
-        console.log('[DB] 인증 완료:', user.uid);
-        _initialized = true;
-        resolve();
-      }
+      _currentUser = user;
+      resolve(user);
     });
   });
+}
+
+/**
+ * 구글 로그인
+ * @returns {Promise<object>} Firebase user
+ */
+export async function signInWithGoogle() {
+  if (!auth) throw new Error('Firebase 미초기화');
+  const provider = new GoogleAuthProvider();
+  const result = await signInWithPopup(auth, provider);
+  _currentUser = result.user;
+  return result.user;
+}
+
+/**
+ * 로그아웃
+ */
+export async function signOutUser() {
+  if (!auth) return;
+  await firebaseSignOut(auth);
+  _currentUser = null;
+}
+
+/**
+ * 현재 로그인된 사용자 반환
+ */
+export function getCurrentUser() {
+  return _currentUser;
+}
+
+/**
+ * 관리자 이메일 반환
+ */
+export function getAdminEmail() {
+  return ADMIN_EMAIL;
+}
+
+// ── 허용 사용자 관리 (allowed_users 컬렉션) ──
+
+/**
+ * 허용된 사용자인지 확인
+ * @param {string} email
+ * @returns {Promise<object|null>} 사용자 정보 또는 null
+ */
+export async function checkAllowedUser(email) {
+  if (!isFirestoreReady()) return { role: 'admin' }; // 데모모드
+  try {
+    const snap = await getDoc(doc(db, 'allowed_users', email));
+    if (snap.exists()) return snap.data();
+    return null;
+  } catch (e) {
+    console.error('[DB] 허용 사용자 확인 실패:', e);
+    return null;
+  }
+}
+
+/**
+ * 관리자 초기 등록 (첫 로그인 시)
+ * @param {object} user - Firebase user
+ */
+export async function ensureAdminUser(user) {
+  if (!isFirestoreReady()) return;
+  const email = user.email;
+  if (email !== ADMIN_EMAIL) return;
+
+  const snap = await getDoc(doc(db, 'allowed_users', email));
+  if (!snap.exists()) {
+    const { setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+    await setDoc(doc(db, 'allowed_users', email), {
+      role: 'admin',
+      name: user.displayName || '',
+      added_at: serverTimestamp(),
+      added_by: 'system'
+    });
+    console.log('[DB] 관리자 등록 완료:', email);
+  }
+}
+
+/**
+ * 허용 사용자 추가 (관리자만)
+ * @param {string} email
+ * @param {string} role - 'admin' | 'user'
+ * @param {string} name
+ */
+export async function addAllowedUser(email, role = 'user', name = '') {
+  if (!isFirestoreReady()) return;
+  const { setDoc } = await import('https://www.gstatic.com/firebasejs/10.12.0/firebase-firestore.js');
+  await setDoc(doc(db, 'allowed_users', email), {
+    role,
+    name,
+    added_at: serverTimestamp(),
+    added_by: _currentUser?.email || 'unknown'
+  });
+}
+
+/**
+ * 허용 사용자 제거
+ * @param {string} email
+ */
+export async function removeAllowedUser(email) {
+  if (!isFirestoreReady()) return;
+  if (email === ADMIN_EMAIL) throw new Error('관리자는 삭제 불가');
+  await deleteDoc(doc(db, 'allowed_users', email));
+}
+
+/**
+ * 전체 허용 사용자 목록
+ * @returns {Promise<array>}
+ */
+export async function getAllowedUsers() {
+  if (!isFirestoreReady()) return [];
+  const snap = await getDocs(collection(db, 'allowed_users'));
+  return snap.docs.map(d => ({ email: d.id, ...d.data() }));
 }
 
 /**

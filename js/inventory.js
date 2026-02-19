@@ -4,7 +4,11 @@
  */
 
 import { initApp, evaluateStatus } from './app.js';
-import { readAll, createDoc, updateDocument, readDoc, COLLECTIONS } from './db.js';
+import {
+  readAll, createDoc, updateDocument, readDoc, COLLECTIONS,
+  getCurrentUser, getAdminEmail, checkAllowedUser,
+  getAllowedUsers, addAllowedUser, removeAllowedUser
+} from './db.js';
 import { writeLog } from './audit.js';
 import {
   formatKRW, formatCurrency, formatQty, formatDate,
@@ -24,6 +28,7 @@ document.addEventListener('DOMContentLoaded', async () => {
   await initApp();
   await loadItems();
   bindEvents();
+  setupUserMgmt();
 });
 
 // ── 데이터 로드 ──
@@ -554,6 +559,82 @@ async function deleteItem(item) {
   selectedItemId = null;
   document.getElementById('detail-panel').innerHTML = '<div class="detail-empty">← 좌측 리스트에서 품목을 선택하세요</div>';
   await loadItems();
+}
+
+// ── 사용자 관리 (관리자 전용) ──
+async function setupUserMgmt() {
+  const user = getCurrentUser();
+  if (!user || user.email !== getAdminEmail()) return;
+
+  // 네비에 사용자 관리 버튼 추가
+  const userInfo = document.getElementById('user-info');
+  if (!userInfo) return;
+
+  const mgmtBtn = document.createElement('button');
+  mgmtBtn.className = 'btn-logout';
+  mgmtBtn.textContent = '사용자 관리';
+  mgmtBtn.style.marginRight = '4px';
+  userInfo.insertBefore(mgmtBtn, userInfo.firstChild);
+
+  mgmtBtn.addEventListener('click', () => showUserMgmtPanel());
+}
+
+async function showUserMgmtPanel() {
+  const panel = document.getElementById('detail-panel');
+  selectedItemId = null;
+  renderList();
+
+  const users = await getAllowedUsers();
+
+  panel.innerHTML = `
+    <div class="detail-card">
+      <h2>접근 허용 사용자</h2>
+      <div class="sku">여기에 등록된 Gmail만 로그인 가능합니다</div>
+
+      <ul class="user-mgmt-list" id="user-list">
+        ${users.map(u => `
+          <li>
+            <div>
+              <strong>${escapeHtml(u.name || u.email)}</strong>
+              <div style="font-size:0.8rem;color:var(--c-text-sub)">${escapeHtml(u.email)} · ${u.role === 'admin' ? '관리자' : '사용자'}</div>
+            </div>
+            ${u.email !== getAdminEmail() ? `<button class="btn btn-danger btn-sm" data-email="${escapeHtml(u.email)}">삭제</button>` : '<span style="font-size:0.75rem;color:var(--c-primary);font-weight:700">관리자</span>'}
+          </li>
+        `).join('')}
+      </ul>
+
+      <div class="user-mgmt-add" style="margin-top:16px">
+        <input type="email" class="form-input" id="new-user-email" placeholder="추가할 Gmail 주소">
+        <button class="btn btn-primary btn-sm" id="btn-add-user">추가</button>
+      </div>
+    </div>
+  `;
+
+  // 추가 버튼
+  document.getElementById('btn-add-user').addEventListener('click', async () => {
+    const emailInput = document.getElementById('new-user-email');
+    const email = emailInput.value.trim().toLowerCase();
+    if (!email || !email.includes('@')) {
+      showToast('유효한 이메일을 입력하세요', 'error');
+      return;
+    }
+
+    await addAllowedUser(email, 'user', '');
+    showToast(`${email} 추가 완료`, 'success');
+    showUserMgmtPanel(); // 새로고침
+  });
+
+  // 삭제 버튼
+  panel.querySelectorAll('[data-email]').forEach(btn => {
+    btn.addEventListener('click', async () => {
+      const email = btn.dataset.email;
+      if (!confirm(`${email} 을(를) 삭제하시겠습니까?`)) return;
+
+      await removeAllowedUser(email);
+      showToast(`${email} 삭제 완료`, 'success');
+      showUserMgmtPanel();
+    });
+  });
 }
 
 // ── 이벤트 바인딩 ──
