@@ -21,13 +21,12 @@ import {
 // GitHub Pages 배포 시 이 값은 공개됨 (정상).
 // 반드시 Firestore Security Rules로 인증 없는 접근 차단할 것.
 const firebaseConfig = {
-  // TODO: 사장님 Firebase 프로젝트 config 입력
-  apiKey: "",
-  authDomain: "",
-  projectId: "",
-  storageBucket: "",
-  messagingSenderId: "",
-  appId: ""
+  apiKey: "AIzaSyBSZrBwukJ6wPDUHpn1m_QdDNf4wVFAIY4",
+  authDomain: "golab-47587.firebaseapp.com",
+  projectId: "golab-47587",
+  storageBucket: "golab-47587.firebasestorage.app",
+  messagingSenderId: "644983132263",
+  appId: "1:644983132263:web:a25989ca0ce67ff318c4c2"
 };
 
 let app = null;

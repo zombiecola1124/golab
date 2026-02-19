@@ -1,0 +1,9 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    match /{document=**} {
+      // 인증된 사용자(사장님)만 읽고 쓰기 가능
+      allow read, write: if request.auth != null;
+    }
+  }
+}
