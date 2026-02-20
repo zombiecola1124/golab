@@ -19,7 +19,7 @@
     <div class="auth-card">
       <div class="auth-logo">GOLAB</div>
       <div class="auth-sub">영업관리 · 재고 · 정산</div>
-      <div id="auth-login-form">
+      <div id="auth-login-form" style="display:none">
         <div class="auth-field">
           <input type="email" class="form-input" id="auth-email" placeholder="이메일" autocomplete="email">
         </div>
@@ -34,7 +34,7 @@
         <p class="auth-denied-sub">관리자에게 이메일 등록을 요청하세요</p>
         <button class="btn btn-secondary btn-sm" id="btn-auth-retry">다른 계정으로 로그인</button>
       </div>
-      <div class="auth-loading" id="auth-loading" style="display:none">
+      <div class="auth-loading" id="auth-loading" style="display:flex">
         <div class="loading-spinner"></div>
         <p>로그인 확인 중...</p>
       </div>

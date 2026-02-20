@@ -47,8 +47,6 @@ async function handleAuth() {
   // 이미 로그인된 세션 확인
   const existingUser = await checkAuth();
   if (existingUser) {
-    if (loginForm) loginForm.style.display = 'none';
-    loading.style.display = 'flex';
     const allowed = await verifyAccess(existingUser);
     if (allowed) {
       showApp(overlay, existingUser);
@@ -57,6 +55,10 @@ async function handleAuth() {
       loading.style.display = 'none';
       denied.style.display = 'block';
     }
+  } else {
+    // 미로그인 → 로딩 숨기고 로그인 폼 표시
+    loading.style.display = 'none';
+    if (loginForm) loginForm.style.display = 'block';
   }
 
   // 로그인 폼 제출
