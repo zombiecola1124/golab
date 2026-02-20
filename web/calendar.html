@@ -1,0 +1,761 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GoLab · 캘린더</title>
+  <style>
+    :root{
+      --bg:#0b1220;--card:#1a2236;--border:rgba(255,255,255,0.08);
+      --text:#e5e7eb;--text-kpi:#ffffff;--muted:#6b7a99;
+      --primary:#3b82f6;--warn:#ef4444;--accent:#22c55e;--orange:#f59e0b;
+      --purple:#a78bfa;--chip:#131c2e;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+      font-size:13px;line-height:1.5}
+
+    /* ─ Header ─ */
+    header{padding:12px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(11,18,32,.92);backdrop-filter:blur(10px);z-index:20;display:flex;align-items:center;justify-content:space-between}
+    header h1{font-size:15px;font-weight:800;color:var(--primary);letter-spacing:-.2px}
+    .tabs{display:flex;gap:6px;flex-wrap:wrap}
+    .tab{padding:6px 10px;border-radius:8px;border:1px solid var(--border);color:var(--muted);text-decoration:none;font-size:11px;font-weight:600;background:transparent;transition:all .15s}
+    .tab:hover{color:var(--text);border-color:rgba(255,255,255,.15)}
+    .tab.active{color:var(--text-kpi);background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.4)}
+
+    /* ─ Month Navigator ─ */
+    .month-nav{display:flex;align-items:center;justify-content:center;gap:16px;padding:16px 20px 0}
+    .month-nav button{background:var(--card);border:1px solid var(--border);color:var(--text);border-radius:8px;padding:6px 14px;font-size:13px;cursor:pointer;font-weight:600;transition:all .15s}
+    .month-nav button:hover{border-color:rgba(59,130,246,.4);color:var(--text-kpi)}
+    .month-nav h2{font-size:18px;font-weight:800;color:var(--text-kpi);min-width:160px;text-align:center}
+    .month-nav .today-btn{font-size:11px;padding:5px 12px;color:var(--primary);border-color:rgba(59,130,246,.3);background:rgba(59,130,246,.06)}
+    .month-nav .today-btn:hover{background:rgba(59,130,246,.15)}
+
+    /* ─ Legend ─ */
+    .legend{display:flex;gap:16px;justify-content:center;padding:10px 20px;align-items:center}
+    .legend-item{display:flex;align-items:center;gap:5px;font-size:11px;color:var(--muted)}
+    .legend-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .legend-dot.event{background:var(--primary)}
+    .legend-dot.trade{background:var(--accent)}
+    .legend-dot.todo{background:var(--warn)}
+
+    /* ─ Calendar Grid ─ */
+    .cal-container{max-width:1200px;margin:0 auto;padding:8px 20px 40px}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:1px;background:var(--border);border:1px solid var(--border);border-radius:12px;overflow:hidden}
+    .cal-dow{background:var(--card);padding:10px 8px;text-align:center;font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.5px}
+    .cal-dow:first-child{color:var(--warn)}
+    .cal-dow:last-child{color:var(--primary)}
+    .cal-cell{background:var(--card);min-height:110px;padding:6px 8px;cursor:pointer;transition:background .12s;position:relative;display:flex;flex-direction:column}
+    .cal-cell:hover{background:rgba(26,34,54,.95)}
+    .cal-cell.other-month{opacity:.3}
+    .cal-cell.today{background:rgba(59,130,246,.08)}
+    .cal-cell.today::before{content:'';position:absolute;top:0;left:0;right:0;height:2px;background:var(--primary)}
+    .cal-cell.selected{background:rgba(59,130,246,.12);box-shadow:inset 0 0 0 1px var(--primary)}
+    .day-num{font-size:12px;font-weight:700;color:var(--text);margin-bottom:4px}
+    .cal-cell.other-month .day-num{color:var(--muted)}
+    .cal-cell.today .day-num{color:var(--primary);font-weight:900}
+    .cal-cell:first-child .day-num, .cal-cell:nth-child(7n+1) .day-num{color:var(--warn)}
+    .cal-cell:nth-child(7n) .day-num{color:var(--primary)}
+    .cal-cell.other-month:first-child .day-num, .cal-cell.other-month:nth-child(7n+1) .day-num,
+    .cal-cell.other-month:nth-child(7n) .day-num{color:var(--muted)}
+
+    /* ─ Event Chips in Calendar ─ */
+    .evt-list{flex:1;overflow:hidden;display:flex;flex-direction:column;gap:2px}
+    .evt-chip{font-size:10px;padding:2px 6px;border-radius:4px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis;cursor:pointer;font-weight:600;line-height:1.4}
+    .evt-chip.event{background:rgba(59,130,246,.15);color:var(--primary)}
+    .evt-chip.trade{background:rgba(34,197,94,.12);color:var(--accent)}
+    .evt-chip.todo{background:rgba(239,68,68,.12);color:var(--warn)}
+    .evt-chip.todo.done{background:rgba(107,122,153,.1);color:var(--muted);text-decoration:line-through;opacity:.5}
+    .evt-more{font-size:9px;color:var(--muted);padding:1px 4px;cursor:pointer}
+    .evt-more:hover{color:var(--text)}
+
+    /* ─ Right Drawer (40%) ─ */
+    .drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:90}
+    .drawer-overlay.open{display:block}
+    .drawer{position:fixed;top:0;right:-42%;width:40%;height:100vh;background:var(--bg);border-left:1px solid var(--border);z-index:100;overflow-y:auto;padding:0;transition:right .25s ease}
+    .drawer.open{right:0}
+    .drawer-header{padding:20px 20px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:2}
+    .drawer-header .top-row{display:flex;align-items:center;justify-content:space-between}
+    .drawer-header h3{font-size:16px;font-weight:800;color:var(--text-kpi)}
+    .drawer-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px}
+    .drawer-close:hover{color:var(--warn)}
+    .drawer-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+    .d-stat{padding:10px;background:var(--card);border:1px solid var(--border);border-radius:8px}
+    .d-stat .t{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase}
+    .d-stat .v{font-size:14px;font-weight:900;margin-top:3px;color:var(--text-kpi)}
+
+    /* ─ Drawer: Date Details ─ */
+    .drawer-section{padding:16px 20px;border-bottom:1px solid var(--border)}
+    .drawer-section:last-child{border-bottom:none}
+    .drawer-section h4{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.3px}
+    .drawer-evt{padding:10px 12px;background:var(--card);border:1px solid var(--border);border-radius:8px;margin-bottom:8px;cursor:pointer;transition:border-color .15s}
+    .drawer-evt:hover{border-color:rgba(59,130,246,.3)}
+    .drawer-evt .evt-type{font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:4px}
+    .drawer-evt .evt-type.event{color:var(--primary)}
+    .drawer-evt .evt-type.trade{color:var(--accent)}
+    .drawer-evt .evt-type.todo{color:var(--warn)}
+    .drawer-evt .evt-title{font-size:13px;font-weight:600;color:var(--text)}
+    .drawer-evt .evt-meta{font-size:11px;color:var(--muted);margin-top:4px;display:flex;gap:8px;flex-wrap:wrap}
+    .drawer-evt .vendor-link{color:var(--primary);font-weight:600;cursor:pointer}
+    .drawer-evt .vendor-link:hover{text-decoration:underline}
+
+    /* ─ Drawer: Vendor Profile ─ */
+    .drawer-tags{padding:0 20px;margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
+    .htag{font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(59,130,246,.1);color:var(--primary);font-weight:600}
+    .drawer-body{padding:16px 20px}
+    .drawer-body h4{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.3px}
+    .timeline{list-style:none}
+    .tl-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+    .tl-item:last-child{border-bottom:none}
+    .tl-dot{width:7px;height:7px;border-radius:50%;margin-top:6px;flex-shrink:0}
+    .tl-dot.purchase{background:var(--primary)}
+    .tl-dot.sale{background:var(--orange)}
+    .tl-dot.work{background:var(--purple)}
+    .tl-text{font-size:12px;color:var(--text)}
+    .tl-time{font-size:10px;color:var(--muted);margin-top:1px}
+
+    /* ─ Event Form Modal ─ */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:110;align-items:flex-start;justify-content:center;padding-top:100px}
+    .modal-overlay.open{display:flex}
+    .modal{background:var(--card);border:1px solid var(--border);border-radius:12px;width:440px;max-width:90vw;padding:20px}
+    .modal h3{font-size:14px;font-weight:800;color:var(--text-kpi);margin-bottom:14px}
+    .modal label{display:block;font-size:10px;color:var(--muted);margin-bottom:3px;margin-top:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+    .modal input,.modal select,.modal textarea{width:100%;border-radius:8px;border:1px solid var(--border);background:var(--chip);color:var(--text);padding:8px 10px;font-size:12px;outline:none;transition:border .15s;font-family:inherit}
+    .modal input:focus,.modal textarea:focus{border-color:var(--primary)}
+    .modal textarea{resize:vertical;min-height:60px}
+    .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+    .modal-btns button{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-weight:600;transition:all .15s}
+    .modal-btns button:hover{border-color:rgba(255,255,255,.2)}
+    .modal-btns .btn-primary{background:var(--primary);border:none;color:#fff}
+    .modal-btns .btn-primary:hover{background:#2563eb}
+    .modal-btns .btn-danger{color:var(--warn);border-color:rgba(239,68,68,.3)}
+    .modal-btns .btn-danger:hover{background:rgba(239,68,68,.1)}
+
+    /* ─ Responsive ─ */
+    @media(max-width:900px){
+      .cal-cell{min-height:80px;padding:4px}
+      .day-num{font-size:11px}
+      .evt-chip{font-size:9px;padding:1px 4px}
+      .drawer{width:100%;right:-102%}
+      .month-nav h2{font-size:15px;min-width:120px}
+    }
+    @media(max-width:600px){
+      .cal-cell{min-height:60px}
+      .evt-list{display:none}
+      .day-num.has-events::after{content:'';display:inline-block;width:5px;height:5px;border-radius:50%;background:var(--primary);margin-left:4px;vertical-align:middle}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>GoLab</h1>
+  <nav class="tabs">
+    <a class="tab" href="./console.html">콘솔</a>
+    <a class="tab" href="./purchases.html">입고/원가</a>
+    <a class="tab" href="./index.html">재고</a>
+    <a class="tab" href="./trade.html">구매 이력</a>
+    <a class="tab" href="./sales.html">매출</a>
+    <a class="tab active" href="./calendar.html">캘린더</a>
+  </nav>
+</header>
+
+<!-- Month Navigator -->
+<div class="month-nav">
+  <button id="btnPrev">◀ 이전</button>
+  <button class="today-btn" id="btnToday">오늘</button>
+  <h2 id="monthTitle">2026년 2월</h2>
+  <button id="btnNext">다음 ▶</button>
+</div>
+
+<!-- Legend -->
+<div class="legend">
+  <div class="legend-item"><div class="legend-dot event"></div>일정</div>
+  <div class="legend-item"><div class="legend-dot trade"></div>구매 납기</div>
+  <div class="legend-item"><div class="legend-dot todo"></div>할 일 마감</div>
+  <span style="margin-left:auto;font-size:11px;color:var(--muted)">
+    <button id="btnAddEvent" style="background:var(--primary);border:none;color:#fff;border-radius:6px;padding:5px 12px;font-size:11px;cursor:pointer;font-weight:600">+ 일정 추가</button>
+  </span>
+</div>
+
+<!-- Calendar Grid -->
+<div class="cal-container">
+  <div class="cal-grid" id="calGrid"></div>
+</div>
+
+<!-- Drawer: Date / Event / Vendor detail -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="top-row">
+      <h3 id="drTitle">2026-02-20 상세</h3>
+      <button class="drawer-close" id="drClose">✕</button>
+    </div>
+    <div class="drawer-stats" id="drStats" style="display:none">
+      <div class="d-stat"><div class="t">총 거래액</div><div class="v" id="drTotal">₩ 0</div></div>
+      <div class="d-stat"><div class="t">최근 거래일</div><div class="v" id="drLatest">-</div></div>
+      <div class="d-stat"><div class="t">거래 건수</div><div class="v" id="drCount">0</div></div>
+      <div class="d-stat"><div class="t">진행 업무</div><div class="v" id="drTasks">0건</div></div>
+    </div>
+  </div>
+  <div class="drawer-tags" id="drTags"></div>
+  <div id="drContent"></div>
+</div>
+
+<!-- Event Form Modal -->
+<div class="modal-overlay" id="modalOverlay">
+  <div class="modal">
+    <h3 id="modalTitle">일정 추가</h3>
+    <label>유형</label>
+    <select id="evtType">
+      <option value="event">일정</option>
+      <option value="trade_due">구매 납기</option>
+      <option value="todo_due">할 일 마감</option>
+    </select>
+    <label>제목</label>
+    <input id="evtTitle" placeholder="일정 제목 입력..." />
+    <label>날짜</label>
+    <input id="evtDate" type="date" />
+    <label>거래처</label>
+    <input id="evtVendor" list="dlVendors" placeholder="업체명 (선택)" />
+    <datalist id="dlVendors"></datalist>
+    <label>메모</label>
+    <textarea id="evtMemo" placeholder="메모 입력..."></textarea>
+    <div class="modal-btns">
+      <button id="evtDelete" class="btn-danger" style="display:none">삭제</button>
+      <span style="flex:1"></span>
+      <button id="evtCancel">취소</button>
+      <button id="evtSave" class="btn-primary">저장</button>
+    </div>
+  </div>
+</div>
+
+<script>
+/* ── Constants ── */
+const TASK_KEY = "golab_worklog_v1";
+const TRADE_KEY = "golab_trade_v1";
+const SALES_KEY = "golab_sales_v1";
+const CAL_KEY = "golab_calendar_v1";
+const TRADE_AUDIT = "golab_trade_audit";
+const SALES_AUDIT = "golab_sales_audit";
+const WORK_AUDIT = "golab_work_audit";
+const $ = id => document.getElementById(id);
+
+/* ── Helpers ── */
+function n(v, fb = 0) { const x = Number(v); return Number.isFinite(x) ? x : fb; }
+function esc(s) { return (s || "").replace(/</g, "&lt;"); }
+function fmt(v) { return "\u20a9" + Math.round(v).toLocaleString(); }
+function todayStr() { return new Date().toISOString().substring(0, 10); }
+
+function extractHashtags(text) {
+  if (!text) return [];
+  const m = text.match(/#[^\s#]+/g);
+  return m ? [...new Set(m)] : [];
+}
+
+/* ── Calendar State ── */
+let calYear, calMonth, selectedDate = null, editingEventId = null;
+
+function initFromURL() {
+  const p = new URLSearchParams(window.location.search);
+  const d = new Date();
+  if (p.get("date")) {
+    const parts = p.get("date").split("-");
+    calYear = parseInt(parts[0]); calMonth = parseInt(parts[1]) - 1;
+    selectedDate = p.get("date");
+  } else if (p.get("y") && p.get("m")) {
+    calYear = parseInt(p.get("y")); calMonth = parseInt(p.get("m")) - 1;
+  } else {
+    calYear = d.getFullYear(); calMonth = d.getMonth();
+  }
+}
+initFromURL();
+
+/* ── Data: Calendar Events (custom) ── */
+function loadEvents() { try { return JSON.parse(localStorage.getItem(CAL_KEY) || "[]"); } catch { return []; } }
+function saveEvents(arr) { localStorage.setItem(CAL_KEY, JSON.stringify(arr)); }
+
+/* ── Data: Worklog tasks (from console) ── */
+function loadTasks() { try { return JSON.parse(localStorage.getItem(TASK_KEY) || "[]"); } catch { return []; } }
+
+/* ── Data: Trades ── */
+function loadTrades() { try { return JSON.parse(localStorage.getItem(TRADE_KEY) || "[]"); } catch { return []; } }
+
+/* ── Data: Sales ── */
+function loadSales() { try { return JSON.parse(localStorage.getItem(SALES_KEY) || "[]"); } catch { return []; } }
+
+/* ── Collect all events for a month ── */
+function getMonthEvents(year, month) {
+  const prefix = `${year}-${String(month + 1).padStart(2, "0")}`;
+  const events = [];
+
+  // 1) Custom calendar events
+  loadEvents().forEach(e => {
+    if ((e.date || "").startsWith(prefix)) {
+      events.push({
+        id: e.id, type: e.type || "event", date: e.date,
+        title: e.title, vendor: e.vendor || "", memo: e.memo || "",
+        source: "calendar", done: false
+      });
+    }
+  });
+
+  // 2) Trade records → trade_due (purchaseDate as due date)
+  loadTrades().forEach(r => {
+    if ((r.purchaseDate || "").startsWith(prefix)) {
+      events.push({
+        id: r.id, type: "trade_due", date: r.purchaseDate,
+        title: r.itemName || r.partNo || "구매 건",
+        vendor: r.vendor || "", memo: r.memo || "",
+        source: "trade", done: false,
+        amount: n(r.buyUnitPrice) * n(r.qty)
+      });
+    }
+  });
+
+  // 3) Worklog tasks → todo_due (tasks with due dates)
+  loadTasks().forEach(t => {
+    if ((t.due || "").startsWith(prefix)) {
+      events.push({
+        id: t.id, type: "todo_due", date: t.due,
+        title: t.text, vendor: t.vendor || "", memo: "",
+        source: "worklog", done: !!t.done
+      });
+    }
+  });
+
+  return events;
+}
+
+/* ── Build events indexed by date ── */
+function buildEventMap(year, month) {
+  const evts = getMonthEvents(year, month);
+  const map = {};
+  evts.forEach(e => {
+    if (!map[e.date]) map[e.date] = [];
+    map[e.date].push(e);
+  });
+  return map;
+}
+
+/* ── Render Calendar ── */
+function renderCalendar() {
+  const mNames = ["1월", "2월", "3월", "4월", "5월", "6월", "7월", "8월", "9월", "10월", "11월", "12월"];
+  $("monthTitle").textContent = calYear + "년 " + mNames[calMonth];
+
+  const first = new Date(calYear, calMonth, 1);
+  const lastDay = new Date(calYear, calMonth + 1, 0).getDate();
+  const startDow = first.getDay(); // 0=Sun
+  const prevLast = new Date(calYear, calMonth, 0).getDate();
+  const today = todayStr();
+
+  // Build event map for current + adjacent months
+  const eventMap = buildEventMap(calYear, calMonth);
+  // Also get adjacent month events for padding cells
+  const prevMonth = calMonth === 0 ? 11 : calMonth - 1;
+  const prevYear = calMonth === 0 ? calYear - 1 : calYear;
+  const nextMonth = calMonth === 11 ? 0 : calMonth + 1;
+  const nextYear = calMonth === 11 ? calYear + 1 : calYear;
+  const prevMap = buildEventMap(prevYear, prevMonth);
+  const nextMap = buildEventMap(nextYear, nextMonth);
+
+  const grid = $("calGrid");
+  grid.innerHTML = "";
+
+  // Day-of-week headers
+  const dows = ["일", "월", "화", "수", "목", "금", "토"];
+  dows.forEach(d => {
+    const div = document.createElement("div");
+    div.className = "cal-dow";
+    div.textContent = d;
+    grid.appendChild(div);
+  });
+
+  // Helper: create a cell
+  function makeCell(day, dateStr, isOther) {
+    const cell = document.createElement("div");
+    cell.className = "cal-cell" + (isOther ? " other-month" : "");
+    if (dateStr === today) cell.classList.add("today");
+    if (dateStr === selectedDate) cell.classList.add("selected");
+
+    const num = document.createElement("div");
+    num.className = "day-num";
+    num.textContent = day;
+
+    // Get events for this date
+    const map = isOther ? (day > 15 ? prevMap : nextMap) : eventMap;
+    const dayEvts = map[dateStr] || [];
+    if (dayEvts.length > 0) num.classList.add("has-events");
+
+    cell.appendChild(num);
+
+    // Event chips (max 3 visible)
+    const evtList = document.createElement("div");
+    evtList.className = "evt-list";
+    const MAX_VISIBLE = 3;
+    dayEvts.slice(0, MAX_VISIBLE).forEach(evt => {
+      const chip = document.createElement("div");
+      chip.className = "evt-chip " + evt.type + (evt.done ? " done" : "");
+      chip.textContent = evt.title;
+      chip.title = evt.title + (evt.vendor ? " [" + evt.vendor + "]" : "");
+      chip.onclick = e => { e.stopPropagation(); openEventDetail(evt); };
+      evtList.appendChild(chip);
+    });
+    if (dayEvts.length > MAX_VISIBLE) {
+      const more = document.createElement("div");
+      more.className = "evt-more";
+      more.textContent = "+" + (dayEvts.length - MAX_VISIBLE) + "건 더보기";
+      evtList.appendChild(more);
+    }
+    cell.appendChild(evtList);
+
+    // Click cell → open date drawer
+    cell.onclick = () => openDateDrawer(dateStr);
+    grid.appendChild(cell);
+  }
+
+  // Previous month padding
+  for (let i = startDow - 1; i >= 0; i--) {
+    const day = prevLast - i;
+    const dateStr = `${prevYear}-${String(prevMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    makeCell(day, dateStr, true);
+  }
+
+  // Current month
+  for (let day = 1; day <= lastDay; day++) {
+    const dateStr = `${calYear}-${String(calMonth + 1).padStart(2, "0")}-${String(day).padStart(2, "0")}`;
+    makeCell(day, dateStr, false);
+  }
+
+  // Next month padding
+  const totalCells = startDow + lastDay;
+  const remaining = totalCells % 7 === 0 ? 0 : 7 - totalCells % 7;
+  for (let i = 1; i <= remaining; i++) {
+    const dateStr = `${nextYear}-${String(nextMonth + 1).padStart(2, "0")}-${String(i).padStart(2, "0")}`;
+    makeCell(i, dateStr, true);
+  }
+}
+
+/* ── Drawer: Date Details ── */
+function openDateDrawer(dateStr) {
+  selectedDate = dateStr;
+  renderCalendar();
+
+  const drawer = $("drawer");
+  const overlay = $("drawerOverlay");
+  drawer.classList.add("open");
+  overlay.classList.add("open");
+
+  $("drTitle").textContent = dateStr + " 상세";
+  $("drStats").style.display = "none";
+  $("drTags").innerHTML = "";
+
+  // Gather all events for this date across all months
+  const allEvts = [];
+  loadEvents().forEach(e => { if (e.date === dateStr) allEvts.push({ ...e, type: e.type || "event", source: "calendar", done: false }); });
+  loadTrades().forEach(r => { if (r.purchaseDate === dateStr) allEvts.push({ id: r.id, type: "trade_due", date: dateStr, title: r.itemName || r.partNo || "구매 건", vendor: r.vendor || "", memo: r.memo || "", source: "trade", done: false, amount: n(r.buyUnitPrice) * n(r.qty) }); });
+  loadTasks().forEach(t => { if (t.due === dateStr) allEvts.push({ id: t.id, type: "todo_due", date: dateStr, title: t.text, vendor: t.vendor || "", memo: "", source: "worklog", done: !!t.done }); });
+
+  const content = $("drContent");
+  content.innerHTML = "";
+
+  if (!allEvts.length) {
+    content.innerHTML = `
+      <div class="drawer-section">
+        <div style="text-align:center;padding:30px;color:var(--muted)">
+          <div style="font-size:24px;margin-bottom:8px">📅</div>
+          <div style="font-size:12px">이 날짜에 등록된 일정이 없습니다.</div>
+          <button style="margin-top:12px;background:var(--primary);border:none;color:#fff;border-radius:6px;padding:6px 14px;font-size:11px;cursor:pointer;font-weight:600" onclick="openEventForm('${dateStr}')">+ 일정 추가</button>
+        </div>
+      </div>`;
+    return;
+  }
+
+  // Group by type
+  const typeNames = { event: "일정", trade_due: "구매 납기", todo_due: "할 일 마감" };
+  const grouped = {};
+  allEvts.forEach(e => {
+    if (!grouped[e.type]) grouped[e.type] = [];
+    grouped[e.type].push(e);
+  });
+
+  let html = "";
+  for (const [type, evts] of Object.entries(grouped)) {
+    html += `<div class="drawer-section"><h4>${typeNames[type] || type} (${evts.length})</h4>`;
+    evts.forEach(evt => {
+      const vendorLink = evt.vendor ? `<span class="vendor-link" data-vendor="${esc(evt.vendor)}">${esc(evt.vendor)}</span>` : "";
+      const amountStr = evt.amount ? `<span>${fmt(evt.amount)}</span>` : "";
+      const memoStr = evt.memo ? `<span>${esc(evt.memo).substring(0, 50)}</span>` : "";
+      const editBtn = evt.source === "calendar" ? ` data-edit="${evt.id}"` : "";
+      html += `
+        <div class="drawer-evt"${editBtn}>
+          <div class="evt-type ${evt.type}">${typeNames[evt.type] || evt.type}</div>
+          <div class="evt-title">${esc(evt.title)}${evt.done ? " ✓" : ""}</div>
+          <div class="evt-meta">${vendorLink}${amountStr}${memoStr}</div>
+        </div>`;
+    });
+    html += "</div>";
+  }
+
+  // Add button
+  html += `
+    <div class="drawer-section" style="text-align:center">
+      <button style="background:var(--primary);border:none;color:#fff;border-radius:6px;padding:6px 14px;font-size:11px;cursor:pointer;font-weight:600" onclick="openEventForm('${dateStr}')">+ 이 날짜에 일정 추가</button>
+    </div>`;
+
+  content.innerHTML = html;
+
+  // Bind vendor links
+  content.querySelectorAll("[data-vendor]").forEach(el => {
+    el.onclick = e => { e.stopPropagation(); openVendorDrawer(el.dataset.vendor); };
+  });
+
+  // Bind edit buttons (calendar events only)
+  content.querySelectorAll("[data-edit]").forEach(el => {
+    el.onclick = () => openEventFormEdit(el.dataset.edit);
+  });
+}
+
+/* ── Drawer: Vendor Profile ── */
+function openVendorDrawer(vendor) {
+  if (!vendor) return;
+  const drawer = $("drawer");
+  const overlay = $("drawerOverlay");
+  drawer.classList.add("open");
+  overlay.classList.add("open");
+
+  $("drTitle").textContent = vendor;
+  $("drStats").style.display = "grid";
+
+  let trades = [], sales = [], tasks = [];
+  try { trades = loadTrades().filter(r => r.vendor === vendor); } catch {}
+  try { sales = loadSales().filter(r => r.client === vendor); } catch {}
+  try { tasks = loadTasks().filter(t => t.vendor === vendor && !t.done); } catch {}
+
+  const tTotal = trades.reduce((s, r) => s + n(r.buyUnitPrice) * n(r.qty), 0);
+  const sTotal = sales.reduce((s, r) => s + n(r.sellUnitPrice) * n(r.qty), 0);
+  const allDates = [...trades.map(r => r.purchaseDate), ...sales.map(r => r.salesDate)].filter(Boolean).sort();
+  $("drTotal").textContent = fmt(tTotal + sTotal);
+  $("drLatest").textContent = allDates.length ? allDates[allDates.length - 1] : "-";
+  $("drCount").textContent = (trades.length + sales.length);
+  $("drTasks").textContent = tasks.length + "건";
+
+  // Hashtags
+  const allMemos = [...trades.map(r => r.memo), ...sales.map(r => r.memo), ...loadTasks().filter(t => t.vendor === vendor).map(t => t.text)];
+  const tags = new Set();
+  allMemos.forEach(m => extractHashtags(m).forEach(h => tags.add(h)));
+  $("drTags").innerHTML = [...tags].map(t => `<span class="htag">${esc(t)}</span>`).join("");
+
+  // Timeline
+  const items = [];
+  try { JSON.parse(localStorage.getItem(TRADE_AUDIT) || "[]").forEach(a => {
+    if (a.event === "IMPORTED") return;
+    if ((a.detail?.vendor || "") === vendor) items.push({ type: "purchase", ts: a.ts, text: fmtAudit("구매", a.event, a.detail) });
+  }); } catch {}
+  try { JSON.parse(localStorage.getItem(SALES_AUDIT) || "[]").forEach(a => {
+    if ((a.detail?.client || "") === vendor) items.push({ type: "sale", ts: a.ts, text: fmtAudit("매출", a.event, a.detail) });
+  }); } catch {}
+  try { JSON.parse(localStorage.getItem(WORK_AUDIT) || "[]").forEach(a => {
+    if ((a.detail?.vendor || "") === vendor) items.push({ type: "work", ts: a.ts, text: fmtWork(a.event, a.detail) });
+  }); } catch {}
+  items.sort((a, b) => b.ts.localeCompare(a.ts));
+
+  const content = $("drContent");
+  let html = '<div class="drawer-body"><h4>히스토리</h4><ul class="timeline">';
+  if (!items.length) {
+    html += '<li class="tl-item"><div style="color:var(--muted);font-size:12px;padding:8px 0">이력 없음</div></li>';
+  } else {
+    items.slice(0, 30).forEach(it => {
+      html += `<li class="tl-item"><div class="tl-dot ${it.type}"></div><div><div class="tl-text">${it.text}</div><div class="tl-time">${relTime(it.ts)}</div></div></li>`;
+    });
+  }
+  html += "</ul></div>";
+
+  // Pending tasks
+  if (tasks.length) {
+    html += '<div class="drawer-section"><h4>미완료 업무</h4>';
+    tasks.forEach(t => {
+      html += `<div style="font-size:12px;color:var(--text);padding:6px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center"><div style="width:6px;height:6px;border-radius:50%;background:var(--orange);flex-shrink:0"></div><span>${esc(t.text)}</span></div>`;
+    });
+    html += "</div>";
+  }
+
+  content.innerHTML = html;
+}
+
+function fmtAudit(m, ev, d) {
+  const nm = esc(d?.itemName || "");
+  if (ev === "CREATE") return `${m} 등록 — ${nm}`;
+  if (ev === "UPDATE") return `${m} 수정 — ${nm}`;
+  if (ev === "DELETE") return `${m} 삭제 — ${nm}`;
+  return `${m} ${ev}`;
+}
+function fmtWork(ev, d) {
+  const tx = esc(d?.text || "");
+  if (ev === "CREATE") return `업무 등록 — ${tx}`;
+  if (ev === "COMPLETE") return `업무 완료 — ${tx}`;
+  if (ev === "REOPEN") return `업무 재개 — ${tx}`;
+  if (ev === "DELETE") return `업무 삭제 — ${tx}`;
+  return `업무 ${ev}`;
+}
+function relTime(iso) {
+  if (!iso) return "";
+  const d = iso.substring(0, 10), t = todayStr();
+  if (d === t) return "오늘 " + iso.substring(11, 16);
+  const yd = new Date(new Date(t).getTime() - 864e5).toISOString().substring(0, 10);
+  if (d === yd) return "어제 " + iso.substring(11, 16);
+  return d;
+}
+
+function closeDrawer() {
+  $("drawer").classList.remove("open");
+  $("drawerOverlay").classList.remove("open");
+  selectedDate = null;
+  renderCalendar();
+}
+
+/* ── Event Form (Calendar Events CRUD) ── */
+function openEventForm(dateStr) {
+  editingEventId = null;
+  closeDrawer();
+  $("modalTitle").textContent = "일정 추가";
+  $("evtType").value = "event";
+  $("evtTitle").value = "";
+  $("evtDate").value = dateStr || todayStr();
+  $("evtVendor").value = "";
+  $("evtMemo").value = "";
+  $("evtDelete").style.display = "none";
+  $("modalOverlay").classList.add("open");
+  refreshVendorList();
+  setTimeout(() => $("evtTitle").focus(), 100);
+}
+
+function openEventFormEdit(eventId) {
+  const events = loadEvents();
+  const evt = events.find(e => e.id === eventId);
+  if (!evt) return;
+  editingEventId = eventId;
+  closeDrawer();
+  $("modalTitle").textContent = "일정 수정";
+  $("evtType").value = evt.type || "event";
+  $("evtTitle").value = evt.title || "";
+  $("evtDate").value = evt.date || "";
+  $("evtVendor").value = evt.vendor || "";
+  $("evtMemo").value = evt.memo || "";
+  $("evtDelete").style.display = "inline-block";
+  $("modalOverlay").classList.add("open");
+  refreshVendorList();
+  setTimeout(() => $("evtTitle").focus(), 100);
+}
+
+function closeModal() {
+  $("modalOverlay").classList.remove("open");
+  editingEventId = null;
+}
+
+function saveEvent() {
+  const title = $("evtTitle").value.trim();
+  if (!title) { $("evtTitle").focus(); return; }
+  const evtData = {
+    type: $("evtType").value,
+    title: title,
+    date: $("evtDate").value,
+    vendor: $("evtVendor").value.trim(),
+    memo: $("evtMemo").value.trim()
+  };
+
+  const events = loadEvents();
+  if (editingEventId) {
+    const idx = events.findIndex(e => e.id === editingEventId);
+    if (idx >= 0) {
+      events[idx] = { ...events[idx], ...evtData, updatedAt: new Date().toISOString() };
+    }
+  } else {
+    events.push({
+      id: crypto.randomUUID(),
+      ...evtData,
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+  }
+  saveEvents(events);
+  closeModal();
+  renderCalendar();
+
+  // Open the date drawer to show the new event
+  if (evtData.date) {
+    setTimeout(() => openDateDrawer(evtData.date), 150);
+  }
+}
+
+function deleteEvent() {
+  if (!editingEventId) return;
+  if (!confirm("이 일정을 삭제하시겠습니까?")) return;
+  const events = loadEvents().filter(e => e.id !== editingEventId);
+  saveEvents(events);
+  closeModal();
+  renderCalendar();
+}
+
+/* ── Event detail click (for trade/worklog items) ── */
+function openEventDetail(evt) {
+  if (evt.source === "calendar") {
+    openEventFormEdit(evt.id);
+  } else if (evt.vendor) {
+    openVendorDrawer(evt.vendor);
+  } else {
+    openDateDrawer(evt.date);
+  }
+}
+
+/* ── Vendor List for datalist ── */
+function refreshVendorList() {
+  const v = new Set();
+  try { loadTrades().forEach(r => { if (r.vendor) v.add(r.vendor); }); } catch {}
+  try { loadSales().forEach(r => { if (r.client) v.add(r.client); }); } catch {}
+  loadTasks().forEach(t => { if (t.vendor) v.add(t.vendor); });
+  const dl = $("dlVendors");
+  dl.innerHTML = "";
+  [...v].sort().forEach(name => { const o = document.createElement("option"); o.value = name; dl.appendChild(o); });
+}
+
+/* ── Navigation ── */
+$("btnPrev").onclick = () => {
+  calMonth--;
+  if (calMonth < 0) { calMonth = 11; calYear--; }
+  selectedDate = null;
+  renderCalendar();
+};
+$("btnNext").onclick = () => {
+  calMonth++;
+  if (calMonth > 11) { calMonth = 0; calYear++; }
+  selectedDate = null;
+  renderCalendar();
+};
+$("btnToday").onclick = () => {
+  const d = new Date();
+  calYear = d.getFullYear(); calMonth = d.getMonth();
+  selectedDate = todayStr();
+  renderCalendar();
+};
+$("btnAddEvent").onclick = () => openEventForm(selectedDate || todayStr());
+
+$("drClose").onclick = closeDrawer;
+$("drawerOverlay").onclick = closeDrawer;
+$("evtCancel").onclick = closeModal;
+$("evtSave").onclick = saveEvent;
+$("evtDelete").onclick = deleteEvent;
+$("modalOverlay").onclick = e => { if (e.target === $("modalOverlay")) closeModal(); };
+$("evtTitle").addEventListener("keydown", e => { if (e.key === "Enter") saveEvent(); });
+document.addEventListener("keydown", e => {
+  if (e.key === "Escape") { closeModal(); closeDrawer(); }
+});
+
+/* ── Init ── */
+renderCalendar();
+if (selectedDate) {
+  setTimeout(() => openDateDrawer(selectedDate), 200);
+}
+</script>
+</body>
+</html>

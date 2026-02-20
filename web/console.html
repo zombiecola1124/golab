@@ -1,0 +1,638 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GoLab · 콘솔</title>
+  <style>
+    :root{
+      --bg:#0b1220;--card:#1a2236;--border:rgba(255,255,255,0.08);
+      --text:#e5e7eb;--text-kpi:#ffffff;--muted:#6b7a99;
+      --primary:#3b82f6;--warn:#ef4444;--accent:#22c55e;--orange:#f59e0b;
+      --purple:#a78bfa;--chip:#131c2e;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+      font-size:13px;line-height:1.5}
+
+    /* ─ Header ─ */
+    header{padding:12px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(11,18,32,.92);backdrop-filter:blur(10px);z-index:20;display:flex;align-items:center;justify-content:space-between}
+    header h1{font-size:15px;font-weight:800;color:var(--primary);letter-spacing:-.2px}
+    .tabs{display:flex;gap:6px;flex-wrap:wrap}
+    .tab{padding:6px 10px;border-radius:8px;border:1px solid var(--border);color:var(--muted);text-decoration:none;font-size:11px;font-weight:600;background:transparent;transition:all .15s}
+    .tab:hover{color:var(--text);border-color:rgba(255,255,255,.15)}
+    .tab.active{color:var(--text-kpi);background:rgba(59,130,246,.15);border-color:rgba(59,130,246,.4)}
+
+    /* ─ 3-Column Bento ─ */
+    .bento{display:grid;grid-template-columns:200px 1fr 280px;gap:16px;max-width:1440px;margin:0 auto;padding:16px 20px 40px;min-height:calc(100vh - 50px)}
+
+    /* ─ Left Sidebar ─ */
+    .sidebar{display:flex;flex-direction:column;gap:12px}
+    .quick-btn{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;text-decoration:none}
+    .quick-btn:hover{border-color:rgba(59,130,246,.4);background:rgba(59,130,246,.06)}
+    .quick-btn .icon{font-size:16px;width:24px;text-align:center;flex-shrink:0}
+    .sidebar-section{margin-top:8px}
+    .sidebar-section h4{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding:0 4px}
+    .sidebar-stat{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);margin-bottom:8px}
+    .sidebar-stat .t{font-size:10px;color:var(--muted);font-weight:600}
+    .sidebar-stat .v{font-size:16px;font-weight:900;color:var(--text-kpi);margin-top:4px}
+
+    /* ─ Center ─ */
+    .center{display:flex;flex-direction:column;gap:16px;min-width:0}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px}
+    .card-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
+    .card-header h2{font-size:13px;font-weight:700;color:var(--text)}
+    .card-header .badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700}
+    .card-header .badge.red{background:rgba(239,68,68,.15);color:var(--warn)}
+    .card-header .badge.green{background:rgba(34,197,94,.15);color:var(--accent)}
+    .card-header .count{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400}
+
+    /* ─ Task Input ─ */
+    .task-input{display:flex;gap:8px;margin-bottom:12px}
+    .task-input>div{flex:1}
+    .task-input .wide{flex:3}
+    label{display:block;font-size:10px;color:var(--muted);margin-bottom:3px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+    input,select{width:100%;border-radius:8px;border:1px solid var(--border);background:var(--chip);color:var(--text);padding:8px 10px;font-size:12px;outline:none;transition:border .15s}
+    input:focus{border-color:var(--primary)}
+    input::placeholder{color:var(--muted)}
+    button{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;font-weight:600;transition:all .15s}
+    button:hover{border-color:rgba(255,255,255,.2)}
+    button.primary{background:var(--primary);border:none;color:#fff}
+    button.primary:hover{background:#2563eb}
+    button.filter-btn{font-size:11px;padding:5px 10px;color:var(--muted)}
+    button.filter-btn.active{color:var(--text);background:rgba(59,130,246,.1);border-color:rgba(59,130,246,.3)}
+
+    /* ─ Task List ─ */
+    .task-list{list-style:none}
+    .task-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
+    .task-item:last-child{border-bottom:none}
+    .check{width:18px;height:18px;border-radius:5px;border:2px solid rgba(255,255,255,.15);cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:10px}
+    .check:hover{border-color:var(--accent);background:rgba(34,197,94,.1)}
+    .check.done{border-color:var(--accent);background:var(--accent);color:#0b1220;font-weight:900}
+    .task-item.completed{opacity:.35}
+    .task-item.completed .task-text{text-decoration:line-through}
+    .task-body{flex:1;min-width:0}
+    .task-text{font-size:12px;color:var(--text)}
+    .task-meta{font-size:10px;color:var(--muted);margin-top:2px;display:flex;gap:8px;align-items:center}
+    .vendor-tag{color:var(--primary);cursor:pointer;font-weight:600}
+    .vendor-tag:hover{text-decoration:underline}
+    .overdue{color:var(--warn);font-weight:700}
+    .today-tag{color:var(--orange);font-weight:600}
+    .task-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px;opacity:.3;margin-top:2px}
+    .task-del:hover{opacity:1;color:var(--warn)}
+    .empty-msg{text-align:center;padding:20px;color:var(--muted);font-size:12px}
+
+    /* ─ Timeline ─ */
+    .tl-filters{display:flex;gap:6px;margin-bottom:10px}
+    .timeline{list-style:none}
+    .tl-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+    .tl-item:last-child{border-bottom:none}
+    .tl-dot{width:7px;height:7px;border-radius:50%;margin-top:6px;flex-shrink:0}
+    .tl-dot.purchase{background:var(--primary)}
+    .tl-dot.sale{background:var(--orange)}
+    .tl-dot.work{background:var(--purple)}
+    .tl-body{flex:1;min-width:0}
+    .tl-text{font-size:12px;color:var(--text)}
+    .tl-text .vendor-link{color:var(--primary);cursor:pointer;font-weight:600}
+    .tl-text .vendor-link:hover{text-decoration:underline}
+    .tl-time{font-size:10px;color:var(--muted);margin-top:1px}
+
+    /* ─ Right Sidebar ─ */
+    .right{display:flex;flex-direction:column;gap:16px}
+
+    /* ─ Mini Calendar ─ */
+    .cal-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px}
+    .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
+    .cal-header span{font-size:12px;font-weight:700;color:var(--text)}
+    .cal-header a{font-size:12px;font-weight:700;color:var(--text);text-decoration:none}
+    .cal-header a:hover{color:var(--primary);text-decoration:underline}
+    .cal-nav{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px}
+    .cal-nav:hover{color:var(--text)}
+    .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
+    .cal-dow{font-size:9px;color:var(--muted);font-weight:700;padding:4px 0}
+    .cal-day{font-size:11px;padding:5px 0;border-radius:6px;cursor:pointer;color:var(--muted);position:relative}
+    .cal-day.current-month{color:var(--text)}
+    .cal-day.today{background:var(--primary);color:#fff;font-weight:700;border-radius:6px}
+    .cal-day.has-task{font-weight:700}
+    .cal-day.has-task::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--orange)}
+    .cal-day.today.has-task::after{background:#fff}
+
+    /* ─ KPI Cards (Right) ─ */
+    .kpi-stack{display:flex;flex-direction:column;gap:8px}
+    .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px}
+    .kpi-card .t{font-size:10px;color:var(--muted);font-weight:600}
+    .kpi-card .v{font-size:18px;font-weight:900;color:var(--text-kpi);margin-top:4px}
+    .kpi-card .v.orange{color:var(--orange)}
+    .kpi-card .v.blue{color:var(--primary)}
+    .kpi-card .v.green{color:var(--accent)}
+
+    /* ─ Vendor Drawer (40%) ─ */
+    .drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:90}
+    .drawer-overlay.open{display:block}
+    .drawer{position:fixed;top:0;right:-42%;width:40%;height:100vh;background:var(--bg);border-left:1px solid var(--border);z-index:100;overflow-y:auto;padding:0;transition:right .25s ease}
+    .drawer.open{right:0}
+    .drawer-header{padding:20px 20px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:2}
+    .drawer-header .top-row{display:flex;align-items:center;justify-content:space-between}
+    .drawer-header h3{font-size:16px;font-weight:800;color:var(--text-kpi)}
+    .drawer-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px}
+    .drawer-close:hover{color:var(--warn)}
+    .drawer-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+    .d-stat{padding:10px;background:var(--card);border:1px solid var(--border);border-radius:8px}
+    .d-stat .t{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase}
+    .d-stat .v{font-size:14px;font-weight:900;margin-top:3px;color:var(--text-kpi)}
+    .drawer-tags{padding:0 20px;margin-top:12px;display:flex;gap:6px;flex-wrap:wrap}
+    .htag{font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(59,130,246,.1);color:var(--primary);font-weight:600}
+    .drawer-body{padding:16px 20px}
+    .drawer-body h4{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.3px}
+    .drawer-footer{padding:16px 20px;border-top:1px solid var(--border)}
+    .drawer-footer h4{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.3px}
+    .drawer-todo{font-size:12px;color:var(--text);padding:6px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
+    .drawer-todo:last-child{border-bottom:none}
+    .drawer-todo .dt-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);flex-shrink:0}
+
+    /* ─ Responsive ─ */
+    @media(max-width:1280px){
+      .bento{grid-template-columns:1fr 280px}
+      .sidebar{display:none}
+    }
+    @media(max-width:900px){
+      .bento{grid-template-columns:1fr;padding:12px}
+      .right{display:none}
+      .task-input{flex-direction:column}
+      .drawer{width:100%;right:-102%}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>GoLab</h1>
+  <nav class="tabs">
+    <a class="tab active" href="./console.html">콘솔</a>
+    <a class="tab" href="./purchases.html">입고/원가</a>
+    <a class="tab" href="./index.html">재고</a>
+    <a class="tab" href="./trade.html">구매 이력</a>
+    <a class="tab" href="./sales.html">매출</a>
+    <a class="tab" href="./calendar.html">캘린더</a>
+  </nav>
+</header>
+
+<div class="bento">
+  <!-- LEFT: Quick Menu -->
+  <aside class="sidebar">
+    <a class="quick-btn" href="./trade.html"><span class="icon">📊</span>구매 등록</a>
+    <a class="quick-btn" href="./sales.html"><span class="icon">💰</span>매출 등록</a>
+    <button class="quick-btn" id="btnQuickTask"><span class="icon">✏️</span>할 일 추가</button>
+    <button class="quick-btn" id="btnQuickSearch"><span class="icon">🔍</span>거래처 검색</button>
+
+    <div class="sidebar-section">
+      <h4>이번 달</h4>
+      <div class="sidebar-stat"><div class="t">매출</div><div class="v" id="sideKpiSales">&yen; 0</div></div>
+      <div class="sidebar-stat"><div class="t">매입</div><div class="v" id="sideKpiPurchase">&yen; 0</div></div>
+      <div class="sidebar-stat"><div class="t">마진</div><div class="v" id="sideKpiMargin">&yen; 0</div></div>
+    </div>
+  </aside>
+
+  <!-- CENTER: Battle + Timeline -->
+  <main class="center">
+    <!-- Battle Zone -->
+    <div class="card">
+      <div class="card-header">
+        <h2>전투판</h2>
+        <span id="battleBadge" class="badge red" style="display:none"></span>
+        <span id="battleCount" class="count"></span>
+      </div>
+      <div class="task-input" id="taskInputArea">
+        <div class="wide">
+          <label>업무</label>
+          <input id="taskText" placeholder="A업체 단가 협의 전화, B업체 샘플 발송..." />
+        </div>
+        <div>
+          <label>거래처</label>
+          <input id="taskVendor" list="dlTaskVendor" placeholder="업체명" />
+          <datalist id="dlTaskVendor"></datalist>
+        </div>
+        <div>
+          <label>마감일</label>
+          <input id="taskDue" type="date" />
+        </div>
+        <div style="display:flex;align-items:flex-end">
+          <button id="btnTaskAdd" class="primary" style="width:100%;white-space:nowrap">추가</button>
+        </div>
+      </div>
+      <ul id="taskList" class="task-list"></ul>
+      <div class="empty-msg" id="taskEmpty" style="display:none">모든 업무 완료!</div>
+    </div>
+
+    <!-- Timeline -->
+    <div class="card">
+      <div class="card-header">
+        <h2>최근 활동</h2>
+        <span id="tlCount" class="count"></span>
+      </div>
+      <div class="tl-filters">
+        <button id="btnTlAll" class="filter-btn active">전체</button>
+        <button id="btnTlPurchase" class="filter-btn">구매</button>
+        <button id="btnTlSale" class="filter-btn">매출</button>
+        <button id="btnTlWork" class="filter-btn">업무</button>
+      </div>
+      <ul id="timeline" class="timeline"></ul>
+    </div>
+  </main>
+
+  <!-- RIGHT: Calendar + KPI -->
+  <aside class="right">
+    <div class="cal-card">
+      <div class="cal-header">
+        <button class="cal-nav" id="calPrev">◀</button>
+        <a id="calTitle" href="./calendar.html">2026년 2월</a>
+        <button class="cal-nav" id="calNext">▶</button>
+      </div>
+      <div class="cal-grid" id="calGrid"></div>
+    </div>
+
+    <div class="kpi-stack">
+      <div class="kpi-card"><div class="t">이번 달 매출</div><div class="v orange" id="kSales">₩ 0</div></div>
+      <div class="kpi-card"><div class="t">이번 달 매입</div><div class="v blue" id="kPurchase">₩ 0</div></div>
+      <div class="kpi-card"><div class="t">마진</div><div class="v green" id="kMargin">₩ 0</div></div>
+      <div class="kpi-card"><div class="t">활성 거래처</div><div class="v" id="kVendors">0</div></div>
+    </div>
+  </aside>
+</div>
+
+<!-- Vendor Drawer -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="top-row">
+      <h3 id="vpName">거래처명</h3>
+      <button class="drawer-close" id="vpClose">✕</button>
+    </div>
+    <div class="drawer-stats">
+      <div class="d-stat"><div class="t">총 거래액</div><div class="v" id="vpTotal">₩ 0</div></div>
+      <div class="d-stat"><div class="t">최근 거래일</div><div class="v" id="vpLatest">-</div></div>
+      <div class="d-stat"><div class="t">거래 건수</div><div class="v" id="vpCount">0</div></div>
+      <div class="d-stat"><div class="t">진행 업무</div><div class="v" id="vpTasks">0건</div></div>
+    </div>
+  </div>
+  <div class="drawer-tags" id="vpTags"></div>
+  <div class="drawer-body">
+    <h4>히스토리</h4>
+    <ul id="vpTimeline" class="timeline"></ul>
+  </div>
+  <div class="drawer-footer" id="vpFooter">
+    <h4>미완료 업무</h4>
+    <div id="vpTodos"></div>
+  </div>
+</div>
+
+<!-- Vendor Search Modal -->
+<div id="searchOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:80;align-items:flex-start;justify-content:center;padding-top:120px">
+  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;width:400px;max-width:90vw;padding:16px">
+    <label>거래처 검색</label>
+    <input id="searchInput" placeholder="업체명 입력..." style="margin-top:4px" />
+    <ul id="searchResults" style="list-style:none;margin-top:10px;max-height:300px;overflow-y:auto"></ul>
+  </div>
+</div>
+
+<script>
+/* ── Constants ── */
+const TASK_KEY="golab_worklog_v1";
+const TRADE_AUDIT="golab_trade_audit";
+const SALES_AUDIT="golab_sales_audit";
+const WORK_AUDIT="golab_work_audit";
+const TRADE_KEY="golab_trade_v1";
+const SALES_KEY="golab_sales_v1";
+const TL_LIMIT=20;
+const $=id=>document.getElementById(id);
+
+/* ── Helpers ── */
+function n(v,fb=0){const x=Number(v);return Number.isFinite(x)?x:fb;}
+function esc(s){return(s||"").replace(/</g,"&lt;");}
+function fmt(v){return"\u20a9"+Math.round(v).toLocaleString();}
+function today(){return new Date().toISOString().substring(0,10);}
+function monthPrefix(){return today().substring(0,7);}
+function relTime(iso){
+  if(!iso) return"";
+  const d=iso.substring(0,10),t=today();
+  if(d===t) return"오늘 "+iso.substring(11,16);
+  const yd=new Date(new Date(t).getTime()-864e5).toISOString().substring(0,10);
+  if(d===yd) return"어제 "+iso.substring(11,16);
+  return d;
+}
+function extractHashtags(text){
+  if(!text) return[];
+  const m=text.match(/#[^\s#]+/g);
+  return m?[...new Set(m)]:[];
+}
+
+/* ── TASK (WorkLog) ── */
+function loadTasks(){try{return JSON.parse(localStorage.getItem(TASK_KEY)||"[]");}catch{return[];}}
+function saveTasks(arr){localStorage.setItem(TASK_KEY,JSON.stringify(arr));}
+
+function emitWorkAudit(event,detail){
+  try{
+    const log=JSON.parse(localStorage.getItem(WORK_AUDIT)||"[]");
+    log.push({event,ts:new Date().toISOString(),detail:detail||{}});
+    if(log.length>2000) log.splice(0,log.length-2000);
+    localStorage.setItem(WORK_AUDIT,JSON.stringify(log));
+  }catch(e){}
+}
+
+function addTask(){
+  const text=$("taskText").value.trim();
+  if(!text){$("taskText").focus();return;}
+  const vendor=$("taskVendor").value.trim();
+  const due=$("taskDue").value||"";
+  const task={id:crypto.randomUUID(),text,vendor,due,done:false,createdAt:new Date().toISOString(),completedAt:null};
+  const tasks=loadTasks();
+  tasks.unshift(task);
+  saveTasks(tasks);
+  emitWorkAudit("CREATE",{id:task.id,text,vendor});
+  $("taskText").value="";$("taskVendor").value="";$("taskDue").value=today();
+  renderAll();
+}
+
+function toggleTask(id){
+  const tasks=loadTasks();const t=tasks.find(x=>x.id===id);if(!t)return;
+  t.done=!t.done;t.completedAt=t.done?new Date().toISOString():null;
+  emitWorkAudit(t.done?"COMPLETE":"REOPEN",{id:t.id,text:t.text,vendor:t.vendor});
+  saveTasks(tasks);renderAll();
+}
+
+function deleteTask(id){
+  const tasks=loadTasks();const t=tasks.find(x=>x.id===id);
+  if(t) emitWorkAudit("DELETE",{id,text:t.text,vendor:t.vendor});
+  saveTasks(tasks.filter(x=>x.id!==id));renderAll();
+}
+
+function renderTasks(){
+  const tasks=loadTasks(),t=today();
+  const active=tasks.filter(x=>!x.done),done=tasks.filter(x=>x.done);
+  const overdue=active.filter(x=>x.due&&x.due<t);
+  const todayT=active.filter(x=>x.due===t);
+  const upcoming=active.filter(x=>!x.due||x.due>t);
+  const sorted=[...overdue,...todayT,...upcoming,...done.slice(0,3)];
+
+  const badge=$("battleBadge");
+  if(overdue.length>0){badge.style.display="inline";badge.className="badge red";badge.textContent="지연 "+overdue.length;}
+  else if(todayT.length>0){badge.style.display="inline";badge.className="badge green";badge.textContent="오늘 "+todayT.length;}
+  else{badge.style.display="none";}
+  $("battleCount").textContent=active.length+"건 진행 중";
+
+  const ul=$("taskList");ul.innerHTML="";
+  if(sorted.length===0){$("taskEmpty").style.display="block";return;}
+  $("taskEmpty").style.display="none";
+
+  sorted.forEach(tk=>{
+    const li=document.createElement("li");
+    li.className="task-item"+(tk.done?" completed":"");
+    const isOD=!tk.done&&tk.due&&tk.due<t;
+    const isTD=!tk.done&&tk.due===t;
+    let due="";
+    if(isOD) due=`<span class="overdue">${tk.due} 지연</span>`;
+    else if(isTD) due=`<span class="today-tag">오늘 마감</span>`;
+    else if(tk.due&&!tk.done) due=`<span>${tk.due}</span>`;
+    const vt=tk.vendor?`<span class="vendor-tag" data-vendor="${esc(tk.vendor)}">${esc(tk.vendor)}</span>`:"";
+    li.innerHTML=`
+      <div class="check${tk.done?" done":""}" data-toggle="${tk.id}">${tk.done?"✓":""}</div>
+      <div class="task-body"><div class="task-text">${esc(tk.text)}</div><div class="task-meta">${vt}${due}</div></div>
+      <button class="task-del" data-tdel="${tk.id}">✕</button>`;
+    ul.appendChild(li);
+  });
+  ul.querySelectorAll("[data-toggle]").forEach(el=>{el.onclick=()=>toggleTask(el.dataset.toggle);});
+  ul.querySelectorAll("[data-tdel]").forEach(el=>{el.onclick=e=>{e.stopPropagation();if(confirm("삭제?"))deleteTask(el.dataset.tdel);};});
+  ul.querySelectorAll("[data-vendor]").forEach(el=>{el.onclick=e=>{e.stopPropagation();openDrawer(el.dataset.vendor);};});
+}
+
+/* ── TIMELINE ── */
+let tlFilter="all";
+
+function buildTimeline(){
+  const items=[];
+  try{JSON.parse(localStorage.getItem(TRADE_AUDIT)||"[]").forEach(a=>{
+    if(a.event==="IMPORTED")return;
+    items.push({type:"purchase",ts:a.ts,event:a.event,vendor:a.detail?.vendor||"",text:fmtAudit("구매",a.event,a.detail)});
+  });}catch(e){}
+  try{JSON.parse(localStorage.getItem(SALES_AUDIT)||"[]").forEach(a=>{
+    if(a.event==="IMPORTED")return;
+    items.push({type:"sale",ts:a.ts,event:a.event,vendor:a.detail?.client||"",text:fmtAudit("매출",a.event,a.detail)});
+  });}catch(e){}
+  try{JSON.parse(localStorage.getItem(WORK_AUDIT)||"[]").forEach(a=>{
+    items.push({type:"work",ts:a.ts,event:a.event,vendor:a.detail?.vendor||"",text:fmtWork(a.event,a.detail)});
+  });}catch(e){}
+  items.sort((a,b)=>b.ts.localeCompare(a.ts));
+  return items;
+}
+function fmtAudit(m,ev,d){
+  const nm=esc(d?.itemName||"");
+  if(ev==="CREATE")return`${m} 등록 — ${nm}`;
+  if(ev==="UPDATE")return`${m} 수정 — ${nm}`;
+  if(ev==="DELETE")return`${m} 삭제 — ${nm}`;
+  return`${m} ${ev}`;
+}
+function fmtWork(ev,d){
+  const tx=esc(d?.text||"");
+  if(ev==="CREATE")return`업무 등록 — ${tx}`;
+  if(ev==="COMPLETE")return`업무 완료 — ${tx}`;
+  if(ev==="REOPEN")return`업무 재개 — ${tx}`;
+  if(ev==="DELETE")return`업무 삭제 — ${tx}`;
+  return`업무 ${ev}`;
+}
+
+function renderTimeline(){
+  let items=buildTimeline();
+  if(tlFilter!=="all")items=items.filter(x=>x.type===tlFilter);
+  const shown=items.slice(0,TL_LIMIT);
+  $("tlCount").textContent=items.length+"건";
+  const ul=$("timeline");ul.innerHTML="";
+  if(!shown.length){ul.innerHTML='<li class="tl-item"><div class="tl-body"><div class="tl-text" style="color:var(--muted);padding:16px 0">활동 기록이 없습니다.</div></div></li>';return;}
+  shown.forEach(it=>{
+    const li=document.createElement("li");li.className="tl-item";
+    const vl=it.vendor?`<span class="vendor-link" data-vendor="${esc(it.vendor)}">[${esc(it.vendor)}]</span> `:"";
+    li.innerHTML=`<div class="tl-dot ${it.type}"></div><div class="tl-body"><div class="tl-text">${vl}${it.text}</div><div class="tl-time">${relTime(it.ts)}</div></div>`;
+    ul.appendChild(li);
+  });
+  ul.querySelectorAll("[data-vendor]").forEach(el=>{el.onclick=()=>openDrawer(el.dataset.vendor);});
+  document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));
+  const map={all:"btnTlAll",purchase:"btnTlPurchase",sale:"btnTlSale",work:"btnTlWork"};
+  if(map[tlFilter])$(map[tlFilter]).classList.add("active");
+}
+
+/* ── MONTHLY KPI ── */
+function computeKPI(){
+  const mp=monthPrefix();
+  let sT=0,pT=0;const sV=new Set(),pV=new Set();
+  try{JSON.parse(localStorage.getItem(SALES_KEY)||"[]").forEach(r=>{if((r.salesDate||"").startsWith(mp)){sT+=n(r.sellUnitPrice)*n(r.qty);if(r.client)sV.add(r.client);}});}catch{}
+  try{JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").forEach(r=>{if((r.purchaseDate||"").startsWith(mp)){pT+=n(r.buyUnitPrice)*n(r.qty);if(r.vendor)pV.add(r.vendor);}});}catch{}
+  const allV=new Set([...sV,...pV]),margin=sT-pT;
+  $("kSales").textContent=fmt(sT);$("kPurchase").textContent=fmt(pT);
+  $("kMargin").textContent=fmt(margin);$("kMargin").style.color=margin>=0?"var(--accent)":"var(--warn)";
+  $("kVendors").textContent=allV.size;
+  // Sidebar KPI
+  if($("sideKpiSales")){$("sideKpiSales").textContent=fmt(sT);$("sideKpiPurchase").textContent=fmt(pT);$("sideKpiMargin").textContent=fmt(margin);$("sideKpiMargin").style.color=margin>=0?"var(--accent)":"var(--warn)";}
+}
+
+/* ── MINI CALENDAR ── */
+let calYear,calMonth;
+(function initCal(){const d=new Date();calYear=d.getFullYear();calMonth=d.getMonth();})();
+
+function renderCalendar(){
+  const mNames=["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+  const calLink=$("calTitle");
+  calLink.textContent=calYear+"년 "+mNames[calMonth];
+  calLink.href="./calendar.html?y="+calYear+"&m="+(calMonth+1);
+  const first=new Date(calYear,calMonth,1);
+  const lastDay=new Date(calYear,calMonth+1,0).getDate();
+  let startDow=first.getDay(); // 0=Sun
+  const todayStr=today();
+  // Task dates for dots
+  const taskDates=new Set();
+  loadTasks().filter(t=>!t.done&&t.due).forEach(t=>taskDates.add(t.due));
+
+  const grid=$("calGrid");
+  grid.innerHTML="";
+  const dows=["일","월","화","수","목","금","토"];
+  dows.forEach(d=>{const s=document.createElement("div");s.className="cal-dow";s.textContent=d;grid.appendChild(s);});
+  // Prev month padding
+  const prevLast=new Date(calYear,calMonth,0).getDate();
+  for(let i=startDow-1;i>=0;i--){
+    const d=document.createElement("div");d.className="cal-day";d.textContent=prevLast-i;grid.appendChild(d);
+  }
+  // Current month
+  for(let day=1;day<=lastDay;day++){
+    const d=document.createElement("div");
+    const dateStr=`${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    d.className="cal-day current-month";
+    if(dateStr===todayStr) d.classList.add("today");
+    if(taskDates.has(dateStr)) d.classList.add("has-task");
+    d.textContent=day;
+    d.onclick=()=>{window.location.href="./calendar.html?date="+dateStr;};
+    grid.appendChild(d);
+  }
+  // Next month padding
+  const totalCells=startDow+lastDay;
+  const remaining=totalCells%7===0?0:7-totalCells%7;
+  for(let i=1;i<=remaining;i++){
+    const d=document.createElement("div");d.className="cal-day";d.textContent=i;grid.appendChild(d);
+  }
+}
+
+/* ── VENDOR DRAWER ── */
+function openDrawer(vendor){
+  if(!vendor)return;
+  $("drawer").classList.add("open");$("drawerOverlay").classList.add("open");
+  $("vpName").textContent=vendor;
+  let trades=[],sales=[],tasks=[];
+  try{trades=JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").filter(r=>r.vendor===vendor);}catch{}
+  try{sales=JSON.parse(localStorage.getItem(SALES_KEY)||"[]").filter(r=>r.client===vendor);}catch{}
+  try{tasks=loadTasks().filter(t=>t.vendor===vendor&&!t.done);}catch{}
+
+  const tTotal=trades.reduce((s,r)=>s+n(r.buyUnitPrice)*n(r.qty),0);
+  const sTotal=sales.reduce((s,r)=>s+n(r.sellUnitPrice)*n(r.qty),0);
+  const allDates=[...trades.map(r=>r.purchaseDate),...sales.map(r=>r.salesDate)].filter(Boolean).sort();
+  $("vpTotal").textContent=fmt(tTotal+sTotal);
+  $("vpLatest").textContent=allDates.length?allDates[allDates.length-1]:"-";
+  $("vpCount").textContent=(trades.length+sales.length);
+  $("vpTasks").textContent=tasks.length+"건";
+
+  // Hashtags from all memos
+  const allMemos=[...trades.map(r=>r.memo),...sales.map(r=>r.memo),...loadTasks().filter(t=>t.vendor===vendor).map(t=>t.text)];
+  const tags=new Set();
+  allMemos.forEach(m=>extractHashtags(m).forEach(h=>tags.add(h)));
+  $("vpTags").innerHTML=[...tags].map(t=>`<span class="htag">${esc(t)}</span>`).join("");
+
+  // Timeline
+  const items=buildTimeline().filter(x=>x.vendor===vendor).slice(0,30);
+  const ul=$("vpTimeline");ul.innerHTML="";
+  if(!items.length){ul.innerHTML='<li class="tl-item"><div class="tl-body"><div class="tl-text" style="color:var(--muted)">이력 없음</div></div></li>';
+  }else{
+    items.forEach(it=>{
+      const li=document.createElement("li");li.className="tl-item";
+      li.innerHTML=`<div class="tl-dot ${it.type}"></div><div class="tl-body"><div class="tl-text">${it.text}</div><div class="tl-time">${relTime(it.ts)}</div></div>`;
+      ul.appendChild(li);
+    });
+  }
+
+  // Footer: pending todos
+  const todoDiv=$("vpTodos");todoDiv.innerHTML="";
+  if(!tasks.length){todoDiv.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">미완료 업무 없음</div>';
+  }else{
+    tasks.forEach(t=>{
+      const d=document.createElement("div");d.className="drawer-todo";
+      d.innerHTML=`<div class="dt-dot"></div><span>${esc(t.text)}</span>`;
+      todoDiv.appendChild(d);
+    });
+  }
+}
+function closeDrawer(){$("drawer").classList.remove("open");$("drawerOverlay").classList.remove("open");}
+
+/* ── VENDOR SEARCH ── */
+function getAllVendors(){
+  const v=new Set();
+  try{JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").forEach(r=>{if(r.vendor)v.add(r.vendor);});}catch{}
+  try{JSON.parse(localStorage.getItem(SALES_KEY)||"[]").forEach(r=>{if(r.client)v.add(r.client);});}catch{}
+  loadTasks().forEach(t=>{if(t.vendor)v.add(t.vendor);});
+  return[...v].sort();
+}
+function openSearch(){
+  $("searchOverlay").style.display="flex";
+  $("searchInput").value="";
+  $("searchInput").focus();
+  renderSearchResults("");
+}
+function closeSearch(){$("searchOverlay").style.display="none";}
+function renderSearchResults(q){
+  const all=getAllVendors();
+  const filtered=q?all.filter(v=>v.toLowerCase().includes(q.toLowerCase())):all;
+  const ul=$("searchResults");ul.innerHTML="";
+  filtered.slice(0,20).forEach(v=>{
+    const li=document.createElement("li");
+    li.style.cssText="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:12px;color:var(--text)";
+    li.textContent=v;
+    li.onmouseenter=()=>li.style.background="rgba(59,130,246,.1)";
+    li.onmouseleave=()=>li.style.background="";
+    li.onclick=()=>{closeSearch();openDrawer(v);};
+    ul.appendChild(li);
+  });
+  if(!filtered.length) ul.innerHTML='<li style="padding:10px;color:var(--muted);font-size:12px">검색 결과 없음</li>';
+}
+
+/* ── Task Vendor AC ── */
+function refreshTaskVendorAC(){
+  const dl=$("dlTaskVendor");dl.innerHTML="";
+  getAllVendors().forEach(v=>{const o=document.createElement("option");o.value=v;dl.appendChild(o);});
+}
+
+/* ── RENDER ALL ── */
+function renderAll(){
+  renderTasks();renderTimeline();computeKPI();renderCalendar();refreshTaskVendorAC();
+}
+
+/* ── EVENTS ── */
+$("btnTaskAdd").onclick=addTask;
+$("taskText").addEventListener("keydown",e=>{if(e.key==="Enter")addTask();});
+$("taskDue").value=today();
+
+$("btnTlAll").onclick=()=>{tlFilter="all";renderTimeline();};
+$("btnTlPurchase").onclick=()=>{tlFilter="purchase";renderTimeline();};
+$("btnTlSale").onclick=()=>{tlFilter="sale";renderTimeline();};
+$("btnTlWork").onclick=()=>{tlFilter="work";renderTimeline();};
+
+$("vpClose").onclick=closeDrawer;
+$("drawerOverlay").onclick=closeDrawer;
+document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeDrawer();closeSearch();}});
+
+$("calPrev").onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();};
+$("calNext").onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();};
+
+$("btnQuickTask").onclick=()=>{$("taskText").focus();$("taskText").scrollIntoView({behavior:"smooth"});};
+$("btnQuickSearch").onclick=openSearch;
+$("searchOverlay").onclick=e=>{if(e.target===$("searchOverlay"))closeSearch();};
+$("searchInput").addEventListener("input",e=>renderSearchResults(e.target.value));
+
+/* ── INIT ── */
+renderAll();
+</script>
+</body>
+</html>

@@ -1,0 +1,700 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GoLab · 매출 관리</title>
+  <style>
+    :root{
+      --bg:#0b1220;--card:#101a2f;--muted:#8aa0c6;--text:#e7efff;
+      --line:#203255;--accent:#3ee087;--warn:#ffcc66;--bad:#ff6b6b;--point:#57a1ff;
+      --chip:#0c1530;--sales:#ff9f43;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:#070b14;color:var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",Arial;}
+    header{padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(7,11,20,.85);backdrop-filter:blur(8px);z-index:10}
+    header .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    header h1{margin:0;font-size:16px;letter-spacing:.2px;color:var(--sales)}
+    .tabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .tab{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);color:var(--muted);text-decoration:none;background:rgba(12,21,48,.35);font-size:12px}
+    .tab.active{color:#fff;background:rgba(255,159,67,.18);border-color:rgba(255,159,67,.45)}
+    .wrap{max-width:1440px;margin:0 auto;padding:16px 16px 36px}
+    .card{background:rgba(16,26,47,.9);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+    .card h2{margin:0 0 12px;font-size:13px;color:var(--sales);display:flex;align-items:center;gap:8px}
+    /* KPI */
+    .kpi-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+    .kpi{padding:14px;border-radius:12px;border:1px solid var(--line);background:rgba(12,21,48,0.5)}
+    .kpi .t{font-size:11px;color:var(--muted)}
+    .kpi .v{margin-top:6px;font-size:18px;font-weight:900;color:var(--sales)}
+    .kpi .v.blue{color:var(--point)}
+    .kpi .sub{margin-top:4px;font-size:10px;color:var(--muted);font-weight:400}
+    /* Form */
+    .row{display:grid;gap:10px;margin-bottom:10px}
+    .r2{grid-template-columns:1fr 1fr}
+    .r3{grid-template-columns:1fr 1fr 1fr}
+    .r4{grid-template-columns:1fr 1fr 1fr 1fr}
+    .r5{grid-template-columns:1fr 1fr 1fr 1fr 1fr}
+    label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:700}
+    label .opt{font-weight:400;color:#5a7baa}
+    input,select{width:100%;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--text);padding:9px 10px;font-size:12px;outline:none;transition:border .2s}
+    input:focus,select:focus{border-color:var(--sales)}
+    .btns{display:flex;gap:8px;flex-wrap:wrap}
+    button{border:1px solid var(--line);background:#1a2b4b;color:var(--text);border-radius:10px;padding:10px 14px;font-size:12px;cursor:pointer;font-weight:700}
+    button.primary{background:var(--sales);border:none;color:#fff}
+    button.save{background:var(--sales);border:none;color:#0b1220}
+    button.danger{color:var(--bad);background:none;border:1px solid rgba(255,107,107,.35)}
+    button.secondary{background:rgba(255,159,67,.10);border:1px solid rgba(255,159,67,.35)}
+    button:disabled{opacity:.5;cursor:not-allowed}
+    /* Table */
+    .tableWrap{overflow:auto;border-radius:12px;border:1px solid var(--line)}
+    table{width:100%;border-collapse:collapse;min-width:1000px;font-size:12px}
+    th{background:#162440;color:var(--muted);text-align:left;padding:10px 12px;position:sticky;top:0;white-space:nowrap;z-index:2}
+    th.num,td.num{text-align:right}
+    td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+    tr:hover{background:rgba(255,159,67,.04)}
+    .highlight{color:var(--sales);font-weight:900}
+    .muted{color:var(--muted)}
+    .mini{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
+    /* Filter */
+    .filter-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
+    .filter-bar>div{flex:1;min-width:130px}
+    .filter-bar .wide{flex:2;min-width:200px}
+    .tools-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
+    .stat-inline{font-size:11px;color:var(--muted);margin-left:auto}
+    /* Pagination */
+    .pagination{display:flex;gap:6px;align-items:center;justify-content:center;margin-top:12px}
+    .pagination button{padding:6px 12px;font-size:11px}
+    .pagination .current{color:var(--sales);font-weight:900;font-size:12px}
+    input[type="file"]{display:none}
+    .note-box{padding:12px;background:rgba(255,159,67,.06);border-left:3px solid var(--sales);font-size:12px;color:var(--muted);line-height:1.6;border-radius:10px}
+    @media(max-width:900px){
+      .kpi-grid{grid-template-columns:1fr 1fr}
+      .r4,.r5{grid-template-columns:1fr 1fr}
+      .filter-bar{flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>GoLab · 매출 관리</h1>
+    <nav class="tabs">
+      <a class="tab" href="./console.html">🎯 콘솔</a>
+      <a class="tab" href="./purchases.html">📦 입고/원가</a>
+      <a class="tab" href="./index.html">📍 재고 현황</a>
+      <a class="tab" href="./trade.html">📊 구매 이력</a>
+      <a class="tab active" href="./sales.html">💰 매출 관리</a>
+      <a class="tab" href="./calendar.html">📅 캘린더</a>
+    </nav>
+  </div>
+</header>
+<div class="wrap">
+
+  <!-- KPI -->
+  <div class="card">
+    <h2>💰 매출 현황</h2>
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="t">총 매출액</div>
+        <div id="kTotal" class="v">₩ 0</div>
+        <div id="kTotalSub" class="sub"></div>
+      </div>
+      <div class="kpi">
+        <div class="t">매출 건수</div>
+        <div id="kCount" class="v">0 건</div>
+        <div id="kCountSub" class="sub"></div>
+      </div>
+      <div class="kpi">
+        <div class="t">거래처 수</div>
+        <div id="kClients" class="v">0</div>
+        <div id="kClientsSub" class="sub"></div>
+      </div>
+      <div class="kpi">
+        <div class="t">최근 매출일</div>
+        <div id="kLatest" class="v blue">-</div>
+        <div id="kLatestSub" class="sub"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- Input Form -->
+  <div class="card">
+    <h2>➕ 매출 등록</h2>
+    <div class="row r4">
+      <div>
+        <label>매출일</label>
+        <input id="inDate" type="date" />
+      </div>
+      <div>
+        <label>판매처(거래처)</label>
+        <input id="inClient" list="dlClient" placeholder="예: 대성금속" />
+        <datalist id="dlClient"></datalist>
+      </div>
+      <div>
+        <label>문서번호 <span class="opt">(선택)</span></label>
+        <input id="inDocNo" placeholder="인보이스/PO 번호" />
+      </div>
+      <div>
+        <label>품번 <span class="opt">(선택)</span></label>
+        <input id="inPartNo" list="dlPartNo" placeholder="예: AGC-123" />
+        <datalist id="dlPartNo"></datalist>
+      </div>
+    </div>
+    <div class="row r5">
+      <div>
+        <label>상품명</label>
+        <input id="inItem" list="dlItem" placeholder="예: Silver Powder 1kg" />
+        <datalist id="dlItem"></datalist>
+      </div>
+      <div>
+        <label>수량</label>
+        <input id="inQty" type="number" step="0.01" placeholder="0" />
+      </div>
+      <div>
+        <label>단위</label>
+        <select id="inUnit">
+          <option value="ea" selected>ea</option>
+          <option value="kg">kg</option>
+          <option value="g">g</option>
+          <option value="BOX">BOX</option>
+          <option value="SET">SET</option>
+          <option value="L">L</option>
+          <option value="mL">mL</option>
+        </select>
+      </div>
+      <div>
+        <label>판매 단가 (KRW)</label>
+        <input id="inPrice" type="number" step="1" placeholder="₩ 단가" />
+      </div>
+      <div>
+        <label>비고 <span class="opt">(선택)</span></label>
+        <input id="inMemo" placeholder="특이사항" />
+      </div>
+    </div>
+    <div class="row r4">
+      <div style="grid-column:span 2"></div>
+      <div style="display:flex;align-items:flex-end;gap:8px">
+        <button id="btnAdd" class="save" style="flex:1">등록</button>
+        <button id="btnCancel" class="secondary" style="display:none;flex:1">취소</button>
+      </div>
+      <div>
+        <div id="formCalc" class="mini" style="text-align:right;margin-top:0;padding-top:12px"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- List -->
+  <div class="card">
+    <h2>
+      📋 매출 내역
+      <span id="filterInfo" class="stat-inline"></span>
+    </h2>
+    <div class="filter-bar">
+      <div class="wide">
+        <label>검색 (상품명/품번/거래처/비고)</label>
+        <input id="fSearch" placeholder="검색어 입력..." />
+      </div>
+      <div>
+        <label>거래처</label>
+        <select id="fClient"><option value="">전체</option></select>
+      </div>
+      <div>
+        <label>시작일</label>
+        <input id="fFrom" type="date" />
+      </div>
+      <div>
+        <label>종료일</label>
+        <input id="fTo" type="date" />
+      </div>
+    </div>
+    <div class="tools-row">
+      <button id="btnExport" class="secondary">내보내기(JSON)</button>
+      <button id="btnImport" class="secondary">가져오기(JSON)</button>
+      <input id="fileIn" type="file" accept="application/json" />
+      <button id="btnReset" class="danger">전체 초기화</button>
+    </div>
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>매출일</th>
+            <th>거래처</th>
+            <th>문서번호</th>
+            <th>품번</th>
+            <th>상품명</th>
+            <th class="num">수량</th>
+            <th>단위</th>
+            <th class="num">판매단가</th>
+            <th class="num">매출액</th>
+            <th>비고</th>
+            <th style="text-align:right">관리</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pgArea"></div>
+    <div class="mini">※ 매출액 = 수량 x 판매단가 (자동 계산)</div>
+  </div>
+
+  <div class="note-box">
+    💡 이 페이지는 <b>매출(판매) 관리</b> 전용입니다. 원가/마진 분석은 향후 수익 분석 모듈에서 별도 처리됩니다.
+  </div>
+</div>
+
+<script>
+/* ── Constants ── */
+const SALES_KEY = "golab_sales_v1";
+const AUDIT_KEY = "golab_sales_audit";
+const PAGE_SIZE = 50;
+const DEBOUNCE_MS = 300;
+const $ = id => document.getElementById(id);
+
+/* ── Audit Log ── */
+function emitAudit(event, detail){
+  // event: CREATE | UPDATE | DELETE | IMPORTED
+  try{
+    const log = JSON.parse(localStorage.getItem(AUDIT_KEY)||"[]");
+    log.push({
+      event,
+      ts: new Date().toISOString(),
+      detail: detail || {}
+    });
+    if(log.length>2000) log.splice(0, log.length-2000);
+    localStorage.setItem(AUDIT_KEY, JSON.stringify(log));
+  }catch(e){ /* silent */ }
+}
+
+/* ── State ── */
+let editingId = null;
+let currentPage = 1;
+let debounceTimer = null;
+let _cache = null;
+
+/* ── Init date ── */
+$("inDate").value = new Date().toISOString().substring(0,10);
+
+/* ── Helpers ── */
+function n(v,fb=0){ const x=Number(v); return Number.isFinite(x)?x:fb; }
+function esc(s){ return (s||"").replace(/</g,"&lt;"); }
+function fmt(v){ return "\u20a9"+Math.round(v).toLocaleString(); }
+function normStr(s){ return (s==null)?"":String(s).trim(); }
+function normUpper(s){ return normStr(s).toUpperCase(); }
+function normNum(v){
+  if(v==null) return 0;
+  if(typeof v==="number") return Number.isFinite(v)?v:0;
+  const cleaned = String(v).replace(/[\u20a9,\s]/g,"");
+  const x = Number(cleaned);
+  return Number.isFinite(x)?x:0;
+}
+function normDate(v){
+  if(!v) return "";
+  if(v instanceof Date){
+    const y=v.getFullYear(), m=String(v.getMonth()+1).padStart(2,"0"), d=String(v.getDate()).padStart(2,"0");
+    return y+"-"+m+"-"+d;
+  }
+  if(typeof v==="number"){
+    const base=new Date(1899,11,30);
+    base.setDate(base.getDate()+Math.floor(v));
+    const y=base.getFullYear(), m=String(base.getMonth()+1).padStart(2,"0"), d=String(base.getDate()).padStart(2,"0");
+    return y+"-"+m+"-"+d;
+  }
+  let s=String(v).trim();
+  s=s.replace(/^(\d{4})[./](\d{1,2})[./](\d{1,2})/, (_, y, m, d) =>
+    y+"-"+m.padStart(2,"0")+"-"+d.padStart(2,"0")
+  );
+  if(s.length>=10) return s.substring(0,10);
+  return s;
+}
+
+/* ── Storage ── */
+function load(){
+  if(_cache) return _cache;
+  try{ _cache=JSON.parse(localStorage.getItem(SALES_KEY)||"[]"); }
+  catch{ _cache=[]; }
+  return _cache;
+}
+function save(data){
+  _cache=data;
+  localStorage.setItem(SALES_KEY,JSON.stringify(data));
+}
+function invalidateCache(){ _cache=null; }
+
+/* ── Normalize record ── */
+function normalizeRecord(r){
+  const client = normStr(r.client || r.vendor || "");
+  const partNo = normUpper(r.partNo);
+  const itemName = normStr(r.itemName || r.product || "");
+  return {
+    id: r.id || crypto.randomUUID(),
+    salesDate: normDate(r.salesDate || r.date || ""),
+    client,
+    docNo: normStr(r.docNo),
+    partNo,
+    itemName,
+    qty: normNum(r.qty),
+    unit: normStr(r.unit) || "ea",
+    sellUnitPrice: normNum(r.sellUnitPrice || r.sellPrice || r.unitPrice || 0),
+    memo: normStr(r.memo || r.note || ""),
+    createdAt: r.createdAt || new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+}
+
+/* ── Autocomplete ── */
+function uniqueVals(key){
+  return [...new Set(load().map(r=>normStr(r[key])).filter(Boolean))].sort();
+}
+function refreshAC(){
+  const fill=(dlId,key)=>{
+    const dl=$(dlId); dl.innerHTML="";
+    uniqueVals(key).forEach(v=>{ const o=document.createElement("option"); o.value=v; dl.appendChild(o); });
+  };
+  fill("dlClient","client");
+  fill("dlPartNo","partNo");
+  fill("dlItem","itemName");
+}
+
+/* ── Filters ── */
+function refreshFilterSelects(){
+  const sel=$("fClient");
+  const cur=sel.value;
+  const opts=uniqueVals("client");
+  sel.innerHTML='<option value="">전체</option>';
+  opts.forEach(v=>{ const o=document.createElement("option"); o.value=v; o.textContent=v; sel.appendChild(o); });
+  sel.value=cur;
+}
+
+function getFiltered(){
+  let data=load();
+  const q=($("fSearch").value||"").trim().toLowerCase();
+  const client=$("fClient").value;
+  const from=$("fFrom").value;
+  const to=$("fTo").value;
+  if(q){
+    data=data.filter(r=>
+      (r.itemName||"").toLowerCase().includes(q)||
+      (r.partNo||"").toLowerCase().includes(q)||
+      (r.client||"").toLowerCase().includes(q)||
+      (r.memo||"").toLowerCase().includes(q)||
+      (r.docNo||"").toLowerCase().includes(q)
+    );
+  }
+  if(client) data=data.filter(r=>r.client===client);
+  if(from) data=data.filter(r=>(r.salesDate||"")>=from);
+  if(to) data=data.filter(r=>(r.salesDate||"")<=to);
+  return data;
+}
+
+/* ── KPI ── */
+function hasActiveFilter(){
+  return !!($("fSearch").value||"").trim()
+    || !!$("fClient").value
+    || !!$("fFrom").value
+    || !!$("fTo").value;
+}
+function computeKPI(){
+  const all=load();
+  const filtered=getFiltered();
+  const isFiltered = hasActiveFilter();
+
+  const calc=(arr)=>{
+    let total=0; const clients=new Set(); let latest="";
+    arr.forEach(r=>{
+      total += n(r.sellUnitPrice)*n(r.qty);
+      if(r.client) clients.add(r.client);
+      if(r.salesDate && r.salesDate>latest) latest=r.salesDate;
+    });
+    return {total,count:arr.length,clients:clients.size,latest};
+  };
+
+  const a=calc(all);
+  const f=isFiltered?calc(filtered):null;
+
+  $("kTotal").textContent = fmt(a.total);
+  $("kCount").textContent = a.count.toLocaleString()+" 건";
+  $("kClients").textContent = a.clients.toLocaleString();
+  $("kLatest").textContent = a.latest || "-";
+
+  if(f){
+    $("kTotalSub").textContent = "필터: "+fmt(f.total);
+    $("kCountSub").textContent = "필터: "+f.count.toLocaleString()+" 건";
+    $("kClientsSub").textContent = "필터: "+f.clients.toLocaleString();
+    $("kLatestSub").textContent = "필터: "+(f.latest||"-");
+  } else {
+    $("kTotalSub").textContent="";
+    $("kCountSub").textContent="";
+    $("kClientsSub").textContent="";
+    $("kLatestSub").textContent="";
+  }
+}
+
+/* ── Form calc preview ── */
+function updateFormCalc(){
+  const qty=n($("inQty").value);
+  const price=n($("inPrice").value);
+  const el=$("formCalc");
+  if(qty>0 && price>0){
+    el.textContent="매출액: "+fmt(qty*price);
+  } else {
+    el.textContent="";
+  }
+}
+
+/* ── Render ── */
+function render(){
+  const filtered=getFiltered();
+  const total=load().length;
+  const totalPages=Math.max(1,Math.ceil(filtered.length/PAGE_SIZE));
+  if(currentPage>totalPages) currentPage=totalPages;
+  const start=(currentPage-1)*PAGE_SIZE;
+  const page=filtered.slice(start,start+PAGE_SIZE);
+
+  $("filterInfo").textContent = filtered.length===total
+    ? total+"건"
+    : filtered.length+" / "+total+"건 (필터 적용 중)";
+
+  const tb=$("tbody");
+  tb.innerHTML="";
+  if(page.length===0){
+    tb.innerHTML='<tr><td colspan="11" class="muted" style="text-align:center;padding:24px">데이터가 없습니다.</td></tr>';
+  }
+  page.forEach(r=>{
+    const salesTotal=n(r.sellUnitPrice)*n(r.qty);
+    const tr=document.createElement("tr");
+    tr.innerHTML=`
+      <td class="muted">${esc(r.salesDate)}</td>
+      <td><b>${esc(r.client)}</b></td>
+      <td class="muted">${esc(r.docNo)}</td>
+      <td class="muted">${esc(r.partNo)}</td>
+      <td>${esc(r.itemName)}</td>
+      <td class="num">${n(r.qty).toLocaleString()}</td>
+      <td class="muted">${esc(r.unit)}</td>
+      <td class="num">${fmt(n(r.sellUnitPrice))}</td>
+      <td class="num highlight">${fmt(salesTotal)}</td>
+      <td class="muted">${esc(r.memo)}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="secondary" style="padding:5px 8px;font-size:11px" data-edit="${r.id}">수정</button>
+        <button class="danger" style="padding:5px 8px;font-size:11px" data-del="${r.id}">삭제</button>
+      </td>`;
+    tb.appendChild(tr);
+  });
+
+  tb.querySelectorAll("button[data-del]").forEach(btn=>{
+    btn.onclick=e=>{ e.stopPropagation(); deleteRecord(btn.dataset.del); };
+  });
+  tb.querySelectorAll("button[data-edit]").forEach(btn=>{
+    btn.onclick=e=>{ e.stopPropagation(); startEdit(btn.dataset.edit); };
+  });
+
+  // Pagination
+  const pg=$("pgArea");
+  pg.innerHTML="";
+  if(totalPages>1){
+    const mk=(label,p,dis)=>{
+      const b=document.createElement("button");
+      b.textContent=label; b.className="secondary"; b.disabled=dis;
+      b.onclick=()=>{ currentPage=p; render(); };
+      return b;
+    };
+    pg.appendChild(mk("◀ 이전",currentPage-1,currentPage<=1));
+    const s=document.createElement("span");
+    s.className="current";
+    s.textContent=currentPage+" / "+totalPages;
+    pg.appendChild(s);
+    pg.appendChild(mk("다음 ▶",currentPage+1,currentPage>=totalPages));
+  }
+}
+
+/* ── CRUD ── */
+function clearForm(){
+  $("inDate").value=new Date().toISOString().substring(0,10);
+  $("inClient").value=""; $("inDocNo").value=""; $("inPartNo").value="";
+  $("inItem").value=""; $("inQty").value=""; $("inUnit").value="ea";
+  $("inPrice").value=""; $("inMemo").value="";
+  editingId=null;
+  $("btnAdd").textContent="등록";
+  $("btnCancel").style.display="none";
+  $("formCalc").textContent="";
+}
+
+function addOrUpdate(){
+  const client=normStr($("inClient").value);
+  const itemName=normStr($("inItem").value);
+  if(!client && !itemName){ alert("거래처 또는 상품명을 입력해주세요."); return; }
+
+  const rec=normalizeRecord({
+    id: editingId||undefined,
+    salesDate: $("inDate").value,
+    client,
+    docNo: $("inDocNo").value,
+    partNo: $("inPartNo").value,
+    itemName,
+    qty: $("inQty").value,
+    unit: $("inUnit").value,
+    sellUnitPrice: $("inPrice").value,
+    memo: $("inMemo").value,
+    createdAt: editingId ? (load().find(x=>x.id===editingId)||{}).createdAt : undefined
+  });
+
+  const all=load();
+  if(editingId){
+    const idx=all.findIndex(x=>x.id===editingId);
+    if(idx>=0) all[idx]=rec;
+    emitAudit("UPDATE",{id:rec.id, client:rec.client, itemName:rec.itemName});
+  } else {
+    all.unshift(rec);
+    emitAudit("CREATE",{id:rec.id, client:rec.client, itemName:rec.itemName});
+  }
+  save(all);
+  clearForm();
+  refreshAC();
+  refreshFilterSelects();
+  computeKPI();
+  render();
+}
+
+function startEdit(id){
+  const r=load().find(x=>x.id===id);
+  if(!r) return;
+  editingId=r.id;
+  $("inDate").value=r.salesDate||"";
+  $("inClient").value=r.client||"";
+  $("inDocNo").value=r.docNo||"";
+  $("inPartNo").value=r.partNo||"";
+  $("inItem").value=r.itemName||"";
+  $("inQty").value=n(r.qty)||"";
+  $("inUnit").value=r.unit||"ea";
+  $("inPrice").value=n(r.sellUnitPrice)||"";
+  $("inMemo").value=r.memo||"";
+  $("btnAdd").textContent="저장";
+  $("btnCancel").style.display="block";
+  updateFormCalc();
+  window.scrollTo({top:0,behavior:"smooth"});
+}
+
+function deleteRecord(id){
+  if(!confirm("이 매출 기록을 삭제하시겠습니까?")) return;
+  const target=load().find(x=>x.id===id);
+  if(target) emitAudit("DELETE",{id, client:target.client, itemName:target.itemName});
+  save(load().filter(x=>x.id!==id));
+  refreshFilterSelects();
+  computeKPI();
+  render();
+}
+
+/* ── Import/Export ── */
+function exportJson(){
+  const data=localStorage.getItem(SALES_KEY)||"[]";
+  const blob=new Blob([data],{type:"application/json"});
+  const a=document.createElement("a");
+  a.href=URL.createObjectURL(blob);
+  a.download="GoLab_Sales_"+new Date().toISOString().slice(0,10)+".json";
+  a.click();
+}
+
+/* ── Duplicate detection key ── */
+function dupKey(r){
+  return [r.salesDate, r.client, r.partNo, String(r.qty), String(r.sellUnitPrice)].join("|");
+}
+
+function importJson(file){
+  const reader=new FileReader();
+  reader.onload=()=>{
+    try{
+      const raw=JSON.parse(reader.result);
+      if(!Array.isArray(raw)) throw new Error("JSON 배열이 아닙니다.");
+      let ok=0, skip=0, dup=0;
+      const cleaned=[];
+
+      const existing=load();
+      const existingKeys=new Set(existing.map(r=>dupKey(r)));
+
+      raw.forEach((r,i)=>{
+        try{
+          const rec=normalizeRecord(r);
+          const key=dupKey(rec);
+          if(existingKeys.has(key)){
+            dup++;
+            return;
+          }
+          existingKeys.add(key);
+          cleaned.push(rec);
+          ok++;
+        }catch(e){
+          skip++;
+        }
+      });
+
+      if(skip>0) alert(skip+"건의 데이터가 형식 오류로 건너뛰었습니다.");
+      const merged=[...cleaned,...existing];
+      save(merged);
+      invalidateCache();
+      refreshAC();
+      refreshFilterSelects();
+      computeKPI();
+      render();
+
+      emitAudit("IMPORTED",{added:ok, duplicates:dup, skipped:skip, totalAfter:merged.length});
+
+      let msg=ok+"건 가져오기 완료 (기존 "+existing.length+"건 + 신규 "+ok+"건 = 총 "+merged.length+"건)";
+      if(dup>0) msg+="\n중복 건너뛰기: "+dup+"건";
+      alert(msg);
+    }catch(e){
+      alert("JSON 형식 오류: "+e.message);
+    }
+  };
+  reader.readAsText(file);
+}
+
+/* ── Debounced filter ── */
+function debouncedRender(){
+  clearTimeout(debounceTimer);
+  debounceTimer=setTimeout(()=>{
+    currentPage=1;
+    computeKPI();
+    render();
+  },DEBOUNCE_MS);
+}
+
+/* ── Events ── */
+$("btnAdd").onclick=addOrUpdate;
+$("btnCancel").onclick=clearForm;
+$("btnExport").onclick=exportJson;
+$("btnImport").onclick=()=>$("fileIn").click();
+$("fileIn").addEventListener("change",e=>{
+  const f=e.target.files?.[0];
+  if(f) importJson(f);
+  e.target.value="";
+});
+$("btnReset").onclick=()=>{
+  if(!confirm("매출 데이터를 전체 초기화할까요? (되돌릴 수 없음)")) return;
+  localStorage.removeItem(SALES_KEY);
+  invalidateCache();
+  currentPage=1;
+  refreshAC();
+  refreshFilterSelects();
+  computeKPI();
+  render();
+  alert("초기화 완료");
+};
+
+// Filter events (debounced)
+$("fSearch").addEventListener("input",debouncedRender);
+$("fClient").addEventListener("change",()=>{ currentPage=1; computeKPI(); render(); });
+$("fFrom").addEventListener("change",()=>{ currentPage=1; computeKPI(); render(); });
+$("fTo").addEventListener("change",()=>{ currentPage=1; computeKPI(); render(); });
+
+// Form calc preview
+$("inQty").addEventListener("input",updateFormCalc);
+$("inPrice").addEventListener("input",updateFormCalc);
+
+/* ── Init ── */
+refreshAC();
+refreshFilterSelects();
+computeKPI();
+render();
+</script>
+</body>
+</html>
