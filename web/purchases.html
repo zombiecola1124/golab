@@ -6,26 +6,26 @@
   <title>GoLab · 수입/유통 원가 관리 (구매/입고)</title>
   <style>
     :root{
-      --bg:#0b1220; --card:#101a2f; --muted:#8aa0c6; --text:#e7efff;
-      --line:#203255; --accent:#3ee087; --warn:#ffcc66; --bad:#ff6b6b; --point:#57a1ff;
-      --chip:#0c1530;
+      --bg:#f5f7fa; --card:#ffffff; --muted:#64748b; --text:#0f172a;
+      --line:#e5e7eb; --accent:#16a34a; --warn:#d97706; --bad:#dc2626; --point:#2563eb;
+      --chip:#f8fafc;
     }
     *{box-sizing:border-box}
-    body{margin:0;background:#070b14;color:var(--text);
+    body{margin:0;background:var(--bg);color:var(--text);
       font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", Arial;}
-    header{padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(7,11,20,.85);backdrop-filter: blur(8px);z-index:10}
+    header{padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(255,255,255,.92);backdrop-filter: blur(8px);z-index:10}
     header .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
     header h1{margin:0;font-size:16px;letter-spacing:.2px;color:var(--point)}
-    .tabs{display:flex;gap:8px;align-items:center}
+    .tabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .tab{
       display:inline-flex;align-items:center;gap:8px;
       padding:8px 10px;border-radius:10px;border:1px solid var(--line);
-      color:var(--muted);text-decoration:none;background:rgba(12,21,48,.35);font-size:12px;
+      color:var(--muted);text-decoration:none;background:transparent;font-size:12px;
     }
-    .tab.active{color:#fff;background:rgba(87,161,255,.18);border-color:rgba(87,161,255,.45)}
+    .tab.active{color:var(--point);background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3)}
     .wrap{max-width:1300px;margin:0 auto;padding:16px 16px 36px}
-    .grid{display:grid;grid-template-columns: 1fr 420px; gap:16px}
-    .card{background:rgba(16,26,47,.9);border:1px solid var(--line);border-radius:14px;padding:16px; margin-bottom:16px}
+    .grid{display:grid;grid-template-columns: 1fr 420px; gap:20px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px; margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .card h2{margin:0 0 12px;font-size:13px;color:var(--point); display:flex; align-items:center; gap:8px}
     .row{display:grid;grid-template-columns: 1fr 1fr; gap:12px; margin-bottom:12px}
     label{display:block;font-size:11px;color:var(--muted);margin-bottom:6px; font-weight:700}
@@ -39,35 +39,38 @@
     }
     #pUnit option,
     #pUnit optgroup{
-      background-color:#020617;
-      color:#e5edff;
+      background-color:#ffffff;
+      color:#0f172a;
     }
     #pUnit option:checked,
     #pUnit option:hover{
       background-color:var(--point);
-      color:#020617;
+      color:#ffffff;
     }
     .field-required{
-      background:rgba(87,161,255,0.18);
+      background:rgba(37,99,235,0.06);
     }
     .field-auto{
-      background:rgba(148,163,184,0.16);
+      background:rgba(100,116,139,0.06);
     }
     .memo-box-highlight{
-      background:rgba(255,244,178,0.95) !important;
+      background:rgba(254,243,199,0.95) !important;
       color:#111;
     }
     input:focus, select:focus, textarea:focus{border-color:var(--point)}
+    input::placeholder{color:#94a3b8}
     textarea{min-height:70px;resize:vertical}
     .btns{display:flex;gap:8px;margin-top:12px;flex-wrap:wrap}
     button{
-      flex:1; border:1px solid var(--line);background:#1a2b4b;color:var(--text);
+      flex:1; border:1px solid var(--line);background:var(--card);color:var(--text);
       border-radius:10px;padding:12px;font-size:12px;cursor:pointer; font-weight:800;
     }
+    button:hover{border-color:#cbd5e1;background:#f8fafc}
     button.primary{background:var(--point); border:none; color:#fff}
-    button.save{background:var(--accent); border:none; color:#0b1220}
+    button.primary:hover{background:#1d4ed8}
+    button.save{background:var(--accent); border:none; color:#fff}
     button.save.save-disabled{
-      background:#111827;
+      background:#e5e7eb;
       border:1px solid var(--line);
       color:var(--muted);
       opacity:0.7;
@@ -76,31 +79,31 @@
     button.save.save-ready{
       background:var(--accent);
       border:none;
-      color:#0b1220;
+      color:#fff;
     }
     button.save.save-warning{
       background:var(--warn);
       border:none;
-      color:#111827;
+      color:#fff;
     }
     button.save.save-error{
       background:var(--bad);
       border:none;
-      color:#0b1220;
+      color:#fff;
     }
-    button.danger{color:var(--bad); background:none; border:1px solid rgba(255,107,107,.35)}
-    button.secondary{background:rgba(87,161,255,.10); border:1px solid rgba(87,161,255,.35)}
+    button.danger{color:var(--bad); background:none; border:1px solid rgba(220,38,38,.3)}
+    button.secondary{background:rgba(37,99,235,.06); border:1px solid rgba(37,99,235,.25);color:var(--point)}
     .kpi-grid{display:grid;grid-template-columns: 1fr 1fr; gap:10px}
-    .kpi{padding:14px;border-radius:12px;border:1px solid var(--line);background:rgba(12,21,48,0.5)}
+    .kpi{padding:14px;border-radius:10px;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .kpi .t{font-size:11px;color:var(--muted)}
-    .kpi .v{margin-top:8px;font-size:18px;font-weight:900; color:var(--accent)}
-    .tableWrap{overflow:auto; border-radius:12px; border:1px solid var(--line)}
+    .kpi .v{margin-top:8px;font-size:24px;font-weight:600; color:var(--point)}
+    .tableWrap{overflow:auto; border-radius:10px; border:1px solid var(--line)}
     table{width:100%;border-collapse:collapse;min-width:1100px; font-size:12px}
-    th{background:#162440; color:var(--muted); text-align:left; padding:12px; position:sticky; top:0}
+    th{background:#f8fafc; color:var(--muted); text-align:left; padding:12px; position:sticky; top:0;border-bottom:1px solid var(--line)}
     td{padding:12px; border-bottom:1px solid var(--line); vertical-align:middle}
     .highlight{color:var(--accent); font-weight:900}
-    .currency-tag{font-size:10px; padding:2px 6px; background:var(--line); border-radius:6px; margin-left:6px; color:#cfe2ff}
-    .note-box{padding:12px; background:rgba(87,161,255,0.06); border-left:3px solid var(--point); font-size:12px; color:var(--muted); line-height:1.6;border-radius:10px}
+    .currency-tag{font-size:10px; padding:2px 6px; background:#e5e7eb; border-radius:6px; margin-left:6px; color:#475569}
+    .note-box{padding:12px; background:rgba(37,99,235,0.04); border-left:3px solid var(--point); font-size:12px; color:var(--muted); line-height:1.6;border-radius:10px}
     .muted{color:var(--muted)}
     .pill{display:inline-flex;align-items:center;gap:8px;padding:3px 10px;border-radius:999px;border:1px solid var(--line);font-size:11px;color:var(--muted)}
     .pill .dot{width:7px;height:7px;border-radius:999px;background:var(--accent)}
@@ -109,7 +112,7 @@
     .inline{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
     .mini{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
     input[type="file"]{display:none}
-    .checkRow{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);background:rgba(12,21,48,.35);border-radius:12px;margin-top:10px}
+    .checkRow{display:flex;align-items:center;gap:10px;padding:10px;border:1px solid var(--line);background:rgba(37,99,235,.03);border-radius:12px;margin-top:10px}
     .checkRow input{width:auto}
   </style>
 </head>

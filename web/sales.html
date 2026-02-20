@@ -6,27 +6,27 @@
   <title>GoLab · 매출 관리</title>
   <style>
     :root{
-      --bg:#0b1220;--card:#101a2f;--muted:#8aa0c6;--text:#e7efff;
-      --line:#203255;--accent:#3ee087;--warn:#ffcc66;--bad:#ff6b6b;--point:#57a1ff;
-      --chip:#0c1530;--sales:#ff9f43;
+      --bg:#f5f7fa;--card:#ffffff;--muted:#64748b;--text:#0f172a;
+      --line:#e5e7eb;--accent:#16a34a;--warn:#d97706;--bad:#dc2626;--point:#2563eb;
+      --chip:#f8fafc;--sales:#d97706;
     }
     *{box-sizing:border-box}
-    body{margin:0;background:#070b14;color:var(--text);
+    body{margin:0;background:var(--bg);color:var(--text);
       font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",Arial;}
-    header{padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(7,11,20,.85);backdrop-filter:blur(8px);z-index:10}
+    header{padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);z-index:10}
     header .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
     header h1{margin:0;font-size:16px;letter-spacing:.2px;color:var(--sales)}
     .tabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .tab{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);color:var(--muted);text-decoration:none;background:rgba(12,21,48,.35);font-size:12px}
-    .tab.active{color:#fff;background:rgba(255,159,67,.18);border-color:rgba(255,159,67,.45)}
+    .tab{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);color:var(--muted);text-decoration:none;background:transparent;font-size:12px}
+    .tab.active{color:var(--sales);background:rgba(217,119,6,.08);border-color:rgba(217,119,6,.3)}
     .wrap{max-width:1440px;margin:0 auto;padding:16px 16px 36px}
-    .card{background:rgba(16,26,47,.9);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .card h2{margin:0 0 12px;font-size:13px;color:var(--sales);display:flex;align-items:center;gap:8px}
     /* KPI */
     .kpi-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
-    .kpi{padding:14px;border-radius:12px;border:1px solid var(--line);background:rgba(12,21,48,0.5)}
+    .kpi{padding:14px;border-radius:10px;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .kpi .t{font-size:11px;color:var(--muted)}
-    .kpi .v{margin-top:6px;font-size:18px;font-weight:900;color:var(--sales)}
+    .kpi .v{margin-top:6px;font-size:24px;font-weight:600;color:var(--sales)}
     .kpi .v.blue{color:var(--point)}
     .kpi .sub{margin-top:4px;font-size:10px;color:var(--muted);font-weight:400}
     /* Form */
@@ -36,23 +36,26 @@
     .r4{grid-template-columns:1fr 1fr 1fr 1fr}
     .r5{grid-template-columns:1fr 1fr 1fr 1fr 1fr}
     label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:700}
-    label .opt{font-weight:400;color:#5a7baa}
+    label .opt{font-weight:400;color:#94a3b8}
     input,select{width:100%;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--text);padding:9px 10px;font-size:12px;outline:none;transition:border .2s}
     input:focus,select:focus{border-color:var(--sales)}
+    input::placeholder{color:#94a3b8}
     .btns{display:flex;gap:8px;flex-wrap:wrap}
-    button{border:1px solid var(--line);background:#1a2b4b;color:var(--text);border-radius:10px;padding:10px 14px;font-size:12px;cursor:pointer;font-weight:700}
+    button{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:10px 14px;font-size:12px;cursor:pointer;font-weight:700}
+    button:hover{border-color:#cbd5e1;background:#f8fafc}
     button.primary{background:var(--sales);border:none;color:#fff}
-    button.save{background:var(--sales);border:none;color:#0b1220}
-    button.danger{color:var(--bad);background:none;border:1px solid rgba(255,107,107,.35)}
-    button.secondary{background:rgba(255,159,67,.10);border:1px solid rgba(255,159,67,.35)}
+    button.primary:hover{background:#b45309}
+    button.save{background:var(--sales);border:none;color:#fff}
+    button.danger{color:var(--bad);background:none;border:1px solid rgba(220,38,38,.3)}
+    button.secondary{background:rgba(217,119,6,.06);border:1px solid rgba(217,119,6,.25);color:var(--sales)}
     button:disabled{opacity:.5;cursor:not-allowed}
     /* Table */
-    .tableWrap{overflow:auto;border-radius:12px;border:1px solid var(--line)}
+    .tableWrap{overflow:auto;border-radius:10px;border:1px solid var(--line)}
     table{width:100%;border-collapse:collapse;min-width:1000px;font-size:12px}
-    th{background:#162440;color:var(--muted);text-align:left;padding:10px 12px;position:sticky;top:0;white-space:nowrap;z-index:2}
+    th{background:#f8fafc;color:var(--muted);text-align:left;padding:10px 12px;position:sticky;top:0;white-space:nowrap;z-index:2;border-bottom:1px solid var(--line)}
     th.num,td.num{text-align:right}
     td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
-    tr:hover{background:rgba(255,159,67,.04)}
+    tr:hover{background:rgba(217,119,6,.03)}
     .highlight{color:var(--sales);font-weight:900}
     .muted{color:var(--muted)}
     .mini{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
@@ -67,7 +70,7 @@
     .pagination button{padding:6px 12px;font-size:11px}
     .pagination .current{color:var(--sales);font-weight:900;font-size:12px}
     input[type="file"]{display:none}
-    .note-box{padding:12px;background:rgba(255,159,67,.06);border-left:3px solid var(--sales);font-size:12px;color:var(--muted);line-height:1.6;border-radius:10px}
+    .note-box{padding:12px;background:rgba(217,119,6,.04);border-left:3px solid var(--sales);font-size:12px;color:var(--muted);line-height:1.6;border-radius:10px}
     @media(max-width:900px){
       .kpi-grid{grid-template-columns:1fr 1fr}
       .r4,.r5{grid-template-columns:1fr 1fr}
