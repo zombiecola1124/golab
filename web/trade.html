@@ -8,7 +8,7 @@
     :root{
       --bg:#f5f7fa;--card:#ffffff;--muted:#64748b;--text:#0f172a;
       --line:#e5e7eb;--accent:#16a34a;--warn:#d97706;--bad:#dc2626;--point:#2563eb;
-      --chip:#f8fafc;
+      --chip:#f8fafc;--purple:#7c3aed;--orange:#d97706;
     }
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--text);
@@ -23,11 +23,12 @@
     .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .card h2{margin:0 0 12px;font-size:13px;color:var(--point);display:flex;align-items:center;gap:8px}
     /* KPI */
-    .kpi-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+    .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
     .kpi{padding:14px;border-radius:10px;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .kpi .t{font-size:11px;color:var(--muted)}
     .kpi .v{margin-top:6px;font-size:24px;font-weight:600;color:var(--point)}
     .kpi .v.blue{color:var(--point)}
+    .kpi .v.orange{color:var(--warn)}
     .kpi .sub{margin-top:4px;font-size:10px;color:var(--muted);font-weight:400}
     /* Form */
     .row{display:grid;gap:10px;margin-bottom:10px}
@@ -37,21 +38,25 @@
     .r5{grid-template-columns:1fr 1fr 1fr 1fr 1fr}
     label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:700}
     label .opt{font-weight:400;color:#94a3b8}
-    input,select{width:100%;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--text);padding:9px 10px;font-size:12px;outline:none;transition:border .2s}
-    input:focus,select:focus{border-color:var(--point)}
+    input,select,textarea{width:100%;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--text);padding:9px 10px;font-size:12px;outline:none;transition:border .2s}
+    input:focus,select:focus,textarea:focus{border-color:var(--point)}
     input::placeholder{color:#94a3b8}
+    textarea{resize:vertical;min-height:36px}
     .btns{display:flex;gap:8px;flex-wrap:wrap}
     button{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:10px 14px;font-size:12px;cursor:pointer;font-weight:700}
     button:hover{border-color:#cbd5e1;background:#f8fafc}
     button.primary{background:var(--point);border:none;color:#fff}
     button.primary:hover{background:#1d4ed8}
     button.save{background:var(--accent);border:none;color:#fff}
+    button.save:hover{background:#15803d}
     button.danger{color:var(--bad);background:none;border:1px solid rgba(220,38,38,.3)}
     button.secondary{background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);color:var(--point)}
+    button.receive-btn{background:rgba(37,99,235,.08);border:1px solid rgba(37,99,235,.3);color:var(--point);padding:5px 8px;font-size:11px}
+    button.receive-btn:hover{background:rgba(37,99,235,.15)}
     button:disabled{opacity:.5;cursor:not-allowed}
     /* Table */
     .tableWrap{overflow:auto;border-radius:10px;border:1px solid var(--line)}
-    table{width:100%;border-collapse:collapse;min-width:1100px;font-size:12px}
+    table{width:100%;border-collapse:collapse;min-width:1300px;font-size:12px}
     th{background:#f8fafc;color:var(--muted);text-align:left;padding:10px 12px;position:sticky;top:0;white-space:nowrap;z-index:2;border-bottom:1px solid var(--line)}
     th.num,td.num{text-align:right}
     td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
@@ -59,9 +64,17 @@
     .highlight{color:var(--accent);font-weight:900}
     .muted{color:var(--muted)}
     .mini{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
+    /* Status tags */
+    .status-tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.2px}
+    .status-tag.ORDERED{background:#dbeafe;color:#1e40af}
+    .status-tag.PARTIAL{background:#fef3c7;color:#92400e}
+    .status-tag.RECEIVED{background:#dcfce7;color:#166534}
+    /* Vendor link */
+    .vendor-link{color:var(--point);cursor:pointer;font-weight:700}
+    .vendor-link:hover{text-decoration:underline}
     /* Filter */
     .filter-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
-    .filter-bar>div{flex:1;min-width:130px}
+    .filter-bar>div{flex:1;min-width:110px}
     .filter-bar .wide{flex:2;min-width:200px}
     .tools-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap;margin-bottom:10px}
     .stat-inline{font-size:11px;color:var(--muted);margin-left:auto}
@@ -71,10 +84,67 @@
     .pagination .current{color:var(--point);font-weight:900;font-size:12px}
     input[type="file"]{display:none}
     .note-box{padding:12px;background:rgba(37,99,235,.04);border-left:3px solid var(--point);font-size:12px;color:var(--muted);line-height:1.6;border-radius:10px}
+    /* Modal */
+    .modalBack{position:fixed;inset:0;background:rgba(0,0,0,.25);display:none;align-items:center;justify-content:center;z-index:999}
+    .modalBack.open{display:flex}
+    .modal{background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;box-shadow:0 8px 30px rgba(0,0,0,.12);width:min(440px,92vw)}
+    .modal h3{margin:0 0 14px;font-size:14px;color:var(--text)}
+    .modal .info-row{display:flex;justify-content:space-between;padding:4px 0;font-size:12px}
+    .modal .info-row .label{color:var(--muted)}
+    .modal .info-row .value{font-weight:700}
+    .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+    .rcv-remaining{font-size:11px;color:var(--muted);margin-top:4px}
+    .rcv-error{font-size:11px;color:var(--bad);margin-top:4px;display:none;font-weight:600}
+    /* Toast */
+    .toast{position:fixed;bottom:24px;right:24px;background:#166534;color:#fff;
+      padding:14px 20px;border-radius:10px;font-size:13px;font-weight:600;
+      box-shadow:0 4px 12px rgba(0,0,0,.15);z-index:300;opacity:0;
+      transform:translateY(10px);transition:all .3s ease;pointer-events:none}
+    .toast.show{opacity:1;transform:translateY(0)}
+    /* Drawer */
+    .drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:90}
+    .drawer-overlay.open{display:block}
+    .drawer{position:fixed;top:0;right:-42%;width:40%;height:100vh;background:var(--bg);border-left:1px solid var(--line);z-index:100;overflow-y:auto;padding:0;transition:right .25s ease}
+    .drawer.open{right:0}
+    .drawer-header{padding:20px 20px 16px;border-bottom:1px solid var(--line);position:sticky;top:0;background:var(--bg);z-index:2}
+    .drawer-header .top-row{display:flex;align-items:center;justify-content:space-between}
+    .drawer-header h3{font-size:16px;font-weight:800;color:var(--text)}
+    .drawer-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px}
+    .drawer-close:hover{color:var(--bad)}
+    .drawer-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+    .d-stat{padding:10px;background:var(--card);border:1px solid var(--line);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .d-stat .t{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase}
+    .d-stat .v{font-size:14px;font-weight:900;margin-top:3px;color:var(--text)}
+    /* Drawer master info */
+    .vendor-master{padding:16px 20px;border-bottom:1px solid var(--line)}
+    .vendor-master .vm-row{display:flex;justify-content:space-between;padding:3px 0;font-size:12px}
+    .vendor-master .vm-label{color:var(--muted);font-size:11px}
+    .vendor-master .vm-value{font-weight:600}
+    .vm-edit-form{display:none;padding:12px 0}
+    .vm-edit-form label{margin-top:6px}
+    .vm-edit-form input,.vm-edit-form textarea{margin-bottom:4px}
+    /* Drawer tabs */
+    .drawer-tabs{display:flex;border-bottom:1px solid var(--line);padding:0 20px}
+    .drawer-tab{padding:10px 16px;font-size:12px;font-weight:700;color:var(--muted);cursor:pointer;border-bottom:2px solid transparent;transition:all .15s}
+    .drawer-tab:hover{color:var(--text)}
+    .drawer-tab.active{color:var(--point);border-bottom-color:var(--point)}
+    .drawer-panel{display:none;padding:16px 20px}
+    .drawer-panel.active{display:block}
+    .drawer-panel h4{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.3px}
+    .drawer-purchase{font-size:12px;padding:8px 0;border-bottom:1px solid var(--line)}
+    .drawer-purchase:last-child{border-bottom:none}
+    .drawer-purchase .dp-top{display:flex;justify-content:space-between}
+    .drawer-purchase .dp-item{font-weight:700}
+    .drawer-purchase .dp-date{color:var(--muted);font-size:11px}
+    .drawer-purchase .dp-detail{color:var(--muted);font-size:11px;margin-top:2px}
+    .drawer-todo{font-size:12px;color:var(--text);padding:6px 0;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
+    .drawer-todo:last-child{border-bottom:none}
+    .drawer-todo .dt-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);flex-shrink:0}
     @media(max-width:900px){
       .kpi-grid{grid-template-columns:1fr 1fr}
       .r4,.r5{grid-template-columns:1fr 1fr}
       .filter-bar{flex-direction:column}
+      .drawer{width:100%;right:-102%}
     }
   </style>
 </head>
@@ -100,18 +170,23 @@
     <div class="kpi-grid">
       <div class="kpi">
         <div class="t">총 구매액</div>
-        <div id="kTotal" class="v">₩ 0</div>
+        <div id="kTotal" class="v">₩0</div>
         <div id="kTotalSub" class="sub"></div>
       </div>
       <div class="kpi">
         <div class="t">거래 건수</div>
-        <div id="kCount" class="v">0 건</div>
+        <div id="kCount" class="v">0건</div>
         <div id="kCountSub" class="sub"></div>
       </div>
       <div class="kpi">
         <div class="t">거래처 수</div>
         <div id="kVendors" class="v">0</div>
         <div id="kVendorsSub" class="sub"></div>
+      </div>
+      <div class="kpi">
+        <div class="t">미입고 건수</div>
+        <div id="kPending" class="v orange">0</div>
+        <div id="kPendingSub" class="sub"></div>
       </div>
       <div class="kpi">
         <div class="t">최근 거래일</div>
@@ -151,7 +226,7 @@
         <datalist id="dlItem"></datalist>
       </div>
       <div>
-        <label>수량</label>
+        <label>발주 수량</label>
         <input id="inQty" type="number" step="0.01" placeholder="0" />
       </div>
       <div>
@@ -203,6 +278,15 @@
         <select id="fVendor"><option value="">전체</option></select>
       </div>
       <div>
+        <label>입고 상태</label>
+        <select id="fStatus">
+          <option value="">전체</option>
+          <option value="ORDERED">발주</option>
+          <option value="PARTIAL">부분입고</option>
+          <option value="RECEIVED">입고완료</option>
+        </select>
+      </div>
+      <div>
         <label>시작일</label>
         <input id="fFrom" type="date" />
       </div>
@@ -226,10 +310,12 @@
             <th>문서번호</th>
             <th>품번</th>
             <th>상품명</th>
-            <th class="num">수량</th>
+            <th class="num">발주</th>
+            <th class="num">입고</th>
             <th>단위</th>
             <th class="num">구매단가</th>
             <th class="num">구매총액</th>
+            <th>상태</th>
             <th>비고</th>
             <th style="text-align:right">관리</th>
           </tr>
@@ -238,43 +324,121 @@
       </table>
     </div>
     <div class="pagination" id="pgArea"></div>
-    <div class="mini">※ 구매총액 = 수량 x 구매단가 (자동 계산)</div>
+    <div class="mini">※ 구매총액 = 발주수량 × 구매단가. 입고처리 시 재고에 자동 반영됩니다.</div>
   </div>
 
   <div class="note-box">
-    💡 이 페이지는 <b>구매 원가 관리</b> 전용입니다. 판매/마진 분석은 향후 매출 모듈에서 별도 처리됩니다.
+    💡 이 페이지는 <b>구매 원가 관리</b> 전용입니다. [입고처리] 버튼으로 실제 입고된 수량만 재고에 반영됩니다.
   </div>
 </div>
 
+<!-- ═══ Receiving Modal ═══ -->
+<div id="receiveModal" class="modalBack">
+  <div class="modal">
+    <h3>📦 입고 처리</h3>
+    <div id="rcvInfo"></div>
+    <hr style="border:none;border-top:1px solid var(--line);margin:12px 0" />
+    <label>이번 입고 수량</label>
+    <input id="rcvQty" type="number" min="0" step="0.01" placeholder="이번 입고 수량" />
+    <div id="rcvRemaining" class="rcv-remaining"></div>
+    <div id="rcvError" class="rcv-error"></div>
+    <div class="modal-btns">
+      <button id="rcvCancel">취소</button>
+      <button id="rcvSave" class="save" disabled>입고 확인</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ Vendor Drawer ═══ -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="top-row">
+      <h3 id="vpName">거래처명</h3>
+      <button class="drawer-close" id="vpClose">✕</button>
+    </div>
+    <div class="drawer-stats">
+      <div class="d-stat"><div class="t">총 구매액</div><div class="v" id="vpTotal">₩0</div></div>
+      <div class="d-stat"><div class="t">거래 건수</div><div class="v" id="vpCount">0</div></div>
+      <div class="d-stat"><div class="t">최근 거래일</div><div class="v" id="vpLatest">-</div></div>
+      <div class="d-stat"><div class="t">미완료 Action</div><div class="v" id="vpTasks">0건</div></div>
+    </div>
+  </div>
+  <!-- Vendor Master Info -->
+  <div class="vendor-master" id="vmSection">
+    <div id="vmDisplay">
+      <div class="vm-row"><span class="vm-label">담당자</span><span class="vm-value" id="vmContact">-</span></div>
+      <div class="vm-row"><span class="vm-label">연락처</span><span class="vm-value" id="vmPhone">-</span></div>
+      <div class="vm-row"><span class="vm-label">이메일</span><span class="vm-value" id="vmEmail">-</span></div>
+      <div class="vm-row"><span class="vm-label">주소</span><span class="vm-value" id="vmAddr">-</span></div>
+      <div class="vm-row"><span class="vm-label">메모</span><span class="vm-value" id="vmMemo">-</span></div>
+      <div style="text-align:right;margin-top:8px">
+        <button id="vmEditBtn" class="secondary" style="padding:4px 10px;font-size:11px">수정</button>
+      </div>
+    </div>
+    <div class="vm-edit-form" id="vmEditForm">
+      <label>담당자</label><input id="vmInContact" placeholder="담당자" />
+      <label>연락처</label><input id="vmInPhone" placeholder="전화번호" />
+      <label>이메일</label><input id="vmInEmail" placeholder="이메일" />
+      <label>주소</label><input id="vmInAddr" placeholder="주소" />
+      <label>메모</label><textarea id="vmInMemo" placeholder="메모"></textarea>
+      <div class="btns" style="margin-top:8px;justify-content:flex-end">
+        <button id="vmCancelBtn" style="padding:5px 10px;font-size:11px">취소</button>
+        <button id="vmSaveBtn" class="save" style="padding:5px 10px;font-size:11px">저장</button>
+      </div>
+    </div>
+  </div>
+  <!-- Tabs -->
+  <div class="drawer-tabs">
+    <div class="drawer-tab active" data-panel="purchases">최근 구매 5건</div>
+    <div class="drawer-tab" data-panel="actions">미완료 Action</div>
+  </div>
+  <div class="drawer-panel active" id="dpPurchases">
+    <h4>최근 구매</h4>
+    <div id="vpPurchases"></div>
+  </div>
+  <div class="drawer-panel" id="dpActions">
+    <h4>미완료 Action</h4>
+    <div id="vpTodos"></div>
+  </div>
+</div>
+
+<!-- Toast -->
+<div class="toast" id="toast"></div>
+
 <script>
+/* ═════════════════════════════════════════
+   GoLab v1.6.1 — Purchase Ledger
+   구매 → 입고처리 → 재고 반영 파이프라인
+   ═════════════════════════════════════════ */
+
 /* ── Constants ── */
 const TRADE_KEY = "golab_trade_v1";
 const AUDIT_KEY = "golab_trade_audit";
+const INV_KEY = "golab_inventory_v01";
+const HIST_KEY = "golab_inventory_inbound_history_v01";
+const ACTION_KEY = "golab_actions_v15";
+const VENDOR_KEY = "golab_vendors_v1";
 const PAGE_SIZE = 50;
 const DEBOUNCE_MS = 300;
 const $ = id => document.getElementById(id);
 
 /* ── Audit Log ── */
 function emitAudit(event, detail){
-  // event: CREATE | UPDATE | DELETE | IMPORTED
   try{
     const log = JSON.parse(localStorage.getItem(AUDIT_KEY)||"[]");
-    log.push({
-      event,
-      ts: new Date().toISOString(),
-      detail: detail || {}
-    });
-    // Keep last 2000 entries to prevent localStorage bloat
+    log.push({ event, ts: new Date().toISOString(), detail: detail || {} });
     if(log.length>2000) log.splice(0, log.length-2000);
     localStorage.setItem(AUDIT_KEY, JSON.stringify(log));
-  }catch(e){ /* silent */ }
+  }catch(e){}
 }
 
 /* ── State ── */
 let editingId = null;
 let currentPage = 1;
 let debounceTimer = null;
-let _cache = null;          // in-memory cache
+let _cache = null;
+let receivingId = null;
 
 /* ── Init date ── */
 $("inDate").value = new Date().toISOString().substring(0,10);
@@ -299,19 +463,27 @@ function normDate(v){
     return y+"-"+m+"-"+d;
   }
   if(typeof v==="number"){
-    // Excel serial date — UTC-safe: use manual calculation instead of Date constructor
-    const base=new Date(1899,11,30); // local time
+    const base=new Date(1899,11,30);
     base.setDate(base.getDate()+Math.floor(v));
     const y=base.getFullYear(), m=String(base.getMonth()+1).padStart(2,"0"), d=String(base.getDate()).padStart(2,"0");
     return y+"-"+m+"-"+d;
   }
   let s=String(v).trim();
-  // Handle YYYY.MM.DD and YYYY/MM/DD
   s=s.replace(/^(\d{4})[./](\d{1,2})[./](\d{1,2})/, (_, y, m, d) =>
     y+"-"+m.padStart(2,"0")+"-"+d.padStart(2,"0")
   );
   if(s.length>=10) return s.substring(0,10);
   return s;
+}
+
+function todayStr(){ return new Date().toISOString().substring(0,10); }
+
+/* ── Toast ── */
+function showToast(msg, duration=3000){
+  const el = $("toast");
+  el.textContent = msg;
+  el.classList.add("show");
+  setTimeout(() => el.classList.remove("show"), duration);
 }
 
 /* ── Deterministic itemId (djb2 hash) ── */
@@ -335,7 +507,14 @@ function save(data){
 }
 function invalidateCache(){ _cache=null; }
 
-/* ── Normalize record ── */
+/* ── Actions (Single Source of Truth) ── */
+function loadActions(){ try{return JSON.parse(localStorage.getItem(ACTION_KEY)||"[]")}catch{return[]} }
+
+/* ── Vendor Master ── */
+function loadVendors(){ try{return JSON.parse(localStorage.getItem(VENDOR_KEY)||"{}")}catch{return{}} }
+function saveVendors(obj){ localStorage.setItem(VENDOR_KEY, JSON.stringify(obj)); }
+
+/* ── Normalize record (backward compat: adds receivedQty + status) ── */
 function normalizeRecord(r){
   const vendor = normStr(r.vendor);
   const partNo = normUpper(r.partNo);
@@ -351,10 +530,24 @@ function normalizeRecord(r){
     qty: normNum(r.qty),
     unit: normStr(r.unit) || "ea",
     buyUnitPrice: normNum(r.buyUnitPrice || r.buyPrice || 0),
+    receivedQty: normNum(r.receivedQty || 0),
+    status: r.status || "ORDERED",
     memo: normStr(r.memo || r.note || ""),
     createdAt: r.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
+}
+
+/* ── Status helper ── */
+function computeStatus(qty, receivedQty){
+  if(receivedQty >= qty && qty > 0) return "RECEIVED";
+  if(receivedQty > 0) return "PARTIAL";
+  return "ORDERED";
+}
+function statusLabel(s){
+  if(s==="RECEIVED") return "입고완료";
+  if(s==="PARTIAL") return "부분입고";
+  return "발주";
 }
 
 /* ── Autocomplete ── */
@@ -385,6 +578,7 @@ function getFiltered(){
   let data=load();
   const q=($("fSearch").value||"").trim().toLowerCase();
   const vendor=$("fVendor").value;
+  const status=$("fStatus").value;
   const from=$("fFrom").value;
   const to=$("fTo").value;
   if(q){
@@ -397,6 +591,7 @@ function getFiltered(){
     );
   }
   if(vendor) data=data.filter(r=>r.vendor===vendor);
+  if(status) data=data.filter(r=>(r.status||"ORDERED")===status);
   if(from) data=data.filter(r=>(r.purchaseDate||"")>=from);
   if(to) data=data.filter(r=>(r.purchaseDate||"")<=to);
   return data;
@@ -406,6 +601,7 @@ function getFiltered(){
 function hasActiveFilter(){
   return !!($("fSearch").value||"").trim()
     || !!$("fVendor").value
+    || !!$("fStatus").value
     || !!$("fFrom").value
     || !!$("fTo").value;
 }
@@ -415,32 +611,36 @@ function computeKPI(){
   const isFiltered = hasActiveFilter();
 
   const calc=(arr)=>{
-    let total=0; const vendors=new Set(); let latest="";
+    let total=0; const vendors=new Set(); let latest=""; let pending=0;
     arr.forEach(r=>{
       total += n(r.buyUnitPrice)*n(r.qty);
       if(r.vendor) vendors.add(r.vendor);
       if(r.purchaseDate && r.purchaseDate>latest) latest=r.purchaseDate;
+      if((r.status||"ORDERED")!=="RECEIVED") pending++;
     });
-    return {total,count:arr.length,vendors:vendors.size,latest};
+    return {total,count:arr.length,vendors:vendors.size,latest,pending};
   };
 
   const a=calc(all);
   const f=isFiltered?calc(filtered):null;
 
   $("kTotal").textContent = fmt(a.total);
-  $("kCount").textContent = a.count.toLocaleString()+" 건";
+  $("kCount").textContent = a.count.toLocaleString()+"건";
   $("kVendors").textContent = a.vendors.toLocaleString();
+  $("kPending").textContent = a.pending.toLocaleString();
   $("kLatest").textContent = a.latest || "-";
 
   if(f){
     $("kTotalSub").textContent = "필터: "+fmt(f.total);
-    $("kCountSub").textContent = "필터: "+f.count.toLocaleString()+" 건";
+    $("kCountSub").textContent = "필터: "+f.count.toLocaleString()+"건";
     $("kVendorsSub").textContent = "필터: "+f.vendors.toLocaleString();
+    $("kPendingSub").textContent = "필터: "+f.pending;
     $("kLatestSub").textContent = "필터: "+(f.latest||"-");
   } else {
     $("kTotalSub").textContent="";
     $("kCountSub").textContent="";
     $("kVendorsSub").textContent="";
+    $("kPendingSub").textContent="";
     $("kLatestSub").textContent="";
   }
 }
@@ -473,34 +673,47 @@ function render(){
   const tb=$("tbody");
   tb.innerHTML="";
   if(page.length===0){
-    tb.innerHTML='<tr><td colspan="11" class="muted" style="text-align:center;padding:24px">데이터가 없습니다.</td></tr>';
+    tb.innerHTML='<tr><td colspan="13" class="muted" style="text-align:center;padding:24px">데이터가 없습니다.</td></tr>';
   }
   page.forEach(r=>{
     const buyTotal=n(r.buyUnitPrice)*n(r.qty);
+    const st = r.status || "ORDERED";
+    const rcvd = n(r.receivedQty);
+    const qty = n(r.qty);
     const tr=document.createElement("tr");
     tr.innerHTML=`
       <td class="muted">${esc(r.purchaseDate)}</td>
-      <td><b>${esc(r.vendor)}</b></td>
+      <td><span class="vendor-link" data-vendor="${esc(r.vendor)}">${esc(r.vendor)}</span></td>
       <td class="muted">${esc(r.docNo)}</td>
       <td class="muted">${esc(r.partNo)}</td>
       <td>${esc(r.itemName)}</td>
-      <td class="num">${n(r.qty).toLocaleString()}</td>
+      <td class="num">${qty.toLocaleString()}</td>
+      <td class="num" style="font-weight:700;${rcvd>0&&rcvd<qty?'color:var(--warn)':rcvd>=qty&&qty>0?'color:var(--accent)':''}">${rcvd.toLocaleString()}</td>
       <td class="muted">${esc(r.unit)}</td>
       <td class="num">${fmt(n(r.buyUnitPrice))}</td>
       <td class="num highlight">${fmt(buyTotal)}</td>
+      <td><span class="status-tag ${st}">${statusLabel(st)}</span></td>
       <td class="muted">${esc(r.memo)}</td>
       <td style="text-align:right;white-space:nowrap">
+        ${st!=="RECEIVED"?`<button class="receive-btn" data-rcv="${r.id}">입고처리</button>`:''}
         <button class="secondary" style="padding:5px 8px;font-size:11px" data-edit="${r.id}">수정</button>
         <button class="danger" style="padding:5px 8px;font-size:11px" data-del="${r.id}">삭제</button>
       </td>`;
     tb.appendChild(tr);
   });
 
+  // Bind events
   tb.querySelectorAll("button[data-del]").forEach(btn=>{
     btn.onclick=e=>{ e.stopPropagation(); deleteRecord(btn.dataset.del); };
   });
   tb.querySelectorAll("button[data-edit]").forEach(btn=>{
     btn.onclick=e=>{ e.stopPropagation(); startEdit(btn.dataset.edit); };
+  });
+  tb.querySelectorAll("button[data-rcv]").forEach(btn=>{
+    btn.onclick=e=>{ e.stopPropagation(); openReceiveModal(btn.dataset.rcv); };
+  });
+  tb.querySelectorAll(".vendor-link").forEach(el=>{
+    el.onclick=e=>{ e.stopPropagation(); openDrawer(el.dataset.vendor); };
   });
 
   // Pagination
@@ -522,6 +735,287 @@ function render(){
   }
 }
 
+/* ══════════════════════════════════════════
+   RECEIVING MODAL
+   ══════════════════════════════════════════ */
+function openReceiveModal(id){
+  const r = load().find(x=>x.id===id);
+  if(!r) return;
+  receivingId = id;
+  const qty = n(r.qty);
+  const rcvd = n(r.receivedQty);
+  const remaining = qty - rcvd;
+
+  $("rcvInfo").innerHTML = `
+    <div class="info-row"><span class="label">상품명</span><span class="value">${esc(r.itemName)}</span></div>
+    <div class="info-row"><span class="label">구매처</span><span class="value">${esc(r.vendor)}</span></div>
+    <div class="info-row"><span class="label">발주 수량</span><span class="value">${qty.toLocaleString()} ${esc(r.unit)}</span></div>
+    <div class="info-row"><span class="label">기 입고</span><span class="value">${rcvd.toLocaleString()} ${esc(r.unit)}</span></div>
+    <div class="info-row"><span class="label" style="color:var(--point);font-weight:700">잔여 수량</span><span class="value" style="color:var(--point)">${remaining.toLocaleString()} ${esc(r.unit)}</span></div>
+  `;
+  $("rcvQty").value = "";
+  $("rcvQty").max = remaining;
+  $("rcvQty").placeholder = "이번 입고 수량 (최대 "+remaining+")";
+  $("rcvRemaining").textContent = "잔여 "+remaining+"개 입고 가능";
+  $("rcvError").style.display = "none";
+  $("rcvSave").disabled = true;
+  $("receiveModal").classList.add("open");
+  setTimeout(() => $("rcvQty").focus(), 100);
+}
+
+function closeReceiveModal(){
+  $("receiveModal").classList.remove("open");
+  receivingId = null;
+}
+
+function validateReceiveQty(){
+  const r = load().find(x=>x.id===receivingId);
+  if(!r){ $("rcvSave").disabled=true; return; }
+  const remaining = n(r.qty) - n(r.receivedQty);
+  const addQty = n($("rcvQty").value);
+  const err = $("rcvError");
+
+  if($("rcvQty").value==="" || addQty <= 0){
+    err.textContent = "1 이상의 수량을 입력해주세요.";
+    err.style.display = "block";
+    $("rcvSave").disabled = true;
+    return;
+  }
+  if(addQty > remaining){
+    err.textContent = "잔여 수량("+remaining+")을 초과했습니다.";
+    err.style.display = "block";
+    $("rcvSave").disabled = true;
+    return;
+  }
+  err.style.display = "none";
+  $("rcvSave").disabled = false;
+}
+
+function saveReceive(){
+  if(!receivingId) return;
+  const all = load();
+  const r = all.find(x=>x.id===receivingId);
+  if(!r) return;
+
+  const addQty = n($("rcvQty").value);
+  const remaining = n(r.qty) - n(r.receivedQty);
+  if(addQty <= 0 || addQty > remaining) return;
+
+  // Update record
+  r.receivedQty = n(r.receivedQty) + addQty;
+  r.status = computeStatus(n(r.qty), r.receivedQty);
+  r.updatedAt = new Date().toISOString();
+  save(all);
+
+  // Update inventory
+  updateInventoryOnReceive(r, addQty);
+
+  // Audit
+  emitAudit("RECEIVE", {
+    id: r.id,
+    vendor: r.vendor,
+    itemName: r.itemName,
+    addQty: addQty,
+    receivedQty: r.receivedQty,
+    status: r.status
+  });
+
+  closeReceiveModal();
+  computeKPI();
+  render();
+  showToast("입고 수량이 반영되어 재고에 업데이트되었습니다.");
+}
+
+/* ══════════════════════════════════════════
+   INVENTORY UPDATE (Moving Average)
+   ══════════════════════════════════════════ */
+function updateInventoryOnReceive(record, addQty){
+  let inv = [];
+  try{ inv = JSON.parse(localStorage.getItem(INV_KEY)||"[]"); }catch{}
+  let hist = [];
+  try{ hist = JSON.parse(localStorage.getItem(HIST_KEY)||"[]"); }catch{}
+
+  // Find or create inventory item
+  let target = inv.find(x => x.id === record.itemId)
+            || inv.find(x => (x.name||"").trim() === (record.itemName||"").trim());
+
+  if(!target){
+    target = {
+      id: record.itemId || crypto.randomUUID(),
+      name: record.itemName,
+      spec: record.unit,
+      vendor: record.vendor,
+      buyPrice: 0,
+      qty: 0,
+      minQty: 0,
+      note: "",
+      updatedAt: new Date().toISOString()
+    };
+    inv.unshift(target);
+  }
+
+  // Moving average cost
+  const oldQty = n(target.qty);
+  const oldPrice = n(target.buyPrice);
+  const newQty = addQty;
+  const unitPrice = n(record.buyUnitPrice);
+  const totalQty = oldQty + newQty;
+
+  if(totalQty > 0){
+    target.buyPrice = (oldQty * oldPrice + newQty * unitPrice) / totalQty;
+  } else {
+    target.buyPrice = unitPrice;
+  }
+  target.qty = totalQty;
+
+  const stamp = `입고 +${newQty}${record.unit} from ${record.vendor} (${todayStr()})`;
+  target.note = (target.note ? (target.note + " | ") : "") + stamp;
+  target.updatedAt = new Date().toISOString();
+
+  // Record history
+  hist.unshift({
+    at: new Date().toISOString(),
+    batchId: "",
+    batchName: "구매원장 입고처리",
+    date: todayStr(),
+    inventoryItemId: target.id,
+    name: record.itemName,
+    qty: newQty,
+    unit: record.unit,
+    unitPriceKrw: unitPrice,
+    addedValueKrw: newQty * unitPrice,
+    memo: record.memo || ""
+  });
+  while(hist.length > 500) hist.pop();
+
+  localStorage.setItem(INV_KEY, JSON.stringify(inv));
+  localStorage.setItem(HIST_KEY, JSON.stringify(hist));
+}
+
+/* ══════════════════════════════════════════
+   VENDOR DRAWER
+   ══════════════════════════════════════════ */
+let currentDrawerVendor = "";
+
+function openDrawer(vendor){
+  if(!vendor) return;
+  currentDrawerVendor = vendor;
+  $("drawer").classList.add("open");
+  $("drawerOverlay").classList.add("open");
+  $("vpName").textContent = vendor;
+
+  // Stats
+  const trades = load().filter(r => r.vendor === vendor);
+  const vendorActions = loadActions().filter(a => a.vendorId === vendor && a.status !== "DONE");
+
+  const tTotal = trades.reduce((s,r) => s + n(r.buyUnitPrice) * n(r.qty), 0);
+  const allDates = trades.map(r => r.purchaseDate).filter(Boolean).sort();
+  $("vpTotal").textContent = fmt(tTotal);
+  $("vpCount").textContent = trades.length;
+  $("vpLatest").textContent = allDates.length ? allDates[allDates.length-1] : "-";
+  $("vpTasks").textContent = vendorActions.length + "건";
+
+  // Vendor Master Info
+  const masters = loadVendors();
+  const m = masters[vendor] || {};
+  $("vmContact").textContent = m.contact || "-";
+  $("vmPhone").textContent = m.phone || "-";
+  $("vmEmail").textContent = m.email || "-";
+  $("vmAddr").textContent = m.address || "-";
+  $("vmMemo").textContent = m.memo || "-";
+  $("vmDisplay").style.display = "block";
+  $("vmEditForm").style.display = "none";
+
+  // Tab: Recent Purchases (5)
+  const recent = [...trades].sort((a,b) => (b.purchaseDate||"").localeCompare(a.purchaseDate||"")).slice(0,5);
+  const pDiv = $("vpPurchases");
+  if(!recent.length){
+    pDiv.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">구매 이력 없음</div>';
+  } else {
+    pDiv.innerHTML = recent.map(r => {
+      const st = r.status || "ORDERED";
+      return `<div class="drawer-purchase">
+        <div class="dp-top">
+          <span class="dp-item">${esc(r.itemName)}</span>
+          <span class="status-tag ${st}" style="font-size:9px">${statusLabel(st)}</span>
+        </div>
+        <div class="dp-detail">${esc(r.purchaseDate)} · ${n(r.qty).toLocaleString()} ${esc(r.unit)} · ${fmt(n(r.buyUnitPrice)*n(r.qty))}</div>
+      </div>`;
+    }).join("");
+  }
+
+  // Tab: Pending Actions
+  const todoDiv = $("vpTodos");
+  if(!vendorActions.length){
+    todoDiv.innerHTML = '<div style="color:var(--muted);font-size:12px;padding:8px 0">미완료 Action 없음</div>';
+  } else {
+    todoDiv.innerHTML = "";
+    vendorActions.forEach(a => {
+      const d = document.createElement("div"); d.className = "drawer-todo";
+      const overdueTag = a.dueDate < todayStr() ? ' <span style="color:var(--bad);font-size:10px;font-weight:700">지연</span>' : '';
+      d.innerHTML = `<div class="dt-dot"></div><span>${esc(a.title)}${overdueTag}</span>`;
+      todoDiv.appendChild(d);
+    });
+  }
+
+  // Activate first tab
+  document.querySelectorAll(".drawer-tab").forEach(t => t.classList.remove("active"));
+  document.querySelectorAll(".drawer-panel").forEach(p => p.classList.remove("active"));
+  document.querySelector('.drawer-tab[data-panel="purchases"]').classList.add("active");
+  $("dpPurchases").classList.add("active");
+}
+
+function closeDrawer(){
+  $("drawer").classList.remove("open");
+  $("drawerOverlay").classList.remove("open");
+  currentDrawerVendor = "";
+}
+
+// Drawer tab switching
+document.querySelectorAll(".drawer-tab").forEach(tab => {
+  tab.onclick = () => {
+    document.querySelectorAll(".drawer-tab").forEach(t => t.classList.remove("active"));
+    document.querySelectorAll(".drawer-panel").forEach(p => p.classList.remove("active"));
+    tab.classList.add("active");
+    $("dp" + tab.dataset.panel.charAt(0).toUpperCase() + tab.dataset.panel.slice(1)).classList.add("active");
+  };
+});
+
+// Vendor master edit
+$("vmEditBtn").onclick = () => {
+  const masters = loadVendors();
+  const m = masters[currentDrawerVendor] || {};
+  $("vmInContact").value = m.contact || "";
+  $("vmInPhone").value = m.phone || "";
+  $("vmInEmail").value = m.email || "";
+  $("vmInAddr").value = m.address || "";
+  $("vmInMemo").value = m.memo || "";
+  $("vmDisplay").style.display = "none";
+  $("vmEditForm").style.display = "block";
+};
+$("vmCancelBtn").onclick = () => {
+  $("vmDisplay").style.display = "block";
+  $("vmEditForm").style.display = "none";
+};
+$("vmSaveBtn").onclick = () => {
+  if(!currentDrawerVendor) return;
+  const masters = loadVendors();
+  masters[currentDrawerVendor] = {
+    contact: $("vmInContact").value.trim(),
+    phone: $("vmInPhone").value.trim(),
+    email: $("vmInEmail").value.trim(),
+    address: $("vmInAddr").value.trim(),
+    memo: $("vmInMemo").value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+  saveVendors(masters);
+  showToast("거래처 정보가 저장되었습니다.");
+  openDrawer(currentDrawerVendor); // refresh
+};
+
+$("vpClose").onclick = closeDrawer;
+$("drawerOverlay").onclick = closeDrawer;
+
 /* ── CRUD ── */
 function clearForm(){
   $("inDate").value=new Date().toISOString().substring(0,10);
@@ -539,9 +1033,11 @@ function addOrUpdate(){
   const itemName=normStr($("inItem").value);
   if(!vendor && !itemName){ alert("구매처 또는 상품명을 입력해주세요."); return; }
 
+  const existing = editingId ? load().find(x=>x.id===editingId) : null;
+
   const rec=normalizeRecord({
     id: editingId||undefined,
-    itemId: editingId ? (load().find(x=>x.id===editingId)||{}).itemId : undefined,
+    itemId: existing ? existing.itemId : undefined,
     purchaseDate: $("inDate").value,
     vendor,
     docNo: $("inDocNo").value,
@@ -550,9 +1046,14 @@ function addOrUpdate(){
     qty: $("inQty").value,
     unit: $("inUnit").value,
     buyUnitPrice: $("inPrice").value,
+    receivedQty: existing ? existing.receivedQty : 0,
+    status: existing ? existing.status : "ORDERED",
     memo: $("inMemo").value,
-    createdAt: editingId ? (load().find(x=>x.id===editingId)||{}).createdAt : undefined
+    createdAt: existing ? existing.createdAt : undefined
   });
+
+  // Recompute status in case qty changed
+  rec.status = computeStatus(rec.qty, rec.receivedQty);
 
   const all=load();
   if(editingId){
@@ -610,7 +1111,6 @@ function exportJson(){
   a.click();
 }
 
-/* ── Duplicate detection key ── */
 function dupKey(r){
   return [r.purchaseDate, r.vendor, r.partNo, String(r.qty), String(r.buyUnitPrice)].join("|");
 }
@@ -623,27 +1123,18 @@ function importJson(file){
       if(!Array.isArray(raw)) throw new Error("JSON 배열이 아닙니다.");
       let ok=0, skip=0, dup=0;
       const cleaned=[];
-
-      // Build duplicate lookup from existing data
       const existing=load();
       const existingKeys=new Set(existing.map(r=>dupKey(r)));
-
       raw.forEach((r,i)=>{
         try{
           const rec=normalizeRecord(r);
           const key=dupKey(rec);
-          if(existingKeys.has(key)){
-            dup++;
-            return;
-          }
-          existingKeys.add(key); // prevent dupes within import file too
+          if(existingKeys.has(key)){ dup++; return; }
+          existingKeys.add(key);
           cleaned.push(rec);
           ok++;
-        }catch(e){
-          skip++;
-        }
+        }catch(e){ skip++; }
       });
-
       if(skip>0) alert(skip+"건의 데이터가 형식 오류로 건너뛰었습니다.");
       const merged=[...cleaned,...existing];
       save(merged);
@@ -652,9 +1143,7 @@ function importJson(file){
       refreshFilterSelects();
       computeKPI();
       render();
-
       emitAudit("IMPORTED",{added:ok, duplicates:dup, skipped:skip, totalAfter:merged.length});
-
       let msg=ok+"건 가져오기 완료 (기존 "+existing.length+"건 + 신규 "+ok+"건 = 총 "+merged.length+"건)";
       if(dup>0) msg+="\n중복 건너뛰기: "+dup+"건";
       alert(msg);
@@ -697,15 +1186,30 @@ $("btnReset").onclick=()=>{
   alert("초기화 완료");
 };
 
-// Filter events (debounced)
+// Receive modal events
+$("rcvQty").addEventListener("input", validateReceiveQty);
+$("rcvSave").onclick = saveReceive;
+$("rcvCancel").onclick = closeReceiveModal;
+$("receiveModal").onclick = e => { if(e.target===$("receiveModal")) closeReceiveModal(); };
+
+// Filter events
 $("fSearch").addEventListener("input",debouncedRender);
 $("fVendor").addEventListener("change",()=>{ currentPage=1; computeKPI(); render(); });
+$("fStatus").addEventListener("change",()=>{ currentPage=1; computeKPI(); render(); });
 $("fFrom").addEventListener("change",()=>{ currentPage=1; computeKPI(); render(); });
 $("fTo").addEventListener("change",()=>{ currentPage=1; computeKPI(); render(); });
 
 // Form calc preview
 $("inQty").addEventListener("input",updateFormCalc);
 $("inPrice").addEventListener("input",updateFormCalc);
+
+// Escape key
+document.addEventListener("keydown", e => {
+  if(e.key==="Escape"){
+    closeReceiveModal();
+    closeDrawer();
+  }
+});
 
 /* ── Init ── */
 refreshAC();

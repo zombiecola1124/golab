@@ -540,7 +540,6 @@ function loadLegacyTrades(){ try{return JSON.parse(localStorage.getItem(TRADE_KE
 function loadLegacySales(){ try{return JSON.parse(localStorage.getItem(SALES_KEY)||"[]")}catch{return[]} }
 function loadLegacyCalEvents(){ try{return JSON.parse(localStorage.getItem(CAL_KEY)||"[]")}catch{return[]} }
 
-function n(v,fb=0){ const x=Number(v); return Number.isFinite(x)?x:fb; }
 function fmt(v){ return "₩"+Math.round(v).toLocaleString(); }
 
 /* Vendor helpers */
