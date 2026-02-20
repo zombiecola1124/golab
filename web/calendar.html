@@ -195,6 +195,41 @@
     .modal-btns .btn-danger{color:var(--warn);border-color:rgba(220,38,38,.3)}
     .modal-btns .btn-danger:hover{background:#fee2e2}
 
+    /* ─ Vendor Tag in Panel ─ */
+    .vendor-tag{color:var(--primary);cursor:pointer;font-weight:600;font-size:10px}
+    .vendor-tag:hover{text-decoration:underline}
+
+    /* ─ Vendor Drawer ─ */
+    .drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:90}
+    .drawer-overlay.open{display:block}
+    .drawer{position:fixed;top:0;right:-42%;width:40%;height:100vh;background:var(--bg);border-left:1px solid var(--border);z-index:100;overflow-y:auto;padding:0;transition:right .25s ease}
+    .drawer.open{right:0}
+    .drawer-header{padding:20px 20px 16px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:2}
+    .drawer-header .top-row{display:flex;align-items:center;justify-content:space-between}
+    .drawer-header h3{font-size:16px;font-weight:800;color:var(--text)}
+    .drawer-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px}
+    .drawer-close:hover{color:var(--warn)}
+    .drawer-stats{display:grid;grid-template-columns:1fr 1fr;gap:8px;margin-top:12px}
+    .d-stat{padding:10px;background:var(--card);border:1px solid var(--border);border-radius:8px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .d-stat .t{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase}
+    .d-stat .v{font-size:14px;font-weight:900;margin-top:3px;color:var(--text)}
+    .drawer-body{padding:16px 20px}
+    .drawer-body h4{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:10px;text-transform:uppercase;letter-spacing:.3px}
+    .drawer-footer{padding:16px 20px;border-top:1px solid var(--border)}
+    .drawer-footer h4{font-size:11px;color:var(--muted);font-weight:700;margin-bottom:8px;text-transform:uppercase;letter-spacing:.3px}
+    .drawer-todo{font-size:12px;color:var(--text);padding:6px 0;border-bottom:1px solid var(--border);display:flex;gap:8px;align-items:center}
+    .drawer-todo:last-child{border-bottom:none}
+    .drawer-todo .dt-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);flex-shrink:0}
+    .tl-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
+    .tl-item:last-child{border-bottom:none}
+    .tl-dot{width:7px;height:7px;border-radius:50%;margin-top:6px;flex-shrink:0}
+    .tl-dot.purchase{background:var(--primary)}
+    .tl-dot.sale{background:var(--orange)}
+    .tl-dot.work{background:var(--purple)}
+    .tl-text{font-size:12px;color:var(--text)}
+    .tl-time{font-size:10px;color:var(--muted);margin-top:1px}
+    .timeline{list-style:none}
+
     /* ─ Responsive ─ */
     @media(max-width:1100px){
       .cal-layout{flex-direction:column}
@@ -214,6 +249,7 @@
       .kpi-bar{gap:6px}
       .kpi-card{min-width:80px;padding:10px 8px}
       .kpi-card .kpi-num{font-size:20px}
+      .drawer{width:100%;right:-102%}
     }
   </style>
 </head>
@@ -352,6 +388,9 @@
       <option value="HIGH">높음</option>
       <option value="LOW">낮음</option>
     </select>
+    <label>거래처 (선택)</label>
+    <input id="actVendor" list="dlVendors" placeholder="업체명" />
+    <datalist id="dlVendors"></datalist>
     <div class="modal-btns">
       <button id="actDelete" class="btn-danger" style="display:none">삭제</button>
       <span style="flex:1"></span>
@@ -412,6 +451,31 @@
   </div>
 </div>
 
+<!-- ═══ VENDOR DRAWER ═══ -->
+<div class="drawer-overlay" id="drawerOverlay"></div>
+<div class="drawer" id="drawer">
+  <div class="drawer-header">
+    <div class="top-row">
+      <h3 id="vpName">거래처명</h3>
+      <button class="drawer-close" id="vpClose">✕</button>
+    </div>
+    <div class="drawer-stats">
+      <div class="d-stat"><div class="t">총 거래액</div><div class="v" id="vpTotal">₩0</div></div>
+      <div class="d-stat"><div class="t">최근 거래일</div><div class="v" id="vpLatest">-</div></div>
+      <div class="d-stat"><div class="t">거래 건수</div><div class="v" id="vpCount">0</div></div>
+      <div class="d-stat"><div class="t">미완료 Action</div><div class="v" id="vpTasks">0건</div></div>
+    </div>
+  </div>
+  <div class="drawer-body">
+    <h4>히스토리</h4>
+    <ul id="vpTimeline" class="timeline"></ul>
+  </div>
+  <div class="drawer-footer" id="vpFooter">
+    <h4>미완료 Action</h4>
+    <div id="vpTodos"></div>
+  </div>
+</div>
+
 <script>
 /* ══════════════════════════════════════════
    v1.5 Calendar + Initiative Kanban
@@ -425,6 +489,9 @@ const TASK_KEY = "golab_worklog_v1";
 const TRADE_KEY = "golab_trade_v1";
 const SALES_KEY = "golab_sales_v1";
 const CAL_KEY = "golab_calendar_v1";
+const TRADE_AUDIT = "golab_trade_audit";
+const SALES_AUDIT = "golab_sales_audit";
+const WORK_AUDIT = "golab_work_audit";
 
 /* ── Helpers ── */
 function uid(){ return crypto.randomUUID(); }
@@ -470,7 +537,25 @@ function saveInitiatives(arr){ localStorage.setItem(INIT_KEY, JSON.stringify(arr
 /* Legacy data loaders */
 function loadLegacyTasks(){ try{return JSON.parse(localStorage.getItem(TASK_KEY)||"[]")}catch{return[]} }
 function loadLegacyTrades(){ try{return JSON.parse(localStorage.getItem(TRADE_KEY)||"[]")}catch{return[]} }
+function loadLegacySales(){ try{return JSON.parse(localStorage.getItem(SALES_KEY)||"[]")}catch{return[]} }
 function loadLegacyCalEvents(){ try{return JSON.parse(localStorage.getItem(CAL_KEY)||"[]")}catch{return[]} }
+
+function n(v,fb=0){ const x=Number(v); return Number.isFinite(x)?x:fb; }
+function fmt(v){ return "₩"+Math.round(v).toLocaleString(); }
+
+/* Vendor helpers */
+function getAllVendors(){
+  const v=new Set();
+  try{JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").forEach(r=>{if(r.vendor)v.add(r.vendor);});}catch{}
+  try{JSON.parse(localStorage.getItem(SALES_KEY)||"[]").forEach(r=>{if(r.client)v.add(r.client);});}catch{}
+  loadActions().forEach(a=>{if(a.vendorId)v.add(a.vendorId);});
+  return[...v].sort();
+}
+function refreshVendorList(){
+  const dl=$("dlVendors"); if(!dl) return;
+  dl.innerHTML="";
+  getAllVendors().forEach(v=>{const o=document.createElement("option"); o.value=v; dl.appendChild(o);});
+}
 
 /* ══════════════════════════════════════════
    SUB-TAB SWITCHING
@@ -568,11 +653,12 @@ function showFilteredList(filter){
     body.innerHTML = items.map(a => {
       const isDone = a.status === "DONE";
       const priBadge = a.priority && a.priority !== "NORMAL" ? `<span class="pri-badge ${a.priority}">${a.priority}</span>` : "";
+      const vendorTag = a.vendorId ? `<span class="vendor-tag" data-vendor="${esc(a.vendorId)}">${esc(a.vendorId)}</span>` : '';
       return `<div class="panel-item">
         <div class="chk ${isDone?"checked":""}" data-id="${a.id}" data-toggle="action"></div>
         <div class="item-body">
           <div class="item-title ${isDone?"strike":""}">${esc(a.title)}</div>
-          <div class="item-meta"><span>${a.dueDate}</span>${priBadge}</div>
+          <div class="item-meta"><span>${a.dueDate}</span>${vendorTag}${priBadge}</div>
         </div>
       </div>`;
     }).join("");
@@ -823,11 +909,12 @@ function renderPanelAction(a, isOverdue){
   const isDone = a.status === "DONE";
   const priBadge = a.priority && a.priority !== "NORMAL" ? `<span class="pri-badge ${a.priority}">${a.priority}</span>` : "";
   const overdueTag = isOverdue ? '<span style="color:var(--warn);font-weight:700">OVERDUE</span>' : '';
+  const vendorTag = a.vendorId ? `<span class="vendor-tag" data-vendor="${esc(a.vendorId)}">${esc(a.vendorId)}</span>` : '';
   return `<div class="panel-item">
     <div class="chk ${isDone?"checked":""}" data-id="${a.id}" data-toggle="action"></div>
     <div class="item-body" style="cursor:pointer" data-edit-action="${a.id}">
       <div class="item-title ${isDone?"strike":""}">${esc(a.title)}</div>
-      <div class="item-meta">${overdueTag}<span>${a.dueDate}</span>${priBadge}</div>
+      <div class="item-meta">${overdueTag}<span>${a.dueDate}</span>${vendorTag}${priBadge}</div>
     </div>
   </div>`;
 }
@@ -841,6 +928,9 @@ function bindCheckboxes(container){
   });
   container.querySelectorAll("[data-edit-action]").forEach(el => {
     el.onclick = () => openActionModal(el.dataset.editAction);
+  });
+  container.querySelectorAll("[data-vendor]").forEach(el => {
+    el.onclick = (e) => { e.stopPropagation(); openDrawer(el.dataset.vendor); };
   });
 }
 
@@ -862,6 +952,7 @@ function toggleActionDone(id){
 
 /* ── Action CRUD Modal ── */
 function openActionModal(id){
+  refreshVendorList();
   if(id){
     editingActionId = id;
     const a = loadActions().find(x => x.id === id);
@@ -870,6 +961,7 @@ function openActionModal(id){
     $("actTitle").value = a.title;
     $("actDate").value = a.dueDate;
     $("actPriority").value = a.priority || "NORMAL";
+    $("actVendor").value = a.vendorId || "";
     $("actDelete").style.display = "inline-block";
   } else {
     editingActionId = null;
@@ -877,6 +969,7 @@ function openActionModal(id){
     $("actTitle").value = "";
     $("actDate").value = selectedDate || todayStr();
     $("actPriority").value = "NORMAL";
+    $("actVendor").value = "";
     $("actDelete").style.display = "none";
   }
   $("actionModal").classList.add("open");
@@ -893,6 +986,7 @@ function saveAction(){
       a.title = title;
       a.dueDate = $("actDate").value;
       a.priority = $("actPriority").value;
+      a.vendorId = $("actVendor").value.trim();
       a.updatedAt = new Date().toISOString();
     }
   } else {
@@ -903,6 +997,7 @@ function saveAction(){
       type: "ACTION",
       status: "OPEN",
       priority: $("actPriority").value || "NORMAL",
+      vendorId: $("actVendor").value.trim(),
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
@@ -940,6 +1035,7 @@ function quickAdd(){
     type: "ACTION",
     status: "OPEN",
     priority: "NORMAL",
+    vendorId: "",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   });
@@ -1149,6 +1245,7 @@ function executeConvert(){
     type: "ACTION",
     status: "OPEN",
     priority: $("convertPriority").value || "NORMAL",
+    vendorId: "",
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     fromInitiativeId: i.id
@@ -1176,6 +1273,101 @@ $("convertCancel").onclick = closeConvertModal;
 $("convertSave").onclick = executeConvert;
 $("convertModal").onclick = e => { if(e.target===$("convertModal")) closeConvertModal(); };
 
+/* ══════════════════════════════════════════
+   VENDOR DRAWER (uses Action data via Single Source)
+   ══════════════════════════════════════════ */
+function relTime(iso){
+  if(!iso) return "";
+  const d=iso.substring(0,10), t=todayStr();
+  if(d===t) return "오늘 "+iso.substring(11,16);
+  const yd=new Date(new Date(t).getTime()-864e5).toISOString().substring(0,10);
+  if(d===yd) return "어제 "+iso.substring(11,16);
+  return d;
+}
+
+function buildTimeline(){
+  const items = [];
+  try{JSON.parse(localStorage.getItem(TRADE_AUDIT)||"[]").forEach(a=>{
+    if(a.event==="IMPORTED") return;
+    items.push({type:"purchase",ts:a.ts,vendor:a.detail?.vendor||"",text:fmtAudit("구매",a.event,a.detail)});
+  });}catch{}
+  try{JSON.parse(localStorage.getItem(SALES_AUDIT)||"[]").forEach(a=>{
+    if(a.event==="IMPORTED") return;
+    items.push({type:"sale",ts:a.ts,vendor:a.detail?.client||"",text:fmtAudit("매출",a.event,a.detail)});
+  });}catch{}
+  try{JSON.parse(localStorage.getItem(WORK_AUDIT)||"[]").forEach(a=>{
+    items.push({type:"work",ts:a.ts,vendor:a.detail?.vendor||"",text:fmtWork(a.event,a.detail)});
+  });}catch{}
+  items.sort((a,b)=>b.ts.localeCompare(a.ts));
+  return items;
+}
+function fmtAudit(m,ev,d){
+  const nm=esc(d?.itemName||"");
+  if(ev==="CREATE")return`${m} 등록 — ${nm}`;
+  if(ev==="UPDATE")return`${m} 수정 — ${nm}`;
+  if(ev==="DELETE")return`${m} 삭제 — ${nm}`;
+  return`${m} ${ev}`;
+}
+function fmtWork(ev,d){
+  const tx=esc(d?.text||"");
+  if(ev==="CREATE")return`Action 등록 — ${tx}`;
+  if(ev==="COMPLETE")return`Action 완료 — ${tx}`;
+  if(ev==="REOPEN")return`Action 재개 — ${tx}`;
+  if(ev==="DELETE")return`Action 삭제 — ${tx}`;
+  return`Action ${ev}`;
+}
+
+function openDrawer(vendor){
+  if(!vendor) return;
+  $("drawer").classList.add("open"); $("drawerOverlay").classList.add("open");
+  $("vpName").textContent = vendor;
+
+  let trades=[], sales=[];
+  try{trades=JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").filter(r=>r.vendor===vendor);}catch{}
+  try{sales=JSON.parse(localStorage.getItem(SALES_KEY)||"[]").filter(r=>r.client===vendor);}catch{}
+
+  // Actions for this vendor (Single Source of Truth)
+  const vendorActions = loadActions().filter(a => a.vendorId === vendor && a.status !== "DONE");
+
+  const tTotal=trades.reduce((s,r)=>s+n(r.buyUnitPrice)*n(r.qty),0);
+  const sTotal=sales.reduce((s,r)=>s+n(r.sellUnitPrice)*n(r.qty),0);
+  const allDates=[...trades.map(r=>r.purchaseDate),...sales.map(r=>r.salesDate)].filter(Boolean).sort();
+  $("vpTotal").textContent=fmt(tTotal+sTotal);
+  $("vpLatest").textContent=allDates.length?allDates[allDates.length-1]:"-";
+  $("vpCount").textContent=(trades.length+sales.length);
+  $("vpTasks").textContent=vendorActions.length+"건";
+
+  // Timeline
+  const items=buildTimeline().filter(x=>x.vendor===vendor).slice(0,30);
+  const ul=$("vpTimeline"); ul.innerHTML="";
+  if(!items.length){
+    ul.innerHTML='<li class="tl-item"><div style="flex:1;min-width:0"><div class="tl-text" style="color:var(--muted)">이력 없음</div></div></li>';
+  } else {
+    items.forEach(it=>{
+      const li=document.createElement("li"); li.className="tl-item";
+      li.innerHTML=`<div class="tl-dot ${it.type}"></div><div style="flex:1;min-width:0"><div class="tl-text">${it.text}</div><div class="tl-time">${relTime(it.ts)}</div></div>`;
+      ul.appendChild(li);
+    });
+  }
+
+  // Footer: pending actions
+  const todoDiv=$("vpTodos"); todoDiv.innerHTML="";
+  if(!vendorActions.length){
+    todoDiv.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">미완료 Action 없음</div>';
+  } else {
+    vendorActions.forEach(a=>{
+      const d=document.createElement("div"); d.className="drawer-todo";
+      const overdueTag = a.dueDate < todayStr() ? ' <span style="color:var(--warn);font-size:10px;font-weight:700">지연</span>' : '';
+      d.innerHTML=`<div class="dt-dot"></div><span>${esc(a.title)}${overdueTag}</span>`;
+      todoDiv.appendChild(d);
+    });
+  }
+}
+function closeDrawer(){ $("drawer").classList.remove("open"); $("drawerOverlay").classList.remove("open"); }
+
+$("vpClose").onclick = closeDrawer;
+$("drawerOverlay").onclick = closeDrawer;
+
 /* ── Global ── */
 function refreshAll(){
   renderKPI();
@@ -1190,6 +1382,7 @@ document.addEventListener("keydown", e => {
     closeInitModal();
     closeConvertModal();
     closeFilteredList();
+    closeDrawer();
   }
 });
 
