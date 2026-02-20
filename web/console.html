@@ -24,7 +24,7 @@
     .tab:hover{color:var(--text);border-color:#cbd5e1}
     .tab.active{color:var(--primary);background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3)}
 
-    /* ─ 3-Column Bento ─ */
+    /* ─ Layout: 3 Column ─ */
     .bento{display:grid;grid-template-columns:200px 1fr 280px;gap:20px;max-width:1440px;margin:0 auto;padding:20px 20px 40px;min-height:calc(100vh - 50px)}
 
     /* ─ Left Sidebar ─ */
@@ -32,59 +32,76 @@
     .quick-btn{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .quick-btn:hover{border-color:rgba(37,99,235,.3);background:rgba(37,99,235,.04)}
     .quick-btn .icon{font-size:16px;width:24px;text-align:center;flex-shrink:0}
-    .sidebar-section{margin-top:8px}
-    .sidebar-section h4{font-size:10px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.5px;margin-bottom:8px;padding:0 4px}
-    .sidebar-stat{padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);margin-bottom:8px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-    .sidebar-stat .t{font-size:10px;color:var(--muted);font-weight:600}
-    .sidebar-stat .v{font-size:16px;font-weight:900;color:var(--text-kpi);margin-top:4px}
 
     /* ─ Center ─ */
     .center{display:flex;flex-direction:column;gap:20px;min-width:0}
     .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-    .card-header{display:flex;align-items:center;gap:8px;margin-bottom:12px}
-    .card-header h2{font-size:13px;font-weight:700;color:var(--text)}
+    .card-header{display:flex;align-items:center;gap:8px;margin-bottom:14px}
+    .card-header h2{font-size:14px;font-weight:700;color:var(--text)}
     .card-header .badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700}
     .card-header .badge.red{background:#fee2e2;color:var(--warn)}
     .card-header .badge.green{background:#dcfce7;color:var(--accent)}
+    .card-header .badge.blue{background:#dbeafe;color:var(--primary)}
     .card-header .count{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400}
 
-    /* ─ Task Input ─ */
-    .task-input{display:flex;gap:8px;margin-bottom:12px}
-    .task-input>div{flex:1}
-    .task-input .wide{flex:3}
-    label{display:block;font-size:10px;color:var(--muted);margin-bottom:3px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
-    input,select{width:100%;border-radius:8px;border:1px solid var(--border);background:var(--chip);color:var(--text);padding:8px 10px;font-size:12px;outline:none;transition:border .15s}
-    input:focus{border-color:var(--primary)}
-    input::placeholder{color:#94a3b8}
-    button{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:8px;padding:8px 14px;font-size:12px;cursor:pointer;font-weight:600;transition:all .15s}
-    button:hover{border-color:#cbd5e1;background:#f8fafc}
-    button.primary{background:var(--primary);border:none;color:#fff}
-    button.primary:hover{background:#1d4ed8}
-    button.filter-btn{font-size:11px;padding:5px 10px;color:var(--muted)}
-    button.filter-btn.active{color:var(--primary);background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3)}
+    /* ─ TODAY ZONE ─ */
+    .today-zone{border:2px solid var(--primary);border-radius:12px;background:var(--card);padding:20px;box-shadow:0 2px 8px rgba(37,99,235,.06)}
+    .today-zone .zone-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .today-zone .zone-title{font-size:16px;font-weight:800;color:var(--text)}
+    .today-zone .zone-count{font-size:12px;font-weight:700;color:var(--primary);background:rgba(37,99,235,.08);padding:3px 10px;border-radius:6px}
+    .today-zone .zone-overdue{font-size:11px;font-weight:700;color:var(--warn);background:#fee2e2;padding:3px 10px;border-radius:6px}
+    .today-zone .add-row{display:flex;gap:8px;margin-bottom:16px}
+    .today-zone .add-row input{flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;outline:none;background:var(--chip);color:var(--text);font-family:inherit}
+    .today-zone .add-row input:focus{border-color:var(--primary)}
+    .today-zone .add-row button{background:var(--primary);border:none;color:#fff;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap}
+    .today-zone .add-row button:hover{background:#1d4ed8}
 
-    /* ─ Task List ─ */
-    .task-list{list-style:none}
-    .task-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border)}
-    .task-item:last-child{border-bottom:none}
-    .check{width:18px;height:18px;border-radius:5px;border:2px solid #cbd5e1;cursor:pointer;flex-shrink:0;margin-top:2px;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:10px}
-    .check:hover{border-color:var(--accent);background:rgba(22,163,74,.08)}
-    .check.done{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:900}
-    .task-item.completed{opacity:.35}
-    .task-item.completed .task-text{text-decoration:line-through}
-    .task-body{flex:1;min-width:0}
-    .task-text{font-size:12px;color:var(--text)}
-    .task-meta{font-size:10px;color:var(--muted);margin-top:2px;display:flex;gap:8px;align-items:center}
-    .vendor-tag{color:var(--primary);cursor:pointer;font-weight:600}
-    .vendor-tag:hover{text-decoration:underline}
-    .overdue{color:var(--warn);font-weight:700}
-    .today-tag{color:var(--orange);font-weight:600}
-    .task-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:2px;opacity:.3;margin-top:2px}
-    .task-del:hover{opacity:1;color:var(--warn)}
-    .empty-msg{text-align:center;padding:20px;color:var(--muted);font-size:12px}
+    .all-clear{text-align:center;padding:30px 20px;color:var(--accent)}
+    .all-clear .icon{font-size:32px;margin-bottom:8px}
+    .all-clear .msg{font-size:14px;font-weight:700}
+    .all-clear .sub{font-size:11px;color:var(--muted);margin-top:4px}
+
+    /* ─ Action Items ─ */
+    .action-list{list-style:none}
+    .action-item{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);transition:background .1s}
+    .action-item:last-child{border-bottom:none}
+    .action-item .chk{width:20px;height:20px;border-radius:5px;border:2px solid var(--border);cursor:pointer;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:11px;background:var(--card)}
+    .action-item .chk:hover{border-color:var(--accent);background:rgba(22,163,74,.08)}
+    .action-item .chk.done{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:900}
+    .action-item.completed{opacity:.35}
+    .action-item.completed .act-title{text-decoration:line-through;color:var(--muted)}
+    .action-item .act-body{flex:1;min-width:0;cursor:pointer}
+    .action-item .act-title{font-size:13px;font-weight:600;color:var(--text)}
+    .action-item .act-meta{font-size:10px;color:var(--muted);margin-top:3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .act-meta .overdue-tag{color:var(--warn);font-weight:700}
+    .act-meta .today-tag{color:var(--primary);font-weight:600}
+    .act-meta .vendor-tag{color:var(--primary);cursor:pointer;font-weight:600}
+    .act-meta .vendor-tag:hover{text-decoration:underline}
+    .pri-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;text-transform:uppercase}
+    .pri-badge.HIGH{background:#fee2e2;color:#991b1b}
+    .pri-badge.LOW{background:#f1f5f9;color:var(--muted)}
+    .action-item .act-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:4px;opacity:.2;margin-top:2px}
+    .action-item .act-del:hover{opacity:1;color:var(--warn)}
+
+    .more-btn{display:flex;align-items:center;justify-content:center;padding:10px;cursor:pointer;color:var(--primary);font-size:12px;font-weight:600;border-top:1px solid var(--border);margin-top:4px}
+    .more-btn:hover{background:rgba(37,99,235,.04);border-radius:0 0 8px 8px}
+
+    /* ─ Week/Overdue Sections ─ */
+    .section-summary{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;cursor:pointer;transition:all .12s;margin-bottom:4px}
+    .section-summary:hover{background:rgba(37,99,235,.04)}
+    .section-summary .s-icon{font-size:14px}
+    .section-summary .s-label{font-size:12px;font-weight:700;color:var(--text)}
+    .section-summary .s-count{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;margin-left:auto}
+    .section-summary .s-count.red{background:#fee2e2;color:var(--warn)}
+    .section-summary .s-count.blue{background:#dbeafe;color:var(--primary)}
+    .section-summary .s-count.muted{background:#f1f5f9;color:var(--muted)}
+    .section-expand{display:none;padding:0 4px 12px}
+    .section-expand.open{display:block}
 
     /* ─ Timeline ─ */
     .tl-filters{display:flex;gap:6px;margin-bottom:10px}
+    button.filter-btn{font-size:11px;padding:5px 10px;color:var(--muted);border:1px solid var(--border);background:var(--card);border-radius:8px;cursor:pointer;font-weight:600}
+    button.filter-btn.active{color:var(--primary);background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3)}
     .timeline{list-style:none}
     .tl-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
     .tl-item:last-child{border-bottom:none}
@@ -100,12 +117,9 @@
 
     /* ─ Right Sidebar ─ */
     .right{display:flex;flex-direction:column;gap:16px}
-
-    /* ─ Mini Calendar ─ */
     .cal-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-    .cal-header span{font-size:12px;font-weight:700;color:var(--text)}
-    .cal-header a{font-size:12px;font-weight:700;color:var(--text);text-decoration:none}
+    .cal-header span,.cal-header a{font-size:12px;font-weight:700;color:var(--text);text-decoration:none}
     .cal-header a:hover{color:var(--primary);text-decoration:underline}
     .cal-nav{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px}
     .cal-nav:hover{color:var(--text)}
@@ -114,21 +128,18 @@
     .cal-day{font-size:11px;padding:5px 0;border-radius:6px;cursor:pointer;color:#94a3b8;position:relative}
     .cal-day.current-month{color:var(--text)}
     .cal-day:hover{background:#f1f5f9}
-    .cal-day.today{background:transparent;color:var(--primary);font-weight:700;border-radius:6px;border:2px solid var(--primary)}
-    .cal-day.has-task{font-weight:700}
-    .cal-day.has-task::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--orange)}
-    .cal-day.today.has-task::after{background:var(--primary)}
+    .cal-day.today{background:transparent;color:var(--primary);font-weight:700;border:2px solid var(--primary);border-radius:6px}
+    .cal-day.has-action{font-weight:700}
+    .cal-day.has-action::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--primary)}
+    .cal-day.has-overdue::after{background:var(--warn)}
+    .cal-day.today.has-action::after{background:var(--primary)}
 
-    /* ─ KPI Cards (Right) ─ */
     .kpi-stack{display:flex;flex-direction:column;gap:8px}
     .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .kpi-card .t{font-size:10px;color:var(--muted);font-weight:600}
     .kpi-card .v{font-size:24px;font-weight:600;color:var(--text-kpi);margin-top:4px}
-    .kpi-card .v.orange{color:var(--orange)}
-    .kpi-card .v.blue{color:var(--primary)}
-    .kpi-card .v.green{color:var(--accent)}
 
-    /* ─ Vendor Drawer (40%) ─ */
+    /* ─ Vendor Drawer ─ */
     .drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:90}
     .drawer-overlay.open{display:block}
     .drawer{position:fixed;top:0;right:-42%;width:40%;height:100vh;background:var(--bg);border-left:1px solid var(--border);z-index:100;overflow-y:auto;padding:0;transition:right .25s ease}
@@ -152,6 +163,33 @@
     .drawer-todo:last-child{border-bottom:none}
     .drawer-todo .dt-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);flex-shrink:0}
 
+    /* ─ Action Modal ─ */
+    .modal-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:110;align-items:flex-start;justify-content:center;padding-top:80px}
+    .modal-overlay.open{display:flex}
+    .modal{background:var(--card);border:1px solid var(--border);border-radius:12px;width:440px;max-width:90vw;padding:20px;box-shadow:0 8px 30px rgba(0,0,0,.12)}
+    .modal h3{font-size:14px;font-weight:800;color:var(--text);margin-bottom:14px}
+    .modal label{display:block;font-size:10px;color:var(--muted);margin-bottom:3px;margin-top:10px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+    .modal input,.modal select{width:100%;border-radius:8px;border:1px solid var(--border);background:var(--chip);color:var(--text);padding:8px 10px;font-size:12px;outline:none;transition:border .15s;font-family:inherit}
+    .modal input:focus{border-color:var(--primary)}
+    .modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+    .modal-btns button{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-weight:600;transition:all .15s}
+    .modal-btns button:hover{border-color:#cbd5e1;background:#f8fafc}
+    .modal-btns .btn-primary{background:var(--primary);border:none;color:#fff}
+    .modal-btns .btn-primary:hover{background:#1d4ed8}
+    .modal-btns .btn-danger{color:var(--warn);border-color:rgba(220,38,38,.3)}
+    .modal-btns .btn-danger:hover{background:#fee2e2}
+
+    /* ─ Vendor Search Modal ─ */
+    .search-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:80;align-items:flex-start;justify-content:center;padding-top:120px}
+    .search-overlay.open{display:flex}
+    .search-modal{background:var(--card);border:1px solid var(--border);border-radius:12px;width:400px;max-width:90vw;padding:16px;box-shadow:0 8px 30px rgba(0,0,0,.12)}
+    .search-modal label{display:block;font-size:10px;color:var(--muted);margin-bottom:4px;font-weight:700;text-transform:uppercase}
+    .search-modal input{width:100%;border:1px solid var(--border);border-radius:8px;padding:8px 10px;font-size:12px;outline:none;background:var(--chip);color:var(--text)}
+    .search-modal input:focus{border-color:var(--primary)}
+    .search-results{list-style:none;margin-top:10px;max-height:300px;overflow-y:auto}
+    .search-results li{padding:8px 10px;cursor:pointer;border-radius:6px;font-size:12px;color:var(--text);transition:background .1s}
+    .search-results li:hover{background:rgba(37,99,235,.08)}
+
     /* ─ Responsive ─ */
     @media(max-width:1280px){
       .bento{grid-template-columns:1fr 280px}
@@ -160,7 +198,6 @@
     @media(max-width:900px){
       .bento{grid-template-columns:1fr;padding:12px}
       .right{display:none}
-      .task-input{flex-direction:column}
       .drawer{width:100%;right:-102%}
     }
   </style>
@@ -183,49 +220,74 @@
   <aside class="sidebar">
     <a class="quick-btn" href="./trade.html"><span class="icon">📊</span>구매 등록</a>
     <a class="quick-btn" href="./sales.html"><span class="icon">💰</span>매출 등록</a>
-    <button class="quick-btn" id="btnQuickTask"><span class="icon">✏️</span>할 일 추가</button>
+    <button class="quick-btn" id="btnQuickTask"><span class="icon">✏️</span>Action 추가</button>
     <button class="quick-btn" id="btnQuickSearch"><span class="icon">🔍</span>거래처 검색</button>
-
-    <div class="sidebar-section">
-      <h4>이번 달</h4>
-      <div class="sidebar-stat"><div class="t">매출</div><div class="v" id="sideKpiSales">&yen; 0</div></div>
-      <div class="sidebar-stat"><div class="t">매입</div><div class="v" id="sideKpiPurchase">&yen; 0</div></div>
-      <div class="sidebar-stat"><div class="t">마진</div><div class="v" id="sideKpiMargin">&yen; 0</div></div>
-    </div>
+    <a class="quick-btn" href="./calendar.html"><span class="icon">📅</span>캘린더</a>
   </aside>
 
-  <!-- CENTER: Battle + Timeline -->
+  <!-- CENTER: Today Zone + Week + Timeline -->
   <main class="center">
-    <!-- Battle Zone -->
-    <div class="card">
-      <div class="card-header">
-        <h2>전투판</h2>
-        <span id="battleBadge" class="badge red" style="display:none"></span>
-        <span id="battleCount" class="count"></span>
+
+    <!-- ═══ TODAY ZONE (상단 40%) ═══ -->
+    <div class="today-zone">
+      <div class="zone-header">
+        <span class="zone-title">🎯 오늘 실행</span>
+        <span class="zone-count" id="todayCount">0건</span>
+        <span class="zone-overdue" id="overdueCount" style="display:none">지연 0</span>
+        <span style="flex:1"></span>
+        <span style="font-size:11px;color:var(--muted)" id="todayDate"></span>
       </div>
-      <div class="task-input" id="taskInputArea">
-        <div class="wide">
-          <label>업무</label>
-          <input id="taskText" placeholder="A업체 단가 협의 전화, B업체 샘플 발송..." />
-        </div>
-        <div>
-          <label>거래처</label>
-          <input id="taskVendor" list="dlTaskVendor" placeholder="업체명" />
-          <datalist id="dlTaskVendor"></datalist>
-        </div>
-        <div>
-          <label>마감일</label>
-          <input id="taskDue" type="date" />
-        </div>
-        <div style="display:flex;align-items:flex-end">
-          <button id="btnTaskAdd" class="primary" style="width:100%;white-space:nowrap">추가</button>
-        </div>
+
+      <!-- Quick Add -->
+      <div class="add-row">
+        <input id="quickInput" placeholder="오늘 할 일 추가..." />
+        <button id="quickAddBtn">추가</button>
       </div>
-      <ul id="taskList" class="task-list"></ul>
-      <div class="empty-msg" id="taskEmpty" style="display:none">모든 업무 완료!</div>
+
+      <!-- Today Actions List -->
+      <ul class="action-list" id="todayList"></ul>
+      <div class="all-clear" id="todayClear" style="display:none">
+        <div class="icon">🟢</div>
+        <div class="msg">오늘 할 일 없음</div>
+        <div class="sub">새 Action을 추가하거나 Initiative에서 전환하세요</div>
+      </div>
+      <div class="more-btn" id="todayMore" style="display:none"></div>
     </div>
 
-    <!-- Timeline -->
+    <!-- ═══ THIS WEEK / OVERDUE ═══ -->
+    <div class="card" id="weekCard">
+      <!-- Overdue Section -->
+      <div class="section-summary" id="overdueToggle" style="display:none">
+        <span class="s-icon">🔴</span>
+        <span class="s-label">Overdue</span>
+        <span class="s-count red" id="overdueNum">0</span>
+      </div>
+      <div class="section-expand" id="overdueExpand">
+        <ul class="action-list" id="overdueList"></ul>
+      </div>
+
+      <!-- This Week Section -->
+      <div class="section-summary" id="weekToggle">
+        <span class="s-icon">📅</span>
+        <span class="s-label">This Week</span>
+        <span class="s-count blue" id="weekNum">0</span>
+      </div>
+      <div class="section-expand" id="weekExpand">
+        <ul class="action-list" id="weekList"></ul>
+      </div>
+
+      <!-- This Month Section -->
+      <div class="section-summary" id="monthToggle">
+        <span class="s-icon">📆</span>
+        <span class="s-label">This Month</span>
+        <span class="s-count muted" id="monthNum">0</span>
+      </div>
+      <div class="section-expand" id="monthExpand">
+        <ul class="action-list" id="monthList"></ul>
+      </div>
+    </div>
+
+    <!-- ═══ TIMELINE ═══ -->
     <div class="card">
       <div class="card-header">
         <h2>최근 활동</h2>
@@ -239,9 +301,17 @@
       </div>
       <ul id="timeline" class="timeline"></ul>
     </div>
+
+    <!-- ═══ KPI (최하단) ═══ -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
+      <div class="kpi-card"><div class="t">이번 달 매출</div><div class="v" id="kSales" style="color:var(--orange)">₩0</div></div>
+      <div class="kpi-card"><div class="t">이번 달 매입</div><div class="v" id="kPurchase" style="color:var(--primary)">₩0</div></div>
+      <div class="kpi-card"><div class="t">마진</div><div class="v" id="kMargin" style="color:var(--accent)">₩0</div></div>
+      <div class="kpi-card"><div class="t">활성 거래처</div><div class="v" id="kVendors">0</div></div>
+    </div>
   </main>
 
-  <!-- RIGHT: Calendar + KPI -->
+  <!-- RIGHT: Calendar + Quick KPI -->
   <aside class="right">
     <div class="cal-card">
       <div class="cal-header">
@@ -253,15 +323,40 @@
     </div>
 
     <div class="kpi-stack">
-      <div class="kpi-card"><div class="t">이번 달 매출</div><div class="v orange" id="kSales">₩ 0</div></div>
-      <div class="kpi-card"><div class="t">이번 달 매입</div><div class="v blue" id="kPurchase">₩ 0</div></div>
-      <div class="kpi-card"><div class="t">마진</div><div class="v green" id="kMargin">₩ 0</div></div>
-      <div class="kpi-card"><div class="t">활성 거래처</div><div class="v" id="kVendors">0</div></div>
+      <div class="kpi-card"><div class="t">Overdue</div><div class="v" id="rOverdue" style="color:var(--warn)">0</div></div>
+      <div class="kpi-card"><div class="t">This Week</div><div class="v" id="rWeek" style="color:var(--primary)">0</div></div>
+      <div class="kpi-card"><div class="t">Completed (이번 달)</div><div class="v" id="rCompleted" style="color:var(--accent)">0</div></div>
     </div>
   </aside>
 </div>
 
-<!-- Vendor Drawer -->
+<!-- ═══ ACTION MODAL ═══ -->
+<div class="modal-overlay" id="actionModal">
+  <div class="modal">
+    <h3 id="actModalTitle">Action 추가</h3>
+    <label>제목</label>
+    <input id="actTitle" placeholder="할 일 입력..." />
+    <label>마감일</label>
+    <input id="actDate" type="date" />
+    <label>우선순위</label>
+    <select id="actPriority">
+      <option value="NORMAL">보통</option>
+      <option value="HIGH">높음</option>
+      <option value="LOW">낮음</option>
+    </select>
+    <label>거래처 (선택)</label>
+    <input id="actVendor" list="dlVendors" placeholder="업체명" />
+    <datalist id="dlVendors"></datalist>
+    <div class="modal-btns">
+      <button id="actDelete" class="btn-danger" style="display:none">삭제</button>
+      <span style="flex:1"></span>
+      <button id="actCancel">취소</button>
+      <button id="actSave" class="btn-primary">저장</button>
+    </div>
+  </div>
+</div>
+
+<!-- ═══ VENDOR DRAWER ═══ -->
 <div class="drawer-overlay" id="drawerOverlay"></div>
 <div class="drawer" id="drawer">
   <div class="drawer-header">
@@ -270,10 +365,10 @@
       <button class="drawer-close" id="vpClose">✕</button>
     </div>
     <div class="drawer-stats">
-      <div class="d-stat"><div class="t">총 거래액</div><div class="v" id="vpTotal">₩ 0</div></div>
+      <div class="d-stat"><div class="t">총 거래액</div><div class="v" id="vpTotal">₩0</div></div>
       <div class="d-stat"><div class="t">최근 거래일</div><div class="v" id="vpLatest">-</div></div>
       <div class="d-stat"><div class="t">거래 건수</div><div class="v" id="vpCount">0</div></div>
-      <div class="d-stat"><div class="t">진행 업무</div><div class="v" id="vpTasks">0건</div></div>
+      <div class="d-stat"><div class="t">미완료 Action</div><div class="v" id="vpTasks">0건</div></div>
     </div>
   </div>
   <div class="drawer-tags" id="vpTags"></div>
@@ -282,149 +377,443 @@
     <ul id="vpTimeline" class="timeline"></ul>
   </div>
   <div class="drawer-footer" id="vpFooter">
-    <h4>미완료 업무</h4>
+    <h4>미완료 Action</h4>
     <div id="vpTodos"></div>
   </div>
 </div>
 
-<!-- Vendor Search Modal -->
-<div id="searchOverlay" style="display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:80;align-items:flex-start;justify-content:center;padding-top:120px">
-  <div style="background:var(--card);border:1px solid var(--border);border-radius:12px;width:400px;max-width:90vw;padding:16px">
+<!-- ═══ VENDOR SEARCH ═══ -->
+<div class="search-overlay" id="searchOverlay">
+  <div class="search-modal">
     <label>거래처 검색</label>
-    <input id="searchInput" placeholder="업체명 입력..." style="margin-top:4px" />
-    <ul id="searchResults" style="list-style:none;margin-top:10px;max-height:300px;overflow-y:auto"></ul>
+    <input id="searchInput" placeholder="업체명 입력..." />
+    <ul class="search-results" id="searchResults"></ul>
   </div>
 </div>
 
 <script>
-/* ── Constants ── */
-const TASK_KEY="golab_worklog_v1";
-const TRADE_AUDIT="golab_trade_audit";
-const SALES_AUDIT="golab_sales_audit";
-const WORK_AUDIT="golab_work_audit";
-const TRADE_KEY="golab_trade_v1";
-const SALES_KEY="golab_sales_v1";
-const TL_LIMIT=20;
-const $=id=>document.getElementById(id);
+/* ══════════════════════════════════════════
+   GoLab Console v1.6 — Today Execution Center
+   Single Source of Truth: golab_actions_v15
+   ══════════════════════════════════════════ */
+
+const $ = id => document.getElementById(id);
+
+/* ── Data Keys ── */
+const ACTION_KEY = "golab_actions_v15";   // ★ Single Source of Truth (shared with Calendar)
+const INIT_KEY = "golab_initiatives_v15"; // Initiatives (read for drawer context)
+const TRADE_KEY = "golab_trade_v1";
+const SALES_KEY = "golab_sales_v1";
+const TRADE_AUDIT = "golab_trade_audit";
+const SALES_AUDIT = "golab_sales_audit";
+const WORK_AUDIT = "golab_work_audit";
+// Legacy (read-only migration)
+const LEGACY_TASK_KEY = "golab_worklog_v1";
+
+const TL_LIMIT = 20;
 
 /* ── Helpers ── */
-function n(v,fb=0){const x=Number(v);return Number.isFinite(x)?x:fb;}
-function esc(s){return(s||"").replace(/</g,"&lt;");}
-function fmt(v){return"\u20a9"+Math.round(v).toLocaleString();}
-function today(){return new Date().toISOString().substring(0,10);}
-function monthPrefix(){return today().substring(0,7);}
+function uid(){ return crypto.randomUUID(); }
+function todayStr(){ return new Date().toISOString().substring(0,10); }
+function esc(s){ return (s||"").replace(/</g,"&lt;"); }
+function n(v,fb=0){ const x=Number(v); return Number.isFinite(x)?x:fb; }
+function fmt(v){ return "₩"+Math.round(v).toLocaleString(); }
+function monthPrefix(){ return todayStr().substring(0,7); }
+
 function relTime(iso){
-  if(!iso) return"";
-  const d=iso.substring(0,10),t=today();
-  if(d===t) return"오늘 "+iso.substring(11,16);
+  if(!iso) return "";
+  const d=iso.substring(0,10), t=todayStr();
+  if(d===t) return "오늘 "+iso.substring(11,16);
   const yd=new Date(new Date(t).getTime()-864e5).toISOString().substring(0,10);
-  if(d===yd) return"어제 "+iso.substring(11,16);
+  if(d===yd) return "어제 "+iso.substring(11,16);
   return d;
 }
 function extractHashtags(text){
-  if(!text) return[];
+  if(!text) return [];
   const m=text.match(/#[^\s#]+/g);
   return m?[...new Set(m)]:[];
 }
 
-/* ── TASK (WorkLog) ── */
-function loadTasks(){try{return JSON.parse(localStorage.getItem(TASK_KEY)||"[]");}catch{return[];}}
-function saveTasks(arr){localStorage.setItem(TASK_KEY,JSON.stringify(arr));}
+/* ── Date Helpers ── */
+function parseDate(s){ const p=s.split("-"); return new Date(+p[0],+p[1]-1,+p[2]); }
+function dateStr(d){ return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(d.getDate()).padStart(2,"0"); }
 
-function emitWorkAudit(event,detail){
-  try{
-    const log=JSON.parse(localStorage.getItem(WORK_AUDIT)||"[]");
-    log.push({event,ts:new Date().toISOString(),detail:detail||{}});
-    if(log.length>2000) log.splice(0,log.length-2000);
-    localStorage.setItem(WORK_AUDIT,JSON.stringify(log));
-  }catch(e){}
+function getEndOfWorkWeek(today){
+  const d = typeof today==="string" ? parseDate(today) : new Date(today);
+  const dow = d.getDay();
+  const daysToFri = dow===0 ? 5 : (dow<=5 ? 5-dow : 5+(7-dow));
+  const fri = new Date(d); fri.setDate(fri.getDate()+daysToFri);
+  return dateStr(fri);
+}
+function getEndOfMonth(today){
+  const d = typeof today==="string" ? parseDate(today) : new Date(today);
+  return dateStr(new Date(d.getFullYear(), d.getMonth()+1, 0));
 }
 
-function addTask(){
-  const text=$("taskText").value.trim();
-  if(!text){$("taskText").focus();return;}
-  const vendor=$("taskVendor").value.trim();
-  const due=$("taskDue").value||"";
-  const task={id:crypto.randomUUID(),text,vendor,due,done:false,createdAt:new Date().toISOString(),completedAt:null};
-  const tasks=loadTasks();
-  tasks.unshift(task);
-  saveTasks(tasks);
-  emitWorkAudit("CREATE",{id:task.id,text,vendor});
-  $("taskText").value="";$("taskVendor").value="";$("taskDue").value=today();
+/* ══════════════════════════════════════════
+   SINGLE SOURCE: Actions CRUD
+   ══════════════════════════════════════════ */
+function loadActions(){ try{return JSON.parse(localStorage.getItem(ACTION_KEY)||"[]")}catch{return[]} }
+function saveActions(arr){ localStorage.setItem(ACTION_KEY, JSON.stringify(arr)); }
+
+/* ── Legacy Migration (one-time, non-destructive) ── */
+function migrateLegacyTasks(){
+  const legacy = JSON.parse(localStorage.getItem(LEGACY_TASK_KEY)||"[]");
+  if(!legacy.length) return;
+  const actions = loadActions();
+  const existingTitles = new Set(actions.map(a=>a.title));
+  let migrated = 0;
+  legacy.forEach(t => {
+    if(existingTitles.has(t.text)) return; // skip duplicates
+    actions.push({
+      id: t.id || uid(),
+      title: t.text || "",
+      dueDate: t.due || todayStr(),
+      type: "ACTION",
+      status: t.done ? "DONE" : "OPEN",
+      priority: "NORMAL",
+      vendorId: t.vendor || "",
+      createdAt: t.createdAt || new Date().toISOString(),
+      updatedAt: t.createdAt || new Date().toISOString(),
+      doneAt: t.completedAt || null,
+      _migratedFrom: "worklog"
+    });
+    migrated++;
+  });
+  if(migrated > 0) saveActions(actions);
+}
+migrateLegacyTasks();
+
+/* ── Dynamic Escalation (same logic as Calendar) ── */
+function classifyActions(){
+  const today = todayStr();
+  const eow = getEndOfWorkWeek(today);
+  const eom = getEndOfMonth(today);
+  const actions = loadActions();
+  const buckets = { overdue:[], today:[], week:[], month:[], completed:[], future:[] };
+  const d = new Date();
+  const mp = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
+
+  actions.forEach(a => {
+    if(a.status === "DONE"){
+      const doneAt = a.doneAt || a.updatedAt || "";
+      if(doneAt.startsWith(mp)) buckets.completed.push(a);
+      return;
+    }
+    if(a.dueDate < today) buckets.overdue.push(a);
+    else if(a.dueDate === today) buckets.today.push(a);
+    else if(a.dueDate <= eow) buckets.week.push(a);
+    else if(a.dueDate <= eom) buckets.month.push(a);
+    else buckets.future.push(a);
+  });
+
+  // Sort each bucket: HIGH first, then dueDate asc, then createdAt desc
+  const priOrder = {HIGH:0, NORMAL:1, LOW:2};
+  const sortFn = (a,b) => (priOrder[a.priority]||1)-(priOrder[b.priority]||1) || (a.dueDate||"").localeCompare(b.dueDate||"") || (b.createdAt||"").localeCompare(a.createdAt||"");
+  Object.values(buckets).forEach(arr => arr.sort(sortFn));
+
+  return buckets;
+}
+
+/* ══════════════════════════════════════════
+   TODAY ZONE RENDER
+   ══════════════════════════════════════════ */
+const TODAY_MAX = 3;
+let showAllToday = false;
+
+function renderTodayZone(){
+  const b = classifyActions();
+  const todayItems = [...b.overdue, ...b.today]; // Overdue + Today merged for display
+  const today = todayStr();
+
+  // Header badges
+  $("todayDate").textContent = today;
+  const activeCount = b.overdue.length + b.today.length;
+  $("todayCount").textContent = activeCount + "건";
+
+  if(b.overdue.length > 0){
+    $("overdueCount").style.display = "inline";
+    $("overdueCount").textContent = "지연 " + b.overdue.length;
+  } else {
+    $("overdueCount").style.display = "none";
+  }
+
+  // List
+  const ul = $("todayList");
+  const clear = $("todayClear");
+  const moreBtn = $("todayMore");
+
+  if(!todayItems.length){
+    ul.innerHTML = "";
+    clear.style.display = "block";
+    moreBtn.style.display = "none";
+    return;
+  }
+
+  clear.style.display = "none";
+  const visible = showAllToday ? todayItems : todayItems.slice(0, TODAY_MAX);
+  const remaining = todayItems.length - TODAY_MAX;
+
+  ul.innerHTML = visible.map(a => renderActionItem(a, today)).join("");
+  bindActionItems(ul);
+
+  if(remaining > 0 && !showAllToday){
+    moreBtn.style.display = "flex";
+    moreBtn.textContent = "+ " + remaining + "건 더보기";
+    moreBtn.onclick = () => { showAllToday = true; renderTodayZone(); };
+  } else {
+    if(showAllToday && todayItems.length > TODAY_MAX){
+      moreBtn.style.display = "flex";
+      moreBtn.textContent = "접기";
+      moreBtn.onclick = () => { showAllToday = false; renderTodayZone(); };
+    } else {
+      moreBtn.style.display = "none";
+    }
+  }
+}
+
+/* ══════════════════════════════════════════
+   WEEK / OVERDUE / MONTH SECTIONS
+   ══════════════════════════════════════════ */
+function renderSections(){
+  const b = classifyActions();
+  const today = todayStr();
+
+  // Overdue (separate section below Today Zone)
+  if(b.overdue.length > 0){
+    $("overdueToggle").style.display = "flex";
+    $("overdueNum").textContent = b.overdue.length;
+    $("overdueList").innerHTML = b.overdue.map(a => renderActionItem(a, today)).join("");
+    bindActionItems($("overdueList"));
+  } else {
+    $("overdueToggle").style.display = "none";
+    $("overdueExpand").classList.remove("open");
+  }
+
+  // This Week
+  $("weekNum").textContent = b.week.length;
+  if(b.week.length){
+    $("weekList").innerHTML = b.week.map(a => renderActionItem(a, today)).join("");
+    bindActionItems($("weekList"));
+  } else {
+    $("weekList").innerHTML = '<div style="padding:8px 0;color:var(--muted);font-size:12px">이번 주 추가 Action 없음</div>';
+  }
+
+  // This Month
+  $("monthNum").textContent = b.month.length;
+  if(b.month.length){
+    $("monthList").innerHTML = b.month.map(a => renderActionItem(a, today)).join("");
+    bindActionItems($("monthList"));
+  } else {
+    $("monthList").innerHTML = '<div style="padding:8px 0;color:var(--muted);font-size:12px">이번 달 추가 Action 없음</div>';
+  }
+
+  // Right sidebar KPI
+  $("rOverdue").textContent = b.overdue.length;
+  $("rWeek").textContent = b.week.length;
+  $("rCompleted").textContent = b.completed.length;
+}
+
+/* ── Section Toggle ── */
+["overdue","week","month"].forEach(key => {
+  $(key+"Toggle").onclick = () => {
+    const expand = $(key+"Expand");
+    expand.classList.toggle("open");
+  };
+});
+
+/* ══════════════════════════════════════════
+   ACTION ITEM RENDERER (Shared)
+   ══════════════════════════════════════════ */
+function renderActionItem(a, today){
+  const isDone = a.status === "DONE";
+  const isOverdue = !isDone && a.dueDate < today;
+  const isToday = !isDone && a.dueDate === today;
+
+  let tags = "";
+  if(isOverdue) tags += '<span class="overdue-tag">' + a.dueDate + ' 지연</span>';
+  else if(isToday) tags += '<span class="today-tag">오늘 마감</span>';
+  else if(a.dueDate) tags += '<span>' + a.dueDate + '</span>';
+
+  if(a.vendorId) tags += '<span class="vendor-tag" data-vendor="'+esc(a.vendorId)+'">'+esc(a.vendorId)+'</span>';
+  if(a.priority && a.priority !== "NORMAL") tags += '<span class="pri-badge '+a.priority+'">'+a.priority+'</span>';
+
+  return `<li class="action-item${isDone?' completed':''}">
+    <div class="chk${isDone?' done':''}" data-toggle="${a.id}">${isDone?'✓':''}</div>
+    <div class="act-body" data-edit="${a.id}">
+      <div class="act-title">${esc(a.title)}</div>
+      <div class="act-meta">${tags}</div>
+    </div>
+    <button class="act-del" data-del="${a.id}">✕</button>
+  </li>`;
+}
+
+function bindActionItems(container){
+  container.querySelectorAll("[data-toggle]").forEach(el => {
+    el.onclick = e => { e.stopPropagation(); toggleAction(el.dataset.toggle); };
+  });
+  container.querySelectorAll("[data-edit]").forEach(el => {
+    el.onclick = () => openActionModal(el.dataset.edit);
+  });
+  container.querySelectorAll("[data-del]").forEach(el => {
+    el.onclick = e => { e.stopPropagation(); if(confirm("삭제?")) deleteAction(el.dataset.del); };
+  });
+  container.querySelectorAll("[data-vendor]").forEach(el => {
+    el.onclick = e => { e.stopPropagation(); openDrawer(el.dataset.vendor); };
+  });
+}
+
+/* ── Action Toggle/Delete ── */
+function toggleAction(id){
+  const actions = loadActions();
+  const a = actions.find(x => x.id === id);
+  if(!a) return;
+  if(a.status === "DONE"){ a.status = "OPEN"; a.doneAt = null; }
+  else { a.status = "DONE"; a.doneAt = new Date().toISOString(); }
+  a.updatedAt = new Date().toISOString();
+  saveActions(actions);
+  emitWorkAudit(a.status==="DONE"?"COMPLETE":"REOPEN", {id:a.id, text:a.title, vendor:a.vendorId});
   renderAll();
 }
 
-function toggleTask(id){
-  const tasks=loadTasks();const t=tasks.find(x=>x.id===id);if(!t)return;
-  t.done=!t.done;t.completedAt=t.done?new Date().toISOString():null;
-  emitWorkAudit(t.done?"COMPLETE":"REOPEN",{id:t.id,text:t.text,vendor:t.vendor});
-  saveTasks(tasks);renderAll();
+function deleteAction(id){
+  const actions = loadActions();
+  const a = actions.find(x => x.id === id);
+  if(a) emitWorkAudit("DELETE", {id, text:a.title, vendor:a.vendorId});
+  saveActions(actions.filter(x => x.id !== id));
+  renderAll();
 }
 
-function deleteTask(id){
-  const tasks=loadTasks();const t=tasks.find(x=>x.id===id);
-  if(t) emitWorkAudit("DELETE",{id,text:t.text,vendor:t.vendor});
-  saveTasks(tasks.filter(x=>x.id!==id));renderAll();
+/* ── Quick Add ── */
+$("quickAddBtn").onclick = quickAdd;
+$("quickInput").addEventListener("keydown", e => { if(e.key==="Enter") quickAdd(); });
+
+function quickAdd(){
+  const title = $("quickInput").value.trim();
+  if(!title){ $("quickInput").focus(); return; }
+  const actions = loadActions();
+  const a = {
+    id: uid(), title, dueDate: todayStr(),
+    type: "ACTION", status: "OPEN", priority: "NORMAL",
+    vendorId: "", createdAt: new Date().toISOString(),
+    updatedAt: new Date().toISOString()
+  };
+  actions.push(a);
+  saveActions(actions);
+  emitWorkAudit("CREATE", {id:a.id, text:title, vendor:""});
+  $("quickInput").value = "";
+  renderAll();
 }
 
-function renderTasks(){
-  const tasks=loadTasks(),t=today();
-  const active=tasks.filter(x=>!x.done),done=tasks.filter(x=>x.done);
-  const overdue=active.filter(x=>x.due&&x.due<t);
-  const todayT=active.filter(x=>x.due===t);
-  const upcoming=active.filter(x=>!x.due||x.due>t);
-  const sorted=[...overdue,...todayT,...upcoming,...done.slice(0,3)];
+/* ══════════════════════════════════════════
+   ACTION MODAL (Full CRUD)
+   ══════════════════════════════════════════ */
+let editingActionId = null;
 
-  const badge=$("battleBadge");
-  if(overdue.length>0){badge.style.display="inline";badge.className="badge red";badge.textContent="지연 "+overdue.length;}
-  else if(todayT.length>0){badge.style.display="inline";badge.className="badge green";badge.textContent="오늘 "+todayT.length;}
-  else{badge.style.display="none";}
-  $("battleCount").textContent=active.length+"건 진행 중";
-
-  const ul=$("taskList");ul.innerHTML="";
-  if(sorted.length===0){$("taskEmpty").style.display="block";return;}
-  $("taskEmpty").style.display="none";
-
-  sorted.forEach(tk=>{
-    const li=document.createElement("li");
-    li.className="task-item"+(tk.done?" completed":"");
-    const isOD=!tk.done&&tk.due&&tk.due<t;
-    const isTD=!tk.done&&tk.due===t;
-    let due="";
-    if(isOD) due=`<span class="overdue">${tk.due} 지연</span>`;
-    else if(isTD) due=`<span class="today-tag">오늘 마감</span>`;
-    else if(tk.due&&!tk.done) due=`<span>${tk.due}</span>`;
-    const vt=tk.vendor?`<span class="vendor-tag" data-vendor="${esc(tk.vendor)}">${esc(tk.vendor)}</span>`:"";
-    li.innerHTML=`
-      <div class="check${tk.done?" done":""}" data-toggle="${tk.id}">${tk.done?"✓":""}</div>
-      <div class="task-body"><div class="task-text">${esc(tk.text)}</div><div class="task-meta">${vt}${due}</div></div>
-      <button class="task-del" data-tdel="${tk.id}">✕</button>`;
-    ul.appendChild(li);
-  });
-  ul.querySelectorAll("[data-toggle]").forEach(el=>{el.onclick=()=>toggleTask(el.dataset.toggle);});
-  ul.querySelectorAll("[data-tdel]").forEach(el=>{el.onclick=e=>{e.stopPropagation();if(confirm("삭제?"))deleteTask(el.dataset.tdel);};});
-  ul.querySelectorAll("[data-vendor]").forEach(el=>{el.onclick=e=>{e.stopPropagation();openDrawer(el.dataset.vendor);};});
+function openActionModal(id){
+  refreshVendorList();
+  if(id){
+    editingActionId = id;
+    const a = loadActions().find(x => x.id === id);
+    if(!a) return;
+    $("actModalTitle").textContent = "Action 수정";
+    $("actTitle").value = a.title;
+    $("actDate").value = a.dueDate;
+    $("actPriority").value = a.priority || "NORMAL";
+    $("actVendor").value = a.vendorId || "";
+    $("actDelete").style.display = "inline-block";
+  } else {
+    editingActionId = null;
+    $("actModalTitle").textContent = "Action 추가";
+    $("actTitle").value = "";
+    $("actDate").value = todayStr();
+    $("actPriority").value = "NORMAL";
+    $("actVendor").value = "";
+    $("actDelete").style.display = "none";
+  }
+  $("actionModal").classList.add("open");
+  setTimeout(() => $("actTitle").focus(), 100);
 }
 
-/* ── TIMELINE ── */
-let tlFilter="all";
+function saveActionModal(){
+  const title = $("actTitle").value.trim();
+  if(!title){ $("actTitle").focus(); return; }
+  const actions = loadActions();
+  if(editingActionId){
+    const a = actions.find(x => x.id === editingActionId);
+    if(a){
+      a.title = title; a.dueDate = $("actDate").value;
+      a.priority = $("actPriority").value; a.vendorId = $("actVendor").value.trim();
+      a.updatedAt = new Date().toISOString();
+    }
+  } else {
+    const a = {
+      id: uid(), title, dueDate: $("actDate").value || todayStr(),
+      type: "ACTION", status: "OPEN", priority: $("actPriority").value || "NORMAL",
+      vendorId: $("actVendor").value.trim(), createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    };
+    actions.push(a);
+    emitWorkAudit("CREATE", {id:a.id, text:title, vendor:a.vendorId});
+  }
+  saveActions(actions);
+  closeActionModal();
+  renderAll();
+}
+
+function deleteActionModal(){
+  if(!editingActionId) return;
+  if(!confirm("이 Action을 삭제하시겠습니까?")) return;
+  const actions = loadActions();
+  const a = actions.find(x => x.id === editingActionId);
+  if(a) emitWorkAudit("DELETE", {id:a.id, text:a.title, vendor:a.vendorId});
+  saveActions(actions.filter(x => x.id !== editingActionId));
+  closeActionModal();
+  renderAll();
+}
+
+function closeActionModal(){
+  $("actionModal").classList.remove("open");
+  editingActionId = null;
+}
+
+$("actCancel").onclick = closeActionModal;
+$("actSave").onclick = saveActionModal;
+$("actDelete").onclick = deleteActionModal;
+$("actionModal").onclick = e => { if(e.target===$("actionModal")) closeActionModal(); };
+$("actTitle").addEventListener("keydown", e => { if(e.key==="Enter") saveActionModal(); });
+
+/* ══════════════════════════════════════════
+   TIMELINE (Legacy audit-based)
+   ══════════════════════════════════════════ */
+let tlFilter = "all";
+
+function emitWorkAudit(event,detail){
+  try{
+    const log = JSON.parse(localStorage.getItem(WORK_AUDIT)||"[]");
+    log.push({event, ts:new Date().toISOString(), detail:detail||{}});
+    if(log.length>2000) log.splice(0,log.length-2000);
+    localStorage.setItem(WORK_AUDIT, JSON.stringify(log));
+  }catch{}
+}
 
 function buildTimeline(){
-  const items=[];
+  const items = [];
   try{JSON.parse(localStorage.getItem(TRADE_AUDIT)||"[]").forEach(a=>{
-    if(a.event==="IMPORTED")return;
+    if(a.event==="IMPORTED") return;
     items.push({type:"purchase",ts:a.ts,event:a.event,vendor:a.detail?.vendor||"",text:fmtAudit("구매",a.event,a.detail)});
-  });}catch(e){}
+  });}catch{}
   try{JSON.parse(localStorage.getItem(SALES_AUDIT)||"[]").forEach(a=>{
-    if(a.event==="IMPORTED")return;
+    if(a.event==="IMPORTED") return;
     items.push({type:"sale",ts:a.ts,event:a.event,vendor:a.detail?.client||"",text:fmtAudit("매출",a.event,a.detail)});
-  });}catch(e){}
+  });}catch{}
   try{JSON.parse(localStorage.getItem(WORK_AUDIT)||"[]").forEach(a=>{
     items.push({type:"work",ts:a.ts,event:a.event,vendor:a.detail?.vendor||"",text:fmtWork(a.event,a.detail)});
-  });}catch(e){}
+  });}catch{}
   items.sort((a,b)=>b.ts.localeCompare(a.ts));
   return items;
 }
+
 function fmtAudit(m,ev,d){
   const nm=esc(d?.itemName||"");
   if(ev==="CREATE")return`${m} 등록 — ${nm}`;
@@ -434,22 +823,22 @@ function fmtAudit(m,ev,d){
 }
 function fmtWork(ev,d){
   const tx=esc(d?.text||"");
-  if(ev==="CREATE")return`업무 등록 — ${tx}`;
-  if(ev==="COMPLETE")return`업무 완료 — ${tx}`;
-  if(ev==="REOPEN")return`업무 재개 — ${tx}`;
-  if(ev==="DELETE")return`업무 삭제 — ${tx}`;
-  return`업무 ${ev}`;
+  if(ev==="CREATE")return`Action 등록 — ${tx}`;
+  if(ev==="COMPLETE")return`Action 완료 — ${tx}`;
+  if(ev==="REOPEN")return`Action 재개 — ${tx}`;
+  if(ev==="DELETE")return`Action 삭제 — ${tx}`;
+  return`Action ${ev}`;
 }
 
 function renderTimeline(){
-  let items=buildTimeline();
-  if(tlFilter!=="all")items=items.filter(x=>x.type===tlFilter);
-  const shown=items.slice(0,TL_LIMIT);
-  $("tlCount").textContent=items.length+"건";
-  const ul=$("timeline");ul.innerHTML="";
-  if(!shown.length){ul.innerHTML='<li class="tl-item"><div class="tl-body"><div class="tl-text" style="color:var(--muted);padding:16px 0">활동 기록이 없습니다.</div></div></li>';return;}
+  let items = buildTimeline();
+  if(tlFilter!=="all") items = items.filter(x=>x.type===tlFilter);
+  const shown = items.slice(0,TL_LIMIT);
+  $("tlCount").textContent = items.length+"건";
+  const ul = $("timeline"); ul.innerHTML = "";
+  if(!shown.length){ ul.innerHTML='<li class="tl-item"><div class="tl-body"><div class="tl-text" style="color:var(--muted);padding:16px 0">활동 기록이 없습니다.</div></div></li>'; return; }
   shown.forEach(it=>{
-    const li=document.createElement("li");li.className="tl-item";
+    const li=document.createElement("li"); li.className="tl-item";
     const vl=it.vendor?`<span class="vendor-link" data-vendor="${esc(it.vendor)}">[${esc(it.vendor)}]</span> `:"";
     li.innerHTML=`<div class="tl-dot ${it.type}"></div><div class="tl-body"><div class="tl-text">${vl}${it.text}</div><div class="tl-time">${relTime(it.ts)}</div></div>`;
     ul.appendChild(li);
@@ -457,77 +846,94 @@ function renderTimeline(){
   ul.querySelectorAll("[data-vendor]").forEach(el=>{el.onclick=()=>openDrawer(el.dataset.vendor);});
   document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));
   const map={all:"btnTlAll",purchase:"btnTlPurchase",sale:"btnTlSale",work:"btnTlWork"};
-  if(map[tlFilter])$(map[tlFilter]).classList.add("active");
+  if(map[tlFilter]) $(map[tlFilter]).classList.add("active");
 }
 
-/* ── MONTHLY KPI ── */
+/* ══════════════════════════════════════════
+   MONTHLY KPI (₩ 통일)
+   ══════════════════════════════════════════ */
 function computeKPI(){
-  const mp=monthPrefix();
-  let sT=0,pT=0;const sV=new Set(),pV=new Set();
-  try{JSON.parse(localStorage.getItem(SALES_KEY)||"[]").forEach(r=>{if((r.salesDate||"").startsWith(mp)){sT+=n(r.sellUnitPrice)*n(r.qty);if(r.client)sV.add(r.client);}});}catch{}
-  try{JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").forEach(r=>{if((r.purchaseDate||"").startsWith(mp)){pT+=n(r.buyUnitPrice)*n(r.qty);if(r.vendor)pV.add(r.vendor);}});}catch{}
-  const allV=new Set([...sV,...pV]),margin=sT-pT;
-  $("kSales").textContent=fmt(sT);$("kPurchase").textContent=fmt(pT);
-  $("kMargin").textContent=fmt(margin);$("kMargin").style.color=margin>=0?"var(--accent)":"var(--warn)";
-  $("kVendors").textContent=allV.size;
-  // Sidebar KPI
-  if($("sideKpiSales")){$("sideKpiSales").textContent=fmt(sT);$("sideKpiPurchase").textContent=fmt(pT);$("sideKpiMargin").textContent=fmt(margin);$("sideKpiMargin").style.color=margin>=0?"var(--accent)":"var(--warn)";}
+  const mp = monthPrefix();
+  let sT=0, pT=0; const allV=new Set();
+  try{JSON.parse(localStorage.getItem(SALES_KEY)||"[]").forEach(r=>{
+    if((r.salesDate||"").startsWith(mp)){sT+=n(r.sellUnitPrice)*n(r.qty); if(r.client) allV.add(r.client);}
+  });}catch{}
+  try{JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").forEach(r=>{
+    if((r.purchaseDate||"").startsWith(mp)){pT+=n(r.buyUnitPrice)*n(r.qty); if(r.vendor) allV.add(r.vendor);}
+  });}catch{}
+  const margin = sT - pT;
+  $("kSales").textContent = fmt(sT);
+  $("kPurchase").textContent = fmt(pT);
+  $("kMargin").textContent = fmt(margin);
+  $("kMargin").style.color = margin >= 0 ? "var(--accent)" : "var(--warn)";
+  $("kVendors").textContent = allV.size;
 }
 
-/* ── MINI CALENDAR ── */
-let calYear,calMonth;
-(function initCal(){const d=new Date();calYear=d.getFullYear();calMonth=d.getMonth();})();
+/* ══════════════════════════════════════════
+   MINI CALENDAR (Right sidebar)
+   ══════════════════════════════════════════ */
+let calYear, calMonth;
+(function(){ const d=new Date(); calYear=d.getFullYear(); calMonth=d.getMonth(); })();
 
-function renderCalendar(){
+function renderMiniCal(){
   const mNames=["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
   const calLink=$("calTitle");
   calLink.textContent=calYear+"년 "+mNames[calMonth];
   calLink.href="./calendar.html?y="+calYear+"&m="+(calMonth+1);
+
   const first=new Date(calYear,calMonth,1);
   const lastDay=new Date(calYear,calMonth+1,0).getDate();
-  let startDow=first.getDay(); // 0=Sun
-  const todayStr=today();
-  // Task dates for dots
-  const taskDates=new Set();
-  loadTasks().filter(t=>!t.done&&t.due).forEach(t=>taskDates.add(t.due));
+  const startDow=first.getDay();
+  const today=todayStr();
 
-  const grid=$("calGrid");
-  grid.innerHTML="";
-  const dows=["일","월","화","수","목","금","토"];
-  dows.forEach(d=>{const s=document.createElement("div");s.className="cal-dow";s.textContent=d;grid.appendChild(s);});
-  // Prev month padding
+  // Action dates for dots
+  const actionDates=new Map();
+  loadActions().forEach(a => {
+    if(!a.dueDate) return;
+    if(!actionDates.has(a.dueDate)) actionDates.set(a.dueDate, {open:false, overdue:false});
+    const info = actionDates.get(a.dueDate);
+    if(a.status !== "DONE"){ info.open = true; if(a.dueDate < today) info.overdue = true; }
+  });
+
+  const grid=$("calGrid"); grid.innerHTML="";
+  ["일","월","화","수","목","금","토"].forEach(d=>{
+    const s=document.createElement("div"); s.className="cal-dow"; s.textContent=d; grid.appendChild(s);
+  });
   const prevLast=new Date(calYear,calMonth,0).getDate();
   for(let i=startDow-1;i>=0;i--){
-    const d=document.createElement("div");d.className="cal-day";d.textContent=prevLast-i;grid.appendChild(d);
+    const d=document.createElement("div"); d.className="cal-day"; d.textContent=prevLast-i; grid.appendChild(d);
   }
-  // Current month
   for(let day=1;day<=lastDay;day++){
     const d=document.createElement("div");
-    const dateStr=`${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
+    const ds=`${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
     d.className="cal-day current-month";
-    if(dateStr===todayStr) d.classList.add("today");
-    if(taskDates.has(dateStr)) d.classList.add("has-task");
+    if(ds===today) d.classList.add("today");
+    const info = actionDates.get(ds);
+    if(info && info.open){ d.classList.add("has-action"); if(info.overdue) d.classList.add("has-overdue"); }
     d.textContent=day;
-    d.onclick=()=>{window.location.href="./calendar.html?date="+dateStr;};
+    d.onclick=()=>{window.location.href="./calendar.html?date="+ds;};
     grid.appendChild(d);
   }
-  // Next month padding
-  const totalCells=startDow+lastDay;
-  const remaining=totalCells%7===0?0:7-totalCells%7;
-  for(let i=1;i<=remaining;i++){
-    const d=document.createElement("div");d.className="cal-day";d.textContent=i;grid.appendChild(d);
+  const total=startDow+lastDay, rem=total%7===0?0:7-total%7;
+  for(let i=1;i<=rem;i++){
+    const d=document.createElement("div"); d.className="cal-day"; d.textContent=i; grid.appendChild(d);
   }
 }
 
-/* ── VENDOR DRAWER ── */
+/* ══════════════════════════════════════════
+   VENDOR DRAWER (uses Action data)
+   ══════════════════════════════════════════ */
 function openDrawer(vendor){
-  if(!vendor)return;
-  $("drawer").classList.add("open");$("drawerOverlay").classList.add("open");
-  $("vpName").textContent=vendor;
-  let trades=[],sales=[],tasks=[];
+  if(!vendor) return;
+  $("drawer").classList.add("open"); $("drawerOverlay").classList.add("open");
+  $("vpName").textContent = vendor;
+
+  let trades=[], sales=[];
   try{trades=JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").filter(r=>r.vendor===vendor);}catch{}
   try{sales=JSON.parse(localStorage.getItem(SALES_KEY)||"[]").filter(r=>r.client===vendor);}catch{}
-  try{tasks=loadTasks().filter(t=>t.vendor===vendor&&!t.done);}catch{}
+
+  // Actions for this vendor (Single Source of Truth)
+  const vendorActions = loadActions().filter(a => a.vendorId === vendor && a.status !== "DONE");
 
   const tTotal=trades.reduce((s,r)=>s+n(r.buyUnitPrice)*n(r.qty),0);
   const sTotal=sales.reduce((s,r)=>s+n(r.sellUnitPrice)*n(r.qty),0);
@@ -535,104 +941,108 @@ function openDrawer(vendor){
   $("vpTotal").textContent=fmt(tTotal+sTotal);
   $("vpLatest").textContent=allDates.length?allDates[allDates.length-1]:"-";
   $("vpCount").textContent=(trades.length+sales.length);
-  $("vpTasks").textContent=tasks.length+"건";
+  $("vpTasks").textContent=vendorActions.length+"건";
 
-  // Hashtags from all memos
-  const allMemos=[...trades.map(r=>r.memo),...sales.map(r=>r.memo),...loadTasks().filter(t=>t.vendor===vendor).map(t=>t.text)];
+  // Hashtags
+  const allMemos=[...trades.map(r=>r.memo),...sales.map(r=>r.memo),...vendorActions.map(a=>a.title)];
   const tags=new Set();
   allMemos.forEach(m=>extractHashtags(m).forEach(h=>tags.add(h)));
   $("vpTags").innerHTML=[...tags].map(t=>`<span class="htag">${esc(t)}</span>`).join("");
 
   // Timeline
   const items=buildTimeline().filter(x=>x.vendor===vendor).slice(0,30);
-  const ul=$("vpTimeline");ul.innerHTML="";
-  if(!items.length){ul.innerHTML='<li class="tl-item"><div class="tl-body"><div class="tl-text" style="color:var(--muted)">이력 없음</div></div></li>';
-  }else{
+  const ul=$("vpTimeline"); ul.innerHTML="";
+  if(!items.length){
+    ul.innerHTML='<li class="tl-item"><div class="tl-body"><div class="tl-text" style="color:var(--muted)">이력 없음</div></div></li>';
+  } else {
     items.forEach(it=>{
-      const li=document.createElement("li");li.className="tl-item";
+      const li=document.createElement("li"); li.className="tl-item";
       li.innerHTML=`<div class="tl-dot ${it.type}"></div><div class="tl-body"><div class="tl-text">${it.text}</div><div class="tl-time">${relTime(it.ts)}</div></div>`;
       ul.appendChild(li);
     });
   }
 
-  // Footer: pending todos
-  const todoDiv=$("vpTodos");todoDiv.innerHTML="";
-  if(!tasks.length){todoDiv.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">미완료 업무 없음</div>';
-  }else{
-    tasks.forEach(t=>{
-      const d=document.createElement("div");d.className="drawer-todo";
-      d.innerHTML=`<div class="dt-dot"></div><span>${esc(t.text)}</span>`;
+  // Footer: pending actions (from Single Source)
+  const todoDiv=$("vpTodos"); todoDiv.innerHTML="";
+  if(!vendorActions.length){
+    todoDiv.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">미완료 Action 없음</div>';
+  } else {
+    vendorActions.forEach(a=>{
+      const d=document.createElement("div"); d.className="drawer-todo";
+      const overdueTag = a.dueDate < todayStr() ? ' <span style="color:var(--warn);font-size:10px;font-weight:700">지연</span>' : '';
+      d.innerHTML=`<div class="dt-dot"></div><span>${esc(a.title)}${overdueTag}</span>`;
       todoDiv.appendChild(d);
     });
   }
 }
-function closeDrawer(){$("drawer").classList.remove("open");$("drawerOverlay").classList.remove("open");}
+function closeDrawer(){ $("drawer").classList.remove("open"); $("drawerOverlay").classList.remove("open"); }
 
-/* ── VENDOR SEARCH ── */
+/* ══════════════════════════════════════════
+   VENDOR SEARCH
+   ══════════════════════════════════════════ */
 function getAllVendors(){
   const v=new Set();
   try{JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").forEach(r=>{if(r.vendor)v.add(r.vendor);});}catch{}
   try{JSON.parse(localStorage.getItem(SALES_KEY)||"[]").forEach(r=>{if(r.client)v.add(r.client);});}catch{}
-  loadTasks().forEach(t=>{if(t.vendor)v.add(t.vendor);});
+  loadActions().forEach(a=>{if(a.vendorId)v.add(a.vendorId);});
   return[...v].sort();
 }
+function refreshVendorList(){
+  const dl=$("dlVendors"); dl.innerHTML="";
+  getAllVendors().forEach(v=>{const o=document.createElement("option"); o.value=v; dl.appendChild(o);});
+}
 function openSearch(){
-  $("searchOverlay").style.display="flex";
-  $("searchInput").value="";
-  $("searchInput").focus();
+  $("searchOverlay").classList.add("open");
+  $("searchInput").value=""; $("searchInput").focus();
   renderSearchResults("");
 }
-function closeSearch(){$("searchOverlay").style.display="none";}
+function closeSearch(){ $("searchOverlay").classList.remove("open"); }
 function renderSearchResults(q){
   const all=getAllVendors();
   const filtered=q?all.filter(v=>v.toLowerCase().includes(q.toLowerCase())):all;
-  const ul=$("searchResults");ul.innerHTML="";
+  const ul=$("searchResults"); ul.innerHTML="";
   filtered.slice(0,20).forEach(v=>{
     const li=document.createElement("li");
-    li.style.cssText="padding:8px 10px;cursor:pointer;border-radius:6px;font-size:12px;color:var(--text)";
     li.textContent=v;
-    li.onmouseenter=()=>li.style.background="rgba(59,130,246,.1)";
-    li.onmouseleave=()=>li.style.background="";
     li.onclick=()=>{closeSearch();openDrawer(v);};
     ul.appendChild(li);
   });
   if(!filtered.length) ul.innerHTML='<li style="padding:10px;color:var(--muted);font-size:12px">검색 결과 없음</li>';
 }
 
-/* ── Task Vendor AC ── */
-function refreshTaskVendorAC(){
-  const dl=$("dlTaskVendor");dl.innerHTML="";
-  getAllVendors().forEach(v=>{const o=document.createElement("option");o.value=v;dl.appendChild(o);});
-}
-
-/* ── RENDER ALL ── */
+/* ══════════════════════════════════════════
+   RENDER ALL
+   ══════════════════════════════════════════ */
 function renderAll(){
-  renderTasks();renderTimeline();computeKPI();renderCalendar();refreshTaskVendorAC();
+  renderTodayZone();
+  renderSections();
+  renderTimeline();
+  computeKPI();
+  renderMiniCal();
 }
 
-/* ── EVENTS ── */
-$("btnTaskAdd").onclick=addTask;
-$("taskText").addEventListener("keydown",e=>{if(e.key==="Enter")addTask();});
-$("taskDue").value=today();
+/* ── Event Bindings ── */
+$("btnQuickTask").onclick = () => openActionModal(null);
+$("btnQuickSearch").onclick = openSearch;
+$("searchOverlay").onclick = e => { if(e.target===$("searchOverlay")) closeSearch(); };
+$("searchInput").addEventListener("input", e => renderSearchResults(e.target.value));
 
 $("btnTlAll").onclick=()=>{tlFilter="all";renderTimeline();};
 $("btnTlPurchase").onclick=()=>{tlFilter="purchase";renderTimeline();};
 $("btnTlSale").onclick=()=>{tlFilter="sale";renderTimeline();};
 $("btnTlWork").onclick=()=>{tlFilter="work";renderTimeline();};
 
-$("vpClose").onclick=closeDrawer;
-$("drawerOverlay").onclick=closeDrawer;
-document.addEventListener("keydown",e=>{if(e.key==="Escape"){closeDrawer();closeSearch();}});
+$("vpClose").onclick = closeDrawer;
+$("drawerOverlay").onclick = closeDrawer;
 
-$("calPrev").onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderCalendar();};
-$("calNext").onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderCalendar();};
+$("calPrev").onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderMiniCal();};
+$("calNext").onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderMiniCal();};
 
-$("btnQuickTask").onclick=()=>{$("taskText").focus();$("taskText").scrollIntoView({behavior:"smooth"});};
-$("btnQuickSearch").onclick=openSearch;
-$("searchOverlay").onclick=e=>{if(e.target===$("searchOverlay"))closeSearch();};
-$("searchInput").addEventListener("input",e=>renderSearchResults(e.target.value));
+document.addEventListener("keydown",e=>{
+  if(e.key==="Escape"){ closeActionModal(); closeDrawer(); closeSearch(); }
+});
 
-/* ── INIT ── */
+/* ── Init ── */
 renderAll();
 </script>
 </body>
