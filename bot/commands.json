@@ -1,0 +1,32 @@
+{
+  "price": {
+    "aliases": ["/p", "/price", "/단가"],
+    "description": "품목 단가 조회",
+    "usage": "/p [품목명]",
+    "handler": "price"
+  },
+  "stock": {
+    "aliases": ["/s", "/stock", "/재고"],
+    "description": "품목 재고 조회",
+    "usage": "/s [품목명]",
+    "handler": "stock"
+  },
+  "low": {
+    "aliases": ["/low", "/부족"],
+    "description": "부족 품목 리스트",
+    "usage": "/low",
+    "handler": "low"
+  },
+  "customer": {
+    "aliases": ["/c", "/customer", "/거래처"],
+    "description": "거래처 브리핑",
+    "usage": "/c [업체명]",
+    "handler": "customer"
+  },
+  "ar": {
+    "aliases": ["/ar", "/미수금"],
+    "description": "미수금 요약",
+    "usage": "/ar",
+    "handler": "ar"
+  }
+}

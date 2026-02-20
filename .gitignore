@@ -22,5 +22,12 @@ venv/
 .DS_Store
 Thumbs.db
 
+# Node.js
+node_modules/
+
+# Firebase 서비스 계정 (절대 커밋 금지)
+service-account.json
+**/service-account*.json
+
 # 리포트 (로컬 생성물)
 research/genspark_report.json

@@ -1,116 +1,635 @@
-<!DOCTYPE html>
+<!doctype html>
 <html lang="ko">
 <head>
-  <meta charset="UTF-8">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="theme-color" content="#2563eb">
-  <meta name="apple-mobile-web-app-capable" content="yes">
-  <meta name="apple-mobile-web-app-status-bar-style" content="default">
-  <meta name="apple-mobile-web-app-title" content="GOLAB">
-  <title>GOLAB — 재고 현황</title>
-  <link rel="stylesheet" href="css/app.css">
-  <link rel="manifest" href="manifest.json">
-  <link rel="icon" href="icons/icon.svg" type="image/svg+xml">
-  <link rel="apple-touch-icon" href="icons/icon.svg">
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GoLab · 재고 관리 (Inventory)</title>
+  <style>
+    :root{
+      --bg:#0b1220; --card:#101a2f; --muted:#8aa0c6; --text:#e7efff;
+      --line:#203255; --accent:#3ee087; --warn:#ffcc66; --bad:#ff6b6b; --point:#57a1ff;
+      --chip:#0c1530;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:#070b14;color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", Arial;}
+    header{padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(7,11,20,.85);backdrop-filter: blur(8px);z-index:10}
+    header .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    header h1{margin:0;font-size:16px;letter-spacing:.2px;color:var(--point)}
+    .tabs{display:flex;gap:8px;align-items:center}
+    .tab{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 10px;border-radius:10px;border:1px solid var(--line);
+      color:var(--muted);text-decoration:none;background:rgba(12,21,48,.35);font-size:12px;
+    }
+    .tab.active{color:#fff;background:rgba(87,161,255,.18);border-color:rgba(87,161,255,.45)}
+    .wrap{max-width:1220px;margin:0 auto;padding:16px 16px 36px}
+    .grid{display:grid;grid-template-columns: 1fr; gap:14px}
+    .card{background:rgba(16,26,47,.9);border:1px solid var(--line);border-radius:14px;padding:16px}
+    .card h2{margin:0 0 12px;font-size:13px;color:var(--point);display:flex;align-items:center;justify-content:space-between;gap:10px}
+    .kpis{display:grid;grid-template-columns: 1fr 1fr 1fr; gap:10px}
+    .kpi{padding:12px;border-radius:12px;border:1px solid var(--line);background:rgba(12,21,48,0.5)}
+    .kpi .t{font-size:11px;color:var(--muted)}
+    .kpi .v{margin-top:8px;font-size:18px;font-weight:800;color:var(--accent)}
+    .btns{display:flex;gap:8px;flex-wrap:wrap}
+    button{
+      border:1px solid var(--line);background:#1a2b4b;color:var(--text);
+      border-radius:10px;padding:10px 12px;font-size:12px;cursor:pointer;font-weight:700;
+    }
+    button.primary{background:var(--point);border:none}
+    button.save{background:var(--accent); border:none; color:#0b1220}
+    button.save.save-disabled{
+      background:#111827;
+      border:1px solid var(--line);
+      color:var(--muted);
+      opacity:0.7;
+      cursor:not-allowed;
+    }
+    button.save.save-ready{
+      background:var(--accent);
+      border:none;
+      color:#0b1220;
+    }
+    button.save.save-warning{
+      background:var(--warn);
+      border:none;
+      color:#111827;
+    }
+    button.save.save-error{
+      background:var(--bad);
+      border:none;
+      color:#0b1220;
+    }
+    button.secondary{background:rgba(87,161,255,.10);border:1px solid rgba(87,161,255,.35)}
+    button.danger{color:var(--bad);background:transparent;border:1px solid rgba(255,107,107,.35)}
+    .form{display:grid;grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr; gap:8px}
+    input, textarea{
+      width:100%;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--text);
+      padding:10px;font-size:12px;outline:none
+    }
+    .field-required{
+      background:rgba(87,161,255,0.18);
+    }
+    .field-auto{
+      background:rgba(148,163,184,0.16);
+    }
+    textarea{grid-column:1 / -2; min-height:38px; resize:vertical}
+    .addWrap{display:flex;justify-content:flex-end;align-items:stretch}
+    .addWrap button{min-width:90px}
+    .mini{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
+    .tableWrap{overflow:auto;border-radius:12px;border:1px solid var(--line);margin-top:10px}
+    table{width:100%;border-collapse:collapse;min-width:980px;font-size:12px}
+    th{background:#162440;color:var(--muted);text-align:left;padding:12px;position:sticky;top:0}
+    td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
+    .tag{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);font-size:11px}
+    .ok{color:var(--accent)}
+    .low{color:var(--warn)}
+    .zero{color:var(--bad)}
+    .right{display:flex;gap:8px;justify-content:flex-end}
+    .muted{color:var(--muted)}
+    input[type="file"]{display:none}
+    .kpi-total-qty{display:none}
+    .inv-main{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.3fr);gap:12px;align-items:flex-start;margin-top:10px}
+    .detailCard{
+      border-radius:12px;
+      border:1px solid var(--line);
+      background:rgba(12,21,48,0.85);
+      padding:12px;
+      font-size:12px;
+    }
+    .detailCard h3{margin:0 0 6px;font-size:13px;color:var(--point)}
+    .detail-row{display:flex;justify-content:space-between;gap:8px;margin-top:4px}
+    .detail-row .label{color:var(--muted);font-size:11px}
+    .detail-row .value{font-weight:700}
+    .detail-actions{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}
+    .detail-mini{margin-top:8px;font-size:11px;color:var(--muted);line-height:1.5}
+    .row-selected{background:rgba(87,161,255,0.12)}
+    .modalBack{position:fixed;inset:0;background:rgba(0,0,0,.6);display:none;align-items:center;justify-content:center;z-index:999}
+    .modal{width:min(980px,92vw);max-height:86vh;overflow:auto;background:rgba(16,26,47,.98);border:1px solid var(--line);border-radius:16px;padding:14px}
+    .modal h3{margin:0 0 10px;color:#fff;font-size:14px}
+    .modal .topRow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
+    .closeX{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:10px;padding:8px 10px;cursor:pointer}
+  </style>
 </head>
 <body>
-  <!-- 로그인 오버레이 -->
-  <div class="auth-overlay" id="auth-overlay">
-    <div class="auth-card">
-      <div class="auth-logo">GOLAB</div>
-      <div class="auth-sub">영업관리 · 재고 · 정산</div>
-      <div id="auth-login-form">
-        <div class="auth-field">
-          <input type="email" class="form-input" id="auth-email" placeholder="이메일" autocomplete="email">
+<header>
+  <div class="top">
+    <h1>GoLab · 재고 관리</h1>
+    <nav class="tabs">
+      <a class="tab" href="./purchases.html">📦 입고/원가</a>
+      <a class="tab active" href="./index.html">📍 재고 현황</a>
+    </nav>
+  </div>
+</header>
+<div class="wrap">
+  <div class="grid">
+    <div class="card">
+      <h2>
+        요약
+        <div class="btns">
+          <button id="btnHistory" class="secondary">최근 입고 히스토리</button>
+          <button id="btnExport" class="secondary">내보내기(JSON)</button>
+          <button id="btnImport" class="secondary">가져오기(JSON)</button>
+          <input id="fileIn" type="file" accept="application/json" />
+          <button id="btnReset" class="danger">초기화</button>
         </div>
-        <div class="auth-field">
-          <input type="password" class="form-input" id="auth-pw" placeholder="비밀번호" autocomplete="current-password">
+      </h2>
+      <div class="kpis">
+        <div class="kpi field-auto" title="자동 합산: 수량 × 매입단가 기준으로 자동 계산된 금액입니다.">
+          <div class="t">전체 재고 금액</div>
+          <div id="kTotalValue" class="v">₩ 0</div>
+          <div class="mini">수량 × 매입단가(평균/최근)</div>
         </div>
-        <button class="btn btn-primary auth-btn" id="btn-login">로그인</button>
+        <div class="kpi field-auto kpi-total-qty" title="자동 합산: 수량 × 매입단가 기준으로 자동 계산된 금액입니다.">
+          <div class="t">전체 재고 수량(합)</div>
+          <div id="kTotalQty" class="v">0</div>
+          <div class="mini">모든 품목의 수량 합</div>
+        </div>
+        <div class="kpi field-auto" title="자동 합산: 수량 × 매입단가 기준으로 자동 계산된 금액입니다.">
+          <div class="t">부족/0 재고 품목</div>
+          <div id="kLow" class="v">0</div>
+          <div class="mini">수량=0 또는 최소수량 이하</div>
+        </div>
       </div>
-      <div class="auth-error" id="auth-error" style="display:none"></div>
-      <div class="auth-denied" id="auth-denied" style="display:none">
-        <p>접근 권한이 없습니다</p>
-        <p class="auth-denied-sub">관리자에게 이메일 등록을 요청하세요</p>
-        <button class="btn btn-secondary btn-sm" id="btn-auth-retry">다른 계정으로 로그인</button>
+      <div class="mini">
+        ✅ 이 페이지는 <b>재고(실물)</b> 중심입니다. 입고 원장(purchases)에서 "재고로 전송"하면 여기에 수량이 자동 반영됩니다.
       </div>
-      <div class="auth-loading" id="auth-loading" style="display:none">
-        <div class="loading-spinner"></div>
-        <p>로그인 확인 중...</p>
+    </div>
+    <div class="card">
+      <h2>품목 추가/수정</h2>
+      <div class="form">
+        <input id="inName" class="field-required" placeholder="품목명 (예: AG Powder)" />
+        <input id="inSpec" placeholder="규격 (예: 1kg / 1ea)" />
+        <input id="inVendor" placeholder="매입처 (예: 일본/국내)" />
+        <input id="inPrice" class="field-required" type="number" step="0.01" placeholder="매입단가(KRW)" />
+        <input id="inQty" class="field-required" type="number" step="0.01" placeholder="수량" />
+        <input id="inMin" type="number" step="0.01" placeholder="최소수량" />
+        <textarea id="inNote" placeholder="비고/메모"></textarea>
+        <div class="addWrap">
+          <button id="btnAdd" class="primary save">추가</button>
+        </div>
+      </div>
+      <div id="saveStatus" class="mini"></div>
+      <div class="inv-main">
+        <div class="tableWrap">
+          <table>
+            <thead>
+              <tr>
+                <th>품목명</th>
+                <th>규격</th>
+                <th>매입처</th>
+                <th>매입단가</th>
+                <th>수량</th>
+                <th>최소수량</th>
+                <th>재고총액</th>
+                <th>상태</th>
+                <th>비고</th>
+                <th style="text-align:right">작업</th>
+              </tr>
+            </thead>
+            <tbody id="tbody"></tbody>
+          </table>
+        </div>
+        <aside class="detailCard" id="detailPanel">
+          <h3>📄 품목 디테일</h3>
+          <div id="detailEmpty" class="detail-mini">👈 왼쪽 리스트에서 품목을 선택하세요.</div>
+          <div id="detailBody" style="display:none">
+            <div class="detail-row">
+              <div class="label">품목명</div>
+              <div class="value" id="detailName"></div>
+            </div>
+            <div class="detail-row">
+              <div class="label">규격 / 매입처</div>
+              <div class="value" id="detailSpecVendor"></div>
+            </div>
+            <div class="detail-row">
+              <div class="label">현재 수량</div>
+              <div class="value" id="detailQty"></div>
+            </div>
+            <div class="detail-row">
+              <div class="label">최소수량</div>
+              <div class="value" id="detailMin"></div>
+            </div>
+            <div class="detail-row">
+              <div class="label">매입단가</div>
+              <div class="value" id="detailPrice"></div>
+            </div>
+            <div class="detail-row">
+              <div class="label">재고총액</div>
+              <div class="value" id="detailTotal"></div>
+            </div>
+            <div class="detail-row">
+              <div class="label">메모</div>
+              <div class="value" id="detailNote"></div>
+            </div>
+            <div class="detail-actions">
+              <button id="detailEdit" class="secondary">이 품목 수정</button>
+              <button id="detailDelete" class="danger">이 품목 삭제</button>
+            </div>
+            <div class="detail-mini" style="margin-top:10px;font-weight:600">최근 입고/변경 히스토리</div>
+            <div id="detailHist" class="detail-mini"></div>
+          </div>
+        </aside>
+      </div>
+      <div class="mini">
+        TIP: 수량/단가는 숫자만 입력하세요. "입고/원가"에서 전송된 품목은 매입단가가 <b>실단가(KRW)</b> 기준으로 자동 업데이트됩니다.
       </div>
     </div>
   </div>
-
-  <!-- 상단 탭 네비게이션 -->
-  <nav class="top-nav">
-    <span class="logo">GOLAB</span>
-    <ul class="tabs">
-      <li><a href="index.html" class="active">재고 현황</a></li>
-      <li><a href="purchases.html">입고/원가</a></li>
-      <li><a href="#" style="opacity:0.4">정산/증빙</a></li>
-      <li><a href="#" style="opacity:0.4">거래처</a></li>
-    </ul>
-    <div class="user-info" id="user-info" style="display:none">
-      <span class="user-email" id="user-email"></span>
-      <button class="btn-logout" id="btn-logout">로그아웃</button>
+</div>
+<div id="modalBack" class="modalBack">
+  <div class="modal">
+    <div class="topRow">
+      <h3>최근 입고 히스토리 (purchases → inventory 전송 기록)</h3>
+      <button id="btnClose" class="closeX">닫기</button>
     </div>
-  </nav>
-
-  <!-- KPI 카드 3개 -->
-  <div class="kpi-bar">
-    <div class="kpi-card blue">
-      <div class="kpi-label">총 재고가치</div>
-      <div class="kpi-value" id="kpi-asset">₩0</div>
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>전송일시</th>
+            <th>배치</th>
+            <th>품목</th>
+            <th>수량</th>
+            <th>실단가(KRW)</th>
+            <th>추가된 금액</th>
+            <th class="muted">메모</th>
+          </tr>
+        </thead>
+        <tbody id="hbody"></tbody>
+      </table>
     </div>
-    <div class="kpi-card green" id="kpi-receivable-card">
-      <div class="kpi-label">미수금 합계</div>
-      <div class="kpi-value" id="kpi-receivable">₩0</div>
-    </div>
-    <div class="kpi-card green" id="kpi-risk-card">
-      <div class="kpi-label">위험 품목</div>
-      <div class="kpi-value" id="kpi-risk">0건</div>
-    </div>
+    <div class="mini">※ 이 기록은 재고 수량/단가가 자동 변경된 "증빙 로그" 역할입니다.</div>
   </div>
-
-  <!-- 메인 레이아웃 -->
-  <div class="main-layout" id="main-layout">
-    <!-- 좌측: 리스트 -->
-    <div class="list-panel">
-      <div class="list-toolbar">
-        <div class="toolbar-top">
-          <input type="text" class="search-input" id="search-input" placeholder="품목명 / SKU 검색...">
-          <button class="btn btn-primary btn-sm" id="btn-add-item" title="새 품목 (Ctrl+N)">+ 품목</button>
-        </div>
-        <div class="filter-row">
-          <button class="filter-btn active" data-filter="ALL">전체</button>
-          <button class="filter-btn" data-filter="NORMAL">정상</button>
-          <button class="filter-btn" data-filter="RISK">위험</button>
-          <button class="filter-btn" data-filter="RESERVED">고객지정</button>
-          <button class="filter-btn" data-filter="OUT">품절</button>
-          <button class="filter-btn toggle-shortage" data-filter="SHORTAGE">부족만</button>
-        </div>
-      </div>
-      <div class="list-scroll" id="item-list">
-        <!-- 동적 렌더링 -->
-      </div>
-    </div>
-
-    <!-- 우측: 상세 -->
-    <div class="detail-panel" id="detail-panel">
-      <div class="detail-empty">
-        ← 좌측 리스트에서 품목을 선택하세요
-      </div>
-    </div>
-  </div>
-
-  <script type="module" src="js/inventory.js"></script>
-  <script>
-    // PWA Service Worker 등록
-    if ('serviceWorker' in navigator) {
-      navigator.serviceWorker.register('./sw.js')
-        .then(() => console.log('[PWA] Service Worker 등록 완료'))
-        .catch((err) => console.warn('[PWA] SW 등록 실패:', err));
+</div>
+<script>
+  const INV_KEY = "golab_inventory_v01";
+  const HIST_KEY = "golab_inventory_inbound_history_v01";
+  const $ = (id) => document.getElementById(id);
+  let isEventBound = false;
+  let selectedItemId = null;
+  function loadInv(){
+    try { return JSON.parse(localStorage.getItem(INV_KEY) || "[]"); }
+    catch { return []; }
+  }
+  function saveInv(list){
+    localStorage.setItem(INV_KEY, JSON.stringify(list));
+  }
+  function loadHist(){
+    try { return JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); }
+    catch { return []; }
+  }
+  function n(v, fb=0){
+    const x = Number(v);
+    return Number.isFinite(x) ? x : fb;
+  }
+  function statusTag(qty, min){
+    if(qty <= 0) return `<span class="tag zero">0 재고</span>`;
+    if(qty <= min) return `<span class="tag low">부족</span>`;
+    return `<span class="tag ok">정상</span>`;
+  }
+  function compute(){
+    const inv = loadInv();
+    let totalValue = 0;
+    let totalQty = 0;
+    let lowCnt = 0;
+    inv.forEach(it=>{
+      const qty = n(it.qty);
+      const price = n(it.buyPrice);
+      totalQty += qty;
+      totalValue += qty * price;
+      if(qty <= 0 || qty <= n(it.minQty)) lowCnt += 1;
+    });
+    $("kTotalValue").textContent = "₩ " + Math.round(totalValue).toLocaleString();
+    $("kTotalQty").textContent = (Math.round(totalQty*100)/100).toLocaleString();
+    $("kLow").textContent = lowCnt.toLocaleString();
+  }
+  function clearDetail(){
+    const empty = $("detailEmpty");
+    const body = $("detailBody");
+    if(empty && body){
+      empty.style.display = "block";
+      body.style.display = "none";
     }
-  </script>
+    const fields = ["detailName","detailSpecVendor","detailQty","detailMin","detailPrice","detailTotal","detailNote","detailHist"];
+    fields.forEach(id=>{
+      const el = $(id);
+      if(el) el.textContent = "";
+    });
+  }
+  function enterEditMode(it){
+    $("inName").value = it.name || "";
+    $("inSpec").value = it.spec || "";
+    $("inVendor").value = it.vendor || "";
+    $("inPrice").value = n(it.buyPrice);
+    $("inQty").value = n(it.qty);
+    $("inMin").value = n(it.minQty);
+    $("inNote").value = it.note || "";
+    $("btnAdd").textContent = "저장";
+    $("btnAdd").dataset.editing = it.id;
+    validateForm();
+  }
+  function showDetail(it){
+    const empty = $("detailEmpty");
+    const body = $("detailBody");
+    if(!body || !empty) return;
+    empty.style.display = "none";
+    body.style.display = "block";
+    const qty = n(it.qty);
+    const min = n(it.minQty);
+    const price = n(it.buyPrice);
+    const total = qty * price;
+    $("detailName").textContent = it.name || "";
+    $("detailSpecVendor").textContent = `${it.spec || "-"} / ${it.vendor || "-"}`;
+    $("detailQty").textContent = (Math.round(qty*100)/100).toLocaleString();
+    $("detailMin").textContent = (Math.round(min*100)/100).toLocaleString();
+    $("detailPrice").textContent = "₩" + Math.round(price).toLocaleString();
+    $("detailTotal").textContent = "₩" + Math.round(total).toLocaleString();
+    $("detailNote").textContent = it.note || "-";
+    const histBox = $("detailHist");
+    if(histBox){
+      const list = loadHist();
+      const related = list.filter(h => (h.name||"") === (it.name||"")).slice(0,5);
+      if(related.length === 0){
+        histBox.textContent = "관련 입고/변경 히스토리가 없습니다.";
+      }else{
+        const lines = related.map(h => {
+          const at = (h.at||"").replace("T"," ").slice(0,16);
+          const qtyText = (Math.round(n(h.qty)*100)/100).toLocaleString() + " " + (h.unit||"");
+          return `${at} · ${qtyText} · ₩${Math.round(n(h.unitPriceKrw)).toLocaleString()}`;
+        });
+        histBox.innerHTML = lines.map(t=>`<div>${t}</div>`).join("");
+      }
+    }
+    const btnEdit = $("detailEdit");
+    const btnDel = $("detailDelete");
+    if(btnEdit){
+      btnEdit.onclick = ()=> enterEditMode(it);
+    }
+    if(btnDel){
+      btnDel.onclick = ()=>{
+        if(!confirm("이 품목을 삭제하시겠습니까?")) return;
+        saveInv(loadInv().filter(x=>x.id !== it.id));
+        selectedItemId = null;
+        render(); compute();
+        validateForm();
+        clearDetail();
+      };
+    }
+  }
+  function updateRowSelection(){
+    const tb = $("tbody");
+    if(!tb) return;
+    tb.querySelectorAll("tr").forEach(tr=>{
+      if(tr.dataset && tr.dataset.id === selectedItemId){
+        tr.classList.add("row-selected");
+      }else{
+        tr.classList.remove("row-selected");
+      }
+    });
+  }
+  function render(){
+    const inv = loadInv();
+    const tb = $("tbody");
+    tb.innerHTML = "";
+    inv.forEach(it=>{
+      const qty = n(it.qty);
+      const min = n(it.minQty);
+      const price = n(it.buyPrice);
+      const total = qty * price;
+      const tr = document.createElement("tr");
+      tr.dataset.id = it.id;
+      tr.innerHTML = `
+        <td><b>${it.name || ""}</b></td>
+        <td class="muted">${it.spec || ""}</td>
+        <td class="muted">${it.vendor || ""}</td>
+        <td>₩${Math.round(price).toLocaleString()}</td>
+        <td><b>${(Math.round(qty*100)/100).toLocaleString()}</b></td>
+        <td class="muted">${(Math.round(min*100)/100).toLocaleString()}</td>
+        <td>₩${Math.round(total).toLocaleString()}</td>
+        <td>${statusTag(qty, min)}</td>
+        <td class="muted">${(it.note||"").replaceAll("<","&lt;")}</td>
+        <td style="text-align:right" class="right">
+          <button class="secondary" data-edit="${it.id}">수정</button>
+          <button class="danger" data-del="${it.id}">삭제</button>
+        </td>
+      `;
+      tr.addEventListener("click", ()=>{
+        selectedItemId = it.id;
+        updateRowSelection();
+        showDetail(it);
+      });
+      tb.appendChild(tr);
+    });
+    tb.querySelectorAll("button[data-del]").forEach(btn=>{
+      btn.onclick = (e)=>{
+        e.stopPropagation();
+        if(!confirm("삭제하시겠습니까?")) return;
+        const id = btn.dataset.del;
+        saveInv(loadInv().filter(x=>x.id!==id));
+        if(selectedItemId === id){
+          selectedItemId = null;
+          clearDetail();
+        }
+        render(); compute();
+        validateForm();
+      };
+    });
+    tb.querySelectorAll("button[data-edit]").forEach(btn=>{
+      btn.onclick = (e)=>{
+        e.stopPropagation();
+        const id = btn.dataset.edit;
+        const it = loadInv().find(x=>x.id===id);
+        if(!it) return;
+        selectedItemId = it.id;
+        updateRowSelection();
+        enterEditMode(it);
+        showDetail(it);
+      };
+    });
+    updateRowSelection();
+  }
+  function upsert(){
+    const name = $("inName").value.trim();
+    if(!name){ alert("품목명을 입력하세요."); return; }
+    const item = {
+      id: $("btnAdd").dataset.editing || crypto.randomUUID(),
+      name,
+      spec: $("inSpec").value.trim(),
+      vendor: $("inVendor").value.trim(),
+      buyPrice: n($("inPrice").value),
+      qty: n($("inQty").value),
+      minQty: n($("inMin").value),
+      note: $("inNote").value.trim(),
+      updatedAt: new Date().toISOString()
+    };
+    const inv = loadInv();
+    const idx = inv.findIndex(x=>x.id===item.id);
+    if(idx >= 0) inv[idx] = item;
+    else inv.unshift(item);
+    saveInv(inv);
+    $("inName").value=""; $("inSpec").value=""; $("inVendor").value="";
+    $("inPrice").value=""; $("inQty").value=""; $("inMin").value=""; $("inNote").value="";
+    $("btnAdd").textContent="추가";
+    delete $("btnAdd").dataset.editing;
+    render(); compute();
+  }
+  function exportJson(){
+    const data = localStorage.getItem(INV_KEY) || "[]";
+    const blob = new Blob([data], {type:"application/json"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = `GoLab_Inventory_${new Date().toISOString().slice(0,10)}.json`;
+    a.click();
+  }
+  function importJson(file){
+    const r = new FileReader();
+    r.onload = ()=>{
+      try{
+        const data = JSON.parse(r.result);
+        if(!Array.isArray(data)) throw new Error("not array");
+        saveInv(data);
+        render(); compute();
+        validateForm();
+        alert("가져오기 완료");
+      }catch(e){
+        alert("JSON 형식이 올바르지 않습니다.");
+      }
+    };
+    r.readAsText(file);
+  }
+  function openHistory(){
+    const list = loadHist();
+    const hb = $("hbody");
+    hb.innerHTML = "";
+    if(list.length === 0){
+      const tr = document.createElement("tr");
+      tr.innerHTML = `<td colspan="7" class="muted" style="padding:16px">히스토리가 없습니다. (purchases에서 '재고로 전송'을 사용해보세요)</td>`;
+      hb.appendChild(tr);
+    }else{
+      list.slice(0, 200).forEach(h=>{
+        const tr = document.createElement("tr");
+        tr.innerHTML = `
+          <td class="muted">${(h.at||"").replace("T"," ").slice(0,19)}</td>
+          <td><b>${h.batchName||""}</b></td>
+          <td>${h.name||""}</td>
+          <td>${(Math.round(n(h.qty)*100)/100).toLocaleString()} ${h.unit||""}</td>
+          <td>₩${Math.round(n(h.unitPriceKrw)).toLocaleString()}</td>
+          <td>₩${Math.round(n(h.addedValueKrw)).toLocaleString()}</td>
+          <td class="muted">${(h.memo||"").replaceAll("<","&lt;")}</td>
+        `;
+        hb.appendChild(tr);
+      });
+    }
+    $("modalBack").style.display = "flex";
+  }
+  function closeHistory(){
+    $("modalBack").style.display = "none";
+  }
+  function computeSaveButtonState(){
+    const name = ($("inName")?.value || "").trim();
+    const priceRaw = $("inPrice")?.value || "";
+    const qtyRaw = $("inQty")?.value || "";
+    const minRaw = $("inMin")?.value || "";
+    const price = n(priceRaw);
+    const qty = n(qtyRaw);
+    const min = n(minRaw);
+    const hasName = !!name;
+    const hasPrice = priceRaw !== "" && price > 0;
+    const hasQty = qtyRaw !== "" && qty >= 0;
+    const hasMin = minRaw !== "";
+    if(!hasName || !hasPrice || !hasQty){
+      return {
+        state: "disabled",
+        message: "입력 확인: 품목명과 수량은 필수입니다. 빈칸을 확인해 주세요."
+      };
+    }
+    if(hasMin && qty <= min){
+      return {
+        state: "warning",
+        message: "재고 부족: 적정 재고 이하입니다. 추가 매입 검토가 필요합니다."
+      };
+    }
+    return {
+      state: "ready",
+      message: "입력값이 정상입니다. 추가/저장을 진행할 수 있습니다."
+    };
+  }
+  function applySaveButtonState(state, message){
+    const btn = $("btnAdd");
+    const statusEl = $("saveStatus");
+    if(!btn || !statusEl) return;
+    btn.classList.remove("save-disabled","save-ready","save-warning","save-error");
+    btn.disabled = false;
+    if(state === "disabled"){
+      btn.classList.add("save-disabled");
+      btn.disabled = true;
+    }else if(state === "warning"){
+      btn.classList.add("save-warning");
+    }else if(state === "error"){
+      btn.classList.add("save-error");
+    }else{
+      btn.classList.add("save-ready");
+    }
+    statusEl.textContent = message || "";
+  }
+  function updateSaveButtonState(){
+    const { state, message } = computeSaveButtonState();
+    applySaveButtonState(state, message);
+  }
+  function setSaveErrorState(message){
+    applySaveButtonState(
+      "error",
+      message || "치명적 오류가 발생했습니다. 저장에 실패했습니다. 잠시 후 다시 시도해주세요."
+    );
+  }
+  function validateForm(){
+    updateSaveButtonState();
+  }
+  function handleAddClick(){
+    const btn = $("btnAdd");
+    if(btn && btn.disabled) return;
+    try{
+      upsert();
+      validateForm();
+    }catch(e){
+      console.error(e);
+      setSaveErrorState("치명적 오류(전송 실패 등)가 발생했습니다. 잠시 후 다시 시도하거나 관리자에게 문의해주세요.");
+    }
+  }
+  function bindEvents(){
+    if(isEventBound) return;
+    isEventBound = true;
+    $("btnAdd").onclick = handleAddClick;
+    $("btnExport").onclick = exportJson;
+    $("btnImport").onclick = ()=> $("fileIn").click();
+    $("fileIn").addEventListener("change", (e)=>{
+      const f = e.target.files?.[0];
+      if(f) importJson(f);
+      e.target.value = "";
+    });
+    $("btnReset").onclick = ()=>{
+      if(!confirm("재고 데이터를 초기화할까요? (되돌릴 수 없음)")) return;
+      localStorage.removeItem(INV_KEY);
+      render(); compute();
+      validateForm();
+      alert("초기화 완료");
+    };
+    $("btnHistory").onclick = openHistory;
+    $("btnClose").onclick = closeHistory;
+    $("modalBack").addEventListener("click", (e)=>{
+      if(e.target.id === "modalBack") closeHistory();
+    });
+    $("inName").addEventListener("input", validateForm);
+    $("inPrice").addEventListener("input", validateForm);
+    $("inQty").addEventListener("input", validateForm);
+    $("inMin").addEventListener("input", validateForm);
+  }
+  document.addEventListener("DOMContentLoaded", () => {
+    render(); compute();
+    bindEvents();
+    validateForm();
+  });
+</script>
 </body>
 </html>
