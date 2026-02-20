@@ -40,6 +40,12 @@
       </div>
     </div>
   </div>
+  <script>
+    // 이미 인증된 세션이면 오버레이 즉시 숨김 (JS 모듈 로드 전 실행)
+    if (sessionStorage.getItem('golab_authed')) {
+      document.getElementById('auth-overlay').classList.add('hidden');
+    }
+  </script>
 
   <!-- 상단 탭 네비게이션 -->
   <nav class="top-nav">

@@ -44,6 +44,8 @@ async function handleAuth() {
 
   if (!overlay) return; // 오버레이 없으면 스킵 (데모)
 
+  const cachedAuth = sessionStorage.getItem('golab_authed');
+
   // 이미 로그인된 세션 확인
   const existingUser = await checkAuth();
   if (existingUser) {
@@ -56,6 +58,11 @@ async function handleAuth() {
       denied.style.display = 'block';
     }
   } else {
+    // 세션 캐시가 있었지만 실제 인증 만료 → 오버레이 다시 표시
+    if (cachedAuth) {
+      sessionStorage.removeItem('golab_authed');
+      overlay.classList.remove('hidden');
+    }
     // 미로그인 → 로딩 숨기고 로그인 폼 표시
     loading.style.display = 'none';
     if (loginForm) loginForm.style.display = 'block';
@@ -161,6 +168,7 @@ async function verifyAccess(user) {
  */
 function showApp(overlay, user) {
   overlay.classList.add('hidden');
+  sessionStorage.setItem('golab_authed', '1');
 
   // 네비 바 사용자 정보 표시
   const userInfo = document.getElementById('user-info');
@@ -174,6 +182,7 @@ function showApp(overlay, user) {
 
   if (logoutBtn) {
     logoutBtn.addEventListener('click', async () => {
+      sessionStorage.removeItem('golab_authed');
       await signOutUser();
       window.location.reload();
     });
