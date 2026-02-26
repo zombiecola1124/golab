@@ -1,8 +1,32 @@
-# CLAUDE.md — ERP-lite 웹 콘솔 아키텍처 문서
+# CLAUDE.md — GoLab ERP 운영 원칙 + 아키텍처 문서
 
-> 최종 갱신: 2026-02-13
-> 상태: v1 개발 착수
+> 최종 갱신: 2026-02-26
+> 상태: v1.6 운영 중
 > 관리: 비서실(최실장) + 개발팀(강본부장)
+
+---
+
+## 0. 운영 원칙 (Claude Code 필수 준수)
+
+1. **항상 먼저 작업 계획을 제시하고, 사용자 승인 후 실행한다.**
+2. 작은 작업은 저비용 모델, 큰 설계 변경만 고성능 모델을 사용한다.
+3. 실패 원인은 기록하고 재발 방지 규칙을 생성한다.
+4. 기능 완성 후 UI를 개선한다.
+5. **자율 실행은 반드시 사용자 승인 후 진행한다.**
+6. 세션이 끊겨도 이전 작업 맥락을 기억한다.
+7. 코드에는 한글 주석을 단다.
+8. 기존 구조를 임의로 대규모 변경하지 않는다.
+
+### 작업 흐름 (필수)
+```
+Plan → (승인) → Execute → Verify → Log(실패/학습) → Polish(UI)
+```
+
+### 금지 사항
+- localStorage 키를 임의 변경/삭제 금지
+- 기존 데이터 모델 필드를 무단 제거 금지
+- 사용자 승인 없는 대규모 리팩토링 금지
+- 외부 CDN/라이브러리 추가 금지 (순수 JS 유지)
 
 ---
 
@@ -20,11 +44,43 @@
 
 | 레이어 | 선택 | 비고 |
 |--------|------|------|
-| 프론트엔드 | HTML + CSS + Vanilla JS | 가볍고 빠름, 프레임워크 없음 |
-| 호스팅 | GitHub Pages | 정적 호스팅, 무료 |
-| DB | Firebase Firestore (Spark 무료) | db.js 추상화로 추후 교체 가능 |
-| 인증 | Firebase Anonymous Auth (v1) | v1.5에서 이메일/구글 로그인 |
-| 보안 | Firestore Security Rules | 인증 없는 접근 차단 필수 |
+| 프론트엔드 | HTML + CSS + Vanilla JS | 순수 JS, 프레임워크 없음 |
+| 데이터 | localStorage (JSON) | 단일 파일 SPA, 키별 분리 |
+| 호스팅 | 로컬 파일 시스템 | D:\GOLAB\golab\web\ |
+| VCS | Git + GitHub | zombiecola1124/golab |
+| 봇 | Python (Telegram) | bot/ 디렉토리 |
+| 스크립트 | Python (Excel→JSON) | scripts/ 디렉토리 |
+| (미래) DB | Firebase Firestore | db.js 추상화로 교체 예정 |
+
+### 현재 페이지 구조 (v1.6)
+| 페이지 | 파일 | 설명 |
+|--------|------|------|
+| 콘솔 | console.html | 오늘 실행 센터 (Action CRUD, 주간/월간, 타임라인, KPI) |
+| 캘린더 | calendar.html | 월간 캘린더 + Initiative 칸반보드 |
+| 입고/원가 | purchases.html | 배치 원가 계산 (환율/물류비) |
+| 재고 | index.html | 재고 현황 |
+| 구매 이력 | trade.html | 구매 원장 (CRUD, 감사로그, KPI) |
+| 매출 | sales.html | 매출 관리 (CRUD, 감사로그, KPI) |
+
+### localStorage 키 맵 (v1.6)
+| 키 | 용도 | 사용처 |
+|----|------|--------|
+| golab_actions_v15 | Action (Single Source of Truth) | console, calendar |
+| golab_initiatives_v15 | Initiative 칸반 | calendar |
+| golab_trade_v1 | 구매 원장 | trade, console, calendar |
+| golab_sales_v1 | 매출 데이터 | sales, console, calendar |
+| golab_trade_audit | 구매 감사로그 | trade, console, calendar |
+| golab_sales_audit | 매출 감사로그 | sales, console, calendar |
+| golab_work_audit | 업무 감사로그 | console, calendar |
+| golab_calendar_v1 | 캘린더 일정 (레거시) | calendar |
+| golab_worklog_v1 | 업무일지 (레거시→마이그레이션) | console |
+| inventoryItems | 재고 | index |
+
+### 디자인 시스템 (v1.6 — 화이트 테마)
+- 배경: #f5f7fa / 카드: #ffffff / 보더: #e5e7eb
+- Primary: #2563eb / Warn: #dc2626 / Accent: #16a34a / Orange: #d97706
+- 텍스트: #0f172a (본문), #64748b (muted)
+- 카드: border-radius 10px, box-shadow 0 1px 3px rgba(0,0,0,.04)
 
 ---
 
