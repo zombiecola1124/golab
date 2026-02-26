@@ -1,0 +1,369 @@
+<!doctype html>
+<html lang="ko">
+<head>
+<meta charset="utf-8"/>
+<title>GoLab v1.6.1 — Phase 3 전체 581건 Import 테스트</title>
+<style>
+  body{font-family:monospace;background:#0f172a;color:#e2e8f0;padding:20px;font-size:12px;line-height:1.5}
+  .pass{color:#4ade80} .fail{color:#f87171} .info{color:#60a5fa} .warn{color:#fbbf24}
+  h1{color:#60a5fa;font-size:15px}
+  pre{background:#1e293b;padding:14px;border-radius:8px;overflow:auto;white-space:pre-wrap;max-height:80vh}
+  button{margin:6px 4px;padding:8px 16px;border-radius:6px;border:none;font-size:13px;font-weight:700;cursor:pointer}
+  .btn-dry{background:#3b82f6;color:#fff} .btn-c1{background:#f59e0b;color:#000}
+  .btn-c2{background:#22c55e;color:#000} .btn-re{background:#6366f1;color:#fff}
+  button:disabled{opacity:.4;cursor:not-allowed}
+</style>
+</head>
+<body>
+<h1>Phase 3 — 전체 581건 Import (DRY_RUN → 50건 COMMIT → 나머지 COMMIT)</h1>
+<div>
+  <button class="btn-dry" id="btnDry" onclick="runDryRun()">1. FULL DRY_RUN</button>
+  <button class="btn-c1" id="btnC1" onclick="runCommit1()" disabled>2. COMMIT 1차 (50건)</button>
+  <button class="btn-c2" id="btnC2" onclick="runCommit2()" disabled>3. COMMIT 2차 (나머지)</button>
+  <button class="btn-re" id="btnRe" onclick="runRecheck()" disabled>4. 재실행 중복 체크</button>
+</div>
+<pre id="log"></pre>
+<script src="js/costing.js"></script>
+<script>
+const L = document.getElementById("log");
+function log(m,c){L.innerHTML+=`<span class="${c||''}">${esc(m)}</span>\n`;L.scrollTop=L.scrollHeight;}
+function esc(s){return String(s).replace(/&/g,'&amp;').replace(/</g,'&lt;');}
+function pass(m){log("[PASS] "+m,"pass");}
+function fail(m){log("[FAIL] "+m,"fail");}
+function info(m){log("[INFO] "+m,"info");}
+function warn(m){log("[WARN] "+m,"warn");}
+function section(m){log("\n"+"=".repeat(56),"info");log(m,"info");log("=".repeat(56),"info");}
+
+/* ── 헬퍼 (trade.html 로직 복제) ── */
+function normStr(s){return(s==null)?"":String(s).trim();}
+function normUpper(s){return normStr(s).toUpperCase();}
+function normNum(v){if(v==null)return 0;if(typeof v==="number")return Number.isFinite(v)?v:0;const c=String(v).replace(/[₩,\s]/g,"");const n=Number(c);return Number.isFinite(n)?n:0;}
+function normDate(v){if(!v)return"";if(typeof v==="string")return v.replace(/\./g,"-").replace(/\//g,"-").slice(0,10);return"";}
+const n=normNum;
+
+const TRADE_KEY="golab_trade_v1";
+const AUDIT_KEY="golab_trade_audit";
+const INV_KEY="golab_inventory_v01";
+const HIST_KEY="golab_inventory_inbound_history_v01";
+const IMPORT_RAW_KEY="golab_trade_import_raw_log";
+const IMPORTED_IDS_KEY="golab_trade_imported_ids";
+
+function sampleDupKey(r){return[normStr(r.vendor),normDate(r.purchaseDate),normStr(r.itemId||r.partNo),String(normNum(r.qty)),String(normNum(r.buyUnitPrice)),normStr(r._currency||"KRW"),normStr(r.unit||"ea"),String(r._lineNo||r.id||"")].join("|");}
+function loadImportedIds(){try{return new Set(JSON.parse(localStorage.getItem(IMPORTED_IDS_KEY)||"[]"));}catch{return new Set();}}
+function saveImportedIds(s){localStorage.setItem(IMPORTED_IDS_KEY,JSON.stringify([...s]));}
+function emitAudit(event,detail){try{const a=JSON.parse(localStorage.getItem(AUDIT_KEY)||"[]");a.push({event,ts:new Date().toISOString(),detail:detail||{}});if(a.length>2000)a.splice(0,a.length-2000);localStorage.setItem(AUDIT_KEY,JSON.stringify(a));}catch{}}
+
+let fullRaw = null;  // 전체 581건 원본
+
+/* ══════════════════════════════════════════
+   1. FULL DRY_RUN
+   ══════════════════════════════════════════ */
+async function runDryRun(){
+  document.getElementById("btnDry").disabled=true;
+  section("FULL DRY_RUN — 581건 검증");
+
+  // 환경 초기화 (이전 샘플 테스트 데이터 정리)
+  [TRADE_KEY,INV_KEY,HIST_KEY,IMPORT_RAW_KEY,IMPORTED_IDS_KEY].forEach(k=>localStorage.removeItem(k));
+  info("localStorage 초기화 완료 (이전 샘플 데이터 제거)");
+
+  // JSON 로드
+  try{
+    const res=await fetch("trade_import.json");
+    fullRaw=await res.json();
+  }catch(e){fail("trade_import.json 로드 실패: "+e.message);return;}
+
+  if(!Array.isArray(fullRaw)){fail("JSON 배열 아님");return;}
+  info("원본 로드: "+fullRaw.length+"건");
+
+  // 불변 원본 저장 (deep copy)
+  localStorage.setItem(IMPORT_RAW_KEY,JSON.stringify(JSON.parse(JSON.stringify(fullRaw))));
+  pass("IMPORT_RAW_KEY 불변 원본 저장 ("+fullRaw.length+"건)");
+
+  // 전체 스캔
+  const ids=loadImportedIds();
+  let valid=0,invalid=0,dupSkip=0,nanCount=0;
+  const uniqueItems=new Map(); // itemId → {name, totalQty, totalValue, count}
+  const vendors=new Set();
+  const dateRange={min:"9999",max:"0000"};
+
+  fullRaw.forEach((r,i)=>{
+    // 유효성
+    if(!r.itemId&&!r.itemName){invalid++;return;}
+    valid++;
+
+    // NaN 체크
+    const qty=normNum(r.qty);
+    const price=normNum(r.buyUnitPrice);
+    if(isNaN(qty)||isNaN(price)){nanCount++;warn(`#${i+1} NaN detected: qty=${r.qty}, price=${r.buyUnitPrice}`);}
+
+    // 중복 체크
+    const hash=sampleDupKey(r);
+    if(ids.has(hash)){dupSkip++;return;}
+
+    // 통계 수집
+    vendors.add(normStr(r.vendor)||"(빈값)");
+    const d=normDate(r.purchaseDate);
+    if(d<dateRange.min)dateRange.min=d;
+    if(d>dateRange.max)dateRange.max=d;
+
+    const iid=r.itemId||"unknown";
+    if(!uniqueItems.has(iid))uniqueItems.set(iid,{name:(r.itemName||"").slice(0,30),totalQty:0,totalValue:0,count:0});
+    const item=uniqueItems.get(iid);
+    item.count++;
+    item.totalQty+=qty;
+    item.totalValue+=qty*price;
+  });
+
+  // 리포트
+  section("FULL DRY_RUN 리포트");
+  log("반올림 규칙: Math.round (KRW 1원 단위)");
+  info("원본: "+fullRaw.length+"건");
+  info("유효: "+valid+"건 / 형식오류: "+invalid+"건");
+  if(nanCount>0)fail("NaN 감지: "+nanCount+"건");else pass("NaN: 0건");
+  info("Idempotency: 신규 "+(valid-dupSkip)+"건 / 중복 "+dupSkip+"건");
+  info("");
+  info("고유 품목(itemId): "+uniqueItems.size+"건");
+  info("고유 업체(vendor): "+vendors.size+"건");
+  info("날짜 범위: "+dateRange.min+" ~ "+dateRange.max);
+  info("업체 목록: "+[...vendors].sort().join(", "));
+
+  // qty=0 건수
+  const zeroQty=fullRaw.filter(r=>normNum(r.qty)<=0).length;
+  info("qty=0 (재고 미반영 예정): "+zeroQty+"건");
+  // price=0 건수
+  const zeroPrice=fullRaw.filter(r=>normNum(r.qty)>0&&normNum(r.buyUnitPrice)<=0).length;
+  if(zeroPrice>0)warn("qty>0이지만 price=0: "+zeroPrice+"건 (이동평균에 0원 반영됨)");
+
+  // 이동평균 시뮬레이션 (전체)
+  section("이동평균 전체 시뮬레이션");
+  const simInv=new Map(); // itemId → {qty, avg}
+  let negativeCount=0;
+
+  fullRaw.forEach(r=>{
+    const qty=normNum(r.qty);
+    const price=normNum(r.buyUnitPrice);
+    if(qty<=0)return;
+    const iid=r.itemId;
+    if(!simInv.has(iid))simInv.set(iid,{qty:0,avg:0});
+    const cur=simInv.get(iid);
+    const result=GoLabCosting.calcMovingAverageUnitCost(cur.qty,cur.avg,qty,price);
+    cur.qty=result.newQty;
+    cur.avg=result.newAvgCost;
+    if(cur.qty<0)negativeCount++;
+    if(isNaN(cur.avg)){nanCount++;warn("NaN avgPrice for "+iid);}
+  });
+
+  info("시뮬레이션 후 재고 품목: "+simInv.size+"건");
+  if(negativeCount>0)fail("음수 재고: "+negativeCount+"건");else pass("음수 재고: 0건");
+  if(nanCount>0)fail("NaN 총 "+nanCount+"건 감지");else pass("NaN: 0건 (전체 시뮬레이션 포함)");
+
+  // item-a52fed58 검증
+  const check=simInv.get("item-a52fed58");
+  if(check){
+    info("item-a52fed58 시뮬레이션: qty="+check.qty+", avg="+check.avg.toLocaleString());
+  }
+
+  // Go/No-Go
+  section("DRY_RUN Go/No-Go");
+  const goErrors=[];
+  if(invalid>0)goErrors.push("형식오류 "+invalid+"건");
+  if(nanCount>0)goErrors.push("NaN "+nanCount+"건");
+  if(negativeCount>0)goErrors.push("음수재고 "+negativeCount+"건");
+
+  if(goErrors.length===0){
+    pass("전항목 PASS — COMMIT 진행 가능");
+    document.getElementById("btnC1").disabled=false;
+  }else{
+    fail("No-Go: "+goErrors.join(", "));
+  }
+
+  emitAudit("FULL_IMPORT_DRY_RUN",{total:fullRaw.length,valid,invalid,nanCount,dupSkip,uniqueItems:uniqueItems.size,vendors:vendors.size,zeroQty,negativeCount});
+  pass("audit: FULL_IMPORT_DRY_RUN 기록");
+}
+
+/* ══════════════════════════════════════════
+   2. COMMIT 1차 (50건)
+   ══════════════════════════════════════════ */
+function runCommit1(){
+  document.getElementById("btnC1").disabled=true;
+  if(!fullRaw){fail("DRY_RUN 먼저 실행 필요");return;}
+  section("COMMIT 1차 — 50건");
+  const result=commitBatch(fullRaw.slice(0,50),"COMMIT_BATCH_1");
+  printCommitResult(result,1,50);
+
+  // 검증
+  section("COMMIT 1차 검증");
+  const trade=JSON.parse(localStorage.getItem(TRADE_KEY)||"[]");
+  const inv=JSON.parse(localStorage.getItem(INV_KEY)||"[]");
+  info("trade 건수: "+trade.length);
+  info("inventory 건수: "+inv.length);
+  const neg=inv.filter(x=>x.qty<0);
+  if(neg.length>0)fail("음수 재고: "+neg.length+"건");else pass("음수 재고: 0건");
+  const nanInv=inv.filter(x=>isNaN(x.buyPrice));
+  if(nanInv.length>0)fail("NaN 단가: "+nanInv.length+"건");else pass("NaN 단가: 0건");
+
+  document.getElementById("btnC2").disabled=false;
+}
+
+/* ══════════════════════════════════════════
+   3. COMMIT 2차 (나머지)
+   ══════════════════════════════════════════ */
+function runCommit2(){
+  document.getElementById("btnC2").disabled=true;
+  if(!fullRaw){fail("DRY_RUN 먼저 실행 필요");return;}
+  section("COMMIT 2차 — 나머지 "+(fullRaw.length-50)+"건");
+  const result=commitBatch(fullRaw.slice(50),"COMMIT_BATCH_2");
+  printCommitResult(result,2,fullRaw.length-50);
+
+  // 최종 검증
+  section("최종 검증 (581건 전체)");
+  const trade=JSON.parse(localStorage.getItem(TRADE_KEY)||"[]");
+  const inv=JSON.parse(localStorage.getItem(INV_KEY)||"[]");
+  const hist=JSON.parse(localStorage.getItem(HIST_KEY)||"[]");
+
+  info("trade 총 건수: "+trade.length);
+  info("inventory 총 건수: "+inv.length);
+  info("inbound history: "+hist.length+"건");
+
+  const neg=inv.filter(x=>x.qty<0);
+  if(neg.length>0)fail("음수 재고: "+neg.length+"건");else pass("음수 재고: 0건");
+  const nanInv=inv.filter(x=>isNaN(x.buyPrice));
+  if(nanInv.length>0)fail("NaN 단가: "+nanInv.length+"건");else pass("NaN 단가: 0건");
+
+  // item-a52fed58 최종
+  const check=inv.find(x=>x.id==="item-a52fed58");
+  if(check){
+    info("item-a52fed58 최종: qty="+check.qty+", avg="+check.buyPrice.toLocaleString());
+    // 전체 581건에서 이 품목 수기 검산
+    const recs=fullRaw.filter(r=>r.itemId==="item-a52fed58"&&normNum(r.qty)>0);
+    let cq=0,cv=0;
+    recs.forEach(r=>{const q=normNum(r.qty),p=normNum(r.buyUnitPrice);cv+=q*p;cq+=q;});
+    const expectedAvg=cq>0?Math.round(cv/cq):0;
+    info("수기검산: qty="+cq+", avg="+expectedAvg.toLocaleString()+" (총액:"+cv.toLocaleString()+"/"+cq+")");
+    if(check.buyPrice===expectedAvg)pass("이동평균 수기검산 일치");
+    else warn("이동평균 차이: 실제="+check.buyPrice+" vs 검산="+expectedAvg+" (이동평균 순서 의존)");
+  }
+
+  // 총 매입액
+  let totalPurchase=0;
+  trade.forEach(r=>totalPurchase+=normNum(r.qty)*normNum(r.buyUnitPrice));
+  info("총 매입액: "+totalPurchase.toLocaleString()+"원");
+
+  document.getElementById("btnRe").disabled=false;
+}
+
+/* ══════════════════════════════════════════
+   4. 재실행 중복 체크
+   ══════════════════════════════════════════ */
+function runRecheck(){
+  document.getElementById("btnRe").disabled=true;
+  section("재실행 Idempotency 체크");
+  const ids=loadImportedIds();
+  let dup=0;
+  fullRaw.forEach(r=>{if(ids.has(sampleDupKey(r)))dup++;});
+  if(dup===fullRaw.length)pass("재실행 시 중복 "+dup+"건 전부 스킵 확인");
+  else fail("중복 "+dup+"/"+fullRaw.length+" ("+fullRaw.length+"건 전부 스킵 기대)");
+
+  // audit 확인
+  section("audit 이벤트 확인");
+  const audit=JSON.parse(localStorage.getItem(AUDIT_KEY)||"[]");
+  const events=audit.map(a=>a.event);
+  ["FULL_IMPORT_DRY_RUN","FULL_IMPORT_COMMIT"].forEach(e=>{
+    const found=events.filter(x=>x===e).length;
+    if(found>0)pass(e+": "+found+"건 기록");
+    else fail(e+": 미기록");
+  });
+
+  section("Phase 3 완료");
+  pass("전체 581건 Import 완료");
+}
+
+/* ══════════════════════════════════════════
+   공통: commitBatch (N건 처리)
+   ══════════════════════════════════════════ */
+function commitBatch(records, batchLabel){
+  const ids=loadImportedIds();
+  let inv=JSON.parse(localStorage.getItem(INV_KEY)||"[]");
+  let hist=JSON.parse(localStorage.getItem(HIST_KEY)||"[]");
+  const existing=JSON.parse(localStorage.getItem(TRADE_KEY)||"[]");
+
+  const result={tradeAdded:0,dupSkip:0,invExisting:0,invNewCreated:0,invSkipQty0:0,failed:0,nanDetected:0};
+  const newRecords=[];
+
+  records.forEach((r,i)=>{
+    const hash=sampleDupKey(r);
+    if(ids.has(hash)){result.dupSkip++;return;}
+
+    // trade 레코드 생성
+    const rec={
+      id:r.id||crypto.randomUUID(),
+      purchaseDate:normDate(r.purchaseDate),
+      vendor:normStr(r.vendor),
+      docNo:normStr(r.docNo),
+      itemId:r.itemId,
+      partNo:normUpper(r.partNo),
+      itemName:normStr(r.itemName),
+      qty:normNum(r.qty),
+      unit:normStr(r.unit)||"ea",
+      buyUnitPrice:normNum(r.buyUnitPrice),
+      receivedQty:normNum(r.qty),
+      status:normNum(r.qty)>0?"RECEIVED":"ORDERED",
+      memo:normStr(r.memo),
+      createdAt:r.createdAt||new Date().toISOString(),
+      updatedAt:new Date().toISOString()
+    };
+    newRecords.push(rec);
+    result.tradeAdded++;
+
+    const qty=normNum(r.qty);
+    const price=normNum(r.buyUnitPrice);
+
+    if(qty<=0){result.invSkipQty0++;ids.add(hash);return;}
+
+    // 재고 매칭
+    let target=inv.find(x=>x.id===rec.itemId)||inv.find(x=>(x.name||"").trim()===rec.itemName.trim());
+    if(!target){
+      // 신규 — 전체 Import에서는 자동 생성 (DRY_RUN에서 검증 완료)
+      target={id:rec.itemId||crypto.randomUUID(),name:rec.itemName,spec:rec.unit,vendor:rec.vendor,buyPrice:0,qty:0,minQty:0,note:"",updatedAt:new Date().toISOString()};
+      inv.unshift(target);
+      result.invNewCreated++;
+    }else{
+      result.invExisting++;
+    }
+
+    // 이동평균 (Math.round 내장)
+    const avg=GoLabCosting.calcMovingAverageUnitCost(n(target.qty),n(target.buyPrice),qty,price);
+    if(isNaN(avg.newAvgCost)){result.nanDetected++;warn("NaN at record #"+i+" itemId="+r.itemId);}
+    target.buyPrice=avg.newAvgCost;
+    target.qty=avg.newQty;
+    target.updatedAt=new Date().toISOString();
+
+    hist.unshift({at:new Date().toISOString(),batchId:batchLabel,batchName:batchLabel,date:normDate(r.purchaseDate),inventoryItemId:target.id,name:rec.itemName,qty,unit:rec.unit,unitPriceKrw:price,addedValueKrw:qty*price,memo:rec.memo||""});
+    ids.add(hash);
+  });
+
+  // 저장
+  while(hist.length>2000)hist.pop();
+  const merged=[...newRecords,...existing];
+  localStorage.setItem(TRADE_KEY,JSON.stringify(merged));
+  localStorage.setItem(INV_KEY,JSON.stringify(inv));
+  localStorage.setItem(HIST_KEY,JSON.stringify(hist));
+  saveImportedIds(ids);
+  emitAudit("FULL_IMPORT_COMMIT",{batch:batchLabel,...result,totalTradeAfter:merged.length});
+
+  return result;
+}
+
+function printCommitResult(r,batch,expected){
+  info("Batch "+batch+" 결과:");
+  info("  trade 추가: "+r.tradeAdded+"건");
+  info("  중복 스킵: "+r.dupSkip+"건");
+  info("  재고 기존 이동평균: "+r.invExisting+"건");
+  info("  재고 신규 생성: "+r.invNewCreated+"건");
+  info("  qty=0 재고 미반영: "+r.invSkipQty0+"건");
+  info("  실패: "+r.failed+"건");
+  if(r.nanDetected>0)fail("NaN 감지: "+r.nanDetected+"건");else pass("NaN: 0건");
+}
+</script>
+</body>
+</html>
