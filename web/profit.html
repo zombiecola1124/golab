@@ -323,17 +323,39 @@ let currentRange = "month";
 let customFrom = "";
 let customTo = "";
 
+/* Fix-1: sales 키 자동 탐지 (golab_sales prefix 전수 스캔) */
+function detectSalesKey(){
+  // 1순위: golab_sales_v1 존재하면 즉시 반환
+  if(localStorage.getItem("golab_sales_v1") !== null) return "golab_sales_v1";
+  // 2순위: golab_sales* 중 JSON 배열 파싱 가능한 후보 → 레코드 수 최대
+  let best = null, bestLen = -1;
+  for(let i = 0; i < localStorage.length; i++){
+    const k = localStorage.key(i);
+    if(!k.startsWith("golab_sales")) continue;
+    try{
+      const arr = JSON.parse(localStorage.getItem(k));
+      if(Array.isArray(arr) && arr.length > bestLen){ best = k; bestLen = arr.length; }
+    }catch{}
+  }
+  return best; // null이면 키 없음
+}
+
 function loadSales(){
-  try{ return JSON.parse(localStorage.getItem("golab_sales_v1")||"[]"); }
+  const key = detectSalesKey();
+  console.log("[Profit] sales key →", key || "(없음)");
+  if(!key) return [];
+  try{ return JSON.parse(localStorage.getItem(key)||"[]"); }
   catch{ return []; }
 }
 
+/* Fix-2: 종료일 — preset은 todayStr(), custom은 사용자 지정 값 */
 function getDateRange(){
-  if(currentRange === "month") return { from: monthStart(), to: "9999-12-31" };
-  if(currentRange === "30d") return { from: daysAgo(30), to: "9999-12-31" };
-  if(currentRange === "all") return { from: "0000-01-01", to: "9999-12-31" };
-  if(currentRange === "custom") return { from: customFrom || "0000-01-01", to: customTo || "9999-12-31" };
-  return { from: monthStart(), to: "9999-12-31" };
+  const today = todayStr();
+  if(currentRange === "month") return { from: monthStart(), to: today };
+  if(currentRange === "30d") return { from: daysAgo(30), to: today };
+  if(currentRange === "all") return { from: "0000-01-01", to: today };
+  if(currentRange === "custom") return { from: customFrom || "0000-01-01", to: customTo || today };
+  return { from: monthStart(), to: today };
 }
 
 function analyze(){
