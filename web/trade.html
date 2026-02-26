@@ -299,6 +299,17 @@
       <button id="btnExport" class="secondary">내보내기(JSON)</button>
       <button id="btnImport" class="secondary">가져오기(JSON)</button>
       <input id="fileIn" type="file" accept="application/json" />
+      <!-- 🧪 샘플 Import 2-Phase 버튼 -->
+      <button id="btnSampleDry" class="secondary"
+        style="border-color:rgba(37,99,235,.4);color:var(--point)">
+        🔍 샘플 DRY_RUN
+      </button>
+      <button id="btnSampleCommit" class="secondary"
+        style="border-color:rgba(22,163,74,.4);color:var(--accent)">
+        ✅ 샘플 COMMIT
+      </button>
+      <!-- 4️⃣ dev 모드에서만 표시 -->
+      <button id="btnSeed" class="danger" style="display:none">🌱 Seed 7건 (DEV)</button>
       <button id="btnReset" class="danger">전체 초기화</button>
     </div>
     <div class="tableWrap">
@@ -406,6 +417,14 @@
 <!-- Toast -->
 <div class="toast" id="toast"></div>
 
+<!-- 샘플 Import 리포트 영역 -->
+<div id="sampleReport" class="wrap" style="display:none">
+  <div class="card" style="font-family:monospace;white-space:pre-wrap;font-size:12px;line-height:1.6;max-height:500px;overflow:auto">
+    <div id="sampleReportBody"></div>
+  </div>
+</div>
+
+<script src="js/costing.js"></script>
 <script>
 /* ═════════════════════════════════════════
    GoLab v1.6.1 — Purchase Ledger
@@ -422,6 +441,13 @@ const VENDOR_KEY = "golab_vendors_v1";
 const PAGE_SIZE = 50;
 const DEBOUNCE_MS = 300;
 const $ = id => document.getElementById(id);
+
+/* ── 3️⃣ 샘플 Import 전용 키 (데이터 저장 키 분리) ── */
+const IMPORT_RAW_KEY = "golab_trade_import_raw_log";   // 불변 원본 100% 기록
+const IMPORTED_IDS_KEY = "golab_trade_imported_ids";    // idempotency 해시 Set
+
+/* ── 4️⃣ dev 모드 감지 (URL ?dev=1) ── */
+const IS_DEV = new URLSearchParams(location.search).has("dev");
 
 /* ── Audit Log ── */
 function emitAudit(event, detail){
@@ -854,19 +880,13 @@ function updateInventoryOnReceive(record, addQty){
     inv.unshift(target);
   }
 
-  // Moving average cost
-  const oldQty = n(target.qty);
-  const oldPrice = n(target.buyPrice);
-  const newQty = addQty;
-  const unitPrice = n(record.buyUnitPrice);
-  const totalQty = oldQty + newQty;
-
-  if(totalQty > 0){
-    target.buyPrice = (oldQty * oldPrice + newQty * unitPrice) / totalQty;
-  } else {
-    target.buyPrice = unitPrice;
-  }
-  target.qty = totalQty;
+  // 이동평균 단가 계산 (공통 함수 — js/costing.js)
+  // 반올림 규칙: Math.round (KRW 1원 단위) — costing.js 내부에서 적용
+  const avg = GoLabCosting.calcMovingAverageUnitCost(
+    n(target.qty), n(target.buyPrice), addQty, n(record.buyUnitPrice)
+  );
+  target.buyPrice = avg.newAvgCost;
+  target.qty = avg.newQty;
 
   const stamp = `입고 +${newQty}${record.unit} from ${record.vendor} (${todayStr()})`;
   target.note = (target.note ? (target.note + " | ") : "") + stamp;
@@ -1210,6 +1230,467 @@ document.addEventListener("keydown", e => {
     closeDrawer();
   }
 });
+
+/* ══════════════════════════════════════════
+   🧪 샘플 Import 2-Phase (DRY_RUN / COMMIT)
+   v1.6.1 — 보강 v2
+   ══════════════════════════════════════════ */
+
+/** 1️⃣ 강화된 idempotency 해시 (7필드 + sourceRowId) */
+function sampleDupKey(r) {
+  return [
+    normStr(r.vendor),                        // vendorId
+    normDate(r.purchaseDate),                 // txDate → ISO YYYY-MM-DD
+    normStr(r.itemId || r.partNo),            // itemCode
+    String(normNum(r.qty)),                   // qty
+    String(normNum(r.buyUnitPrice)),          // unitCost
+    normStr(r._currency || "KRW"),            // currency
+    normStr(r.unit || "ea"),                  // unit
+    String(r._lineNo || r.id || "")           // sourceRowId
+  ].join("|");
+}
+
+/** IMPORTED_IDS 로드/저장 */
+function loadImportedIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(IMPORTED_IDS_KEY) || "[]")); }
+  catch { return new Set(); }
+}
+function saveImportedIds(setObj) {
+  localStorage.setItem(IMPORTED_IDS_KEY, JSON.stringify([...setObj]));
+}
+
+/** 리포트 렌더 */
+function showReport(html) {
+  $("sampleReport").style.display = "";
+  $("sampleReportBody").innerHTML = html;
+  $("sampleReport").scrollIntoView({ behavior: "smooth" });
+}
+
+/**
+ * 2️⃣ DRY_RUN — 검증 전용, confirm 금지, 데이터 변경 없음
+ * - 원본 10건을 IMPORT_RAW_KEY에 불변 저장 (deep copy)
+ * - 재고 매칭 시뮬레이션 + 이동평균 예상값 계산
+ * - 신규 품목 목록만 리포트 출력 (confirm 안 띄움)
+ */
+async function sampleDryRun() {
+  let raw;
+  try {
+    const res = await fetch("data/trade_import_sample_10.json");
+    raw = await res.json();
+  } catch (e) {
+    alert("샘플 JSON 로드 실패: " + e.message);
+    return;
+  }
+  if (!Array.isArray(raw) || raw.length === 0) {
+    alert("샘플 JSON이 비어있거나 배열이 아닙니다.");
+    return;
+  }
+
+  // 2️⃣ 원본 불변 저장 (deep copy — structuredClone 또는 JSON round-trip)
+  const rawCopy = JSON.parse(JSON.stringify(raw));
+  localStorage.setItem(IMPORT_RAW_KEY, JSON.stringify(rawCopy));
+
+  // idempotency 대조
+  const importedIds = loadImportedIds();
+  const inv = JSON.parse(localStorage.getItem(INV_KEY) || "[]");
+  const invIdSet = new Set(inv.map(x => x.id));
+  const invNameSet = new Set(inv.map(x => (x.name || "").trim()));
+
+  // 시뮬레이션 결과 집계
+  const result = {
+    total: raw.length,
+    valid: 0,
+    invalid: 0,
+    dupSkip: 0,
+    existingMatch: [],   // 기존 품목 매칭
+    newItems: [],        // 신규 품목 (COMMIT에서 confirm 필요)
+    maSimulation: []     // 이동평균 시뮬레이션 (수기검산용)
+  };
+
+  // 이동평균 시뮬레이션용 가상 재고 복사
+  const simInv = JSON.parse(JSON.stringify(inv));
+
+  raw.forEach((r, i) => {
+    // 유효성 체크
+    if (!r.itemId && !r.itemName) { result.invalid++; return; }
+    result.valid++;
+
+    // idempotency 중복 체크
+    const hash = sampleDupKey(r);
+    if (importedIds.has(hash)) { result.dupSkip++; return; }
+
+    // 재고 매칭 시뮬레이션
+    const itemCode = normStr(r.itemId || r.partNo);
+    const matchResult = GoLabCosting.matchOrRequestCreateItem(
+      new Set([...invIdSet, ...simInv.map(x => x.id)]),
+      itemCode
+    );
+
+    // 이름 매칭도 fallback 체크
+    const nameMatch = simInv.find(x => (x.name || "").trim() === normStr(r.itemName));
+    const isExisting = matchResult.action === "UPDATE_EXISTING" || !!nameMatch;
+
+    if (isExisting) {
+      result.existingMatch.push({
+        itemId: r.itemId,
+        itemName: (r.itemName || "").slice(0, 30),
+        qty: r.qty,
+        unitPrice: r.buyUnitPrice
+      });
+
+      // 이동평균 시뮬레이션 (가상 재고에 적용)
+      const target = simInv.find(x => x.id === r.itemId)
+                  || simInv.find(x => (x.name || "").trim() === normStr(r.itemName));
+      if (target && normNum(r.qty) > 0) {
+        const before = { qty: n(target.qty), avg: n(target.buyPrice) };
+        const avg = GoLabCosting.calcMovingAverageUnitCost(
+          before.qty, before.avg, normNum(r.qty), normNum(r.buyUnitPrice)
+        );
+        target.qty = avg.newQty;
+        target.buyPrice = avg.newAvgCost;
+        result.maSimulation.push({
+          itemId: r.itemId,
+          itemName: (r.itemName || "").slice(0, 28),
+          before,
+          inQty: normNum(r.qty),
+          inPrice: normNum(r.buyUnitPrice),
+          after: { qty: avg.newQty, avg: avg.newAvgCost }
+        });
+      }
+    } else {
+      // 2️⃣ 신규 품목 — confirm 안 띄우고 목록에만 추가
+      result.newItems.push({
+        itemId: r.itemId,
+        itemName: (r.itemName || "").slice(0, 40),
+        qty: r.qty,
+        unitPrice: r.buyUnitPrice
+      });
+      // 시뮬레이션용 가상 추가 (다음 행 매칭용)
+      simInv.push({ id: r.itemId, name: r.itemName, qty: 0, buyPrice: 0 });
+    }
+  });
+
+  // audit 기록
+  emitAudit("SAMPLE_IMPORT_DRY_RUN", {
+    total: result.total,
+    valid: result.valid,
+    invalid: result.invalid,
+    dupSkip: result.dupSkip,
+    existingMatch: result.existingMatch.length,
+    newItems: result.newItems.length,
+    rawKey: IMPORT_RAW_KEY
+  });
+
+  // 리포트 렌더링
+  let html = "";
+  html += `<b>🔍 DRY_RUN 검증 리포트</b>  (${new Date().toLocaleString("ko-KR")})\n`;
+  html += `<b>반올림 규칙: Math.round (KRW 1원 단위)</b>\n`;
+  html += `${"─".repeat(52)}\n`;
+  html += `📥 원본: ${result.total}건 로드 → IMPORT_RAW_KEY 저장 완료\n`;
+  html += `   유효: ${result.valid}건 / 형식오류: ${result.invalid}건\n\n`;
+  html += `🔑 Idempotency 체크 (8필드 해시):\n`;
+  html += `   신규(등록 예정): ${result.valid - result.dupSkip}건\n`;
+  html += `   중복(스킵 예정): ${result.dupSkip}건\n\n`;
+  html += `📦 재고 매칭 시뮬레이션:\n`;
+  html += `   기존 품목 매칭: ${result.existingMatch.length}건\n`;
+  result.existingMatch.forEach(m => {
+    html += `     ${m.itemId}  ${m.itemName}  qty:${m.qty}\n`;
+  });
+  html += `\n   ⚠️ 신규 품목 (COMMIT 시 승인 필요): ${result.newItems.length}건\n`;
+  if (result.newItems.length > 0) {
+    result.newItems.forEach(m => {
+      html += `     ${m.itemId}  ${m.itemName}\n`;
+    });
+  }
+
+  // 이동평균 시뮬레이션 상세
+  if (result.maSimulation.length > 0) {
+    html += `\n📊 이동평균 예상 (수기검산용):\n`;
+    html += `${"─".repeat(52)}\n`;
+    result.maSimulation.forEach(s => {
+      html += `  ${s.itemId} (${s.itemName})\n`;
+      html += `    현재: qty=${s.before.qty}, avg=${s.before.avg.toLocaleString()}\n`;
+      html += `    +입고: qty=${s.inQty}, price=${s.inPrice.toLocaleString()}\n`;
+      html += `    → qty=${s.after.qty}, avg=${s.after.avg.toLocaleString()}\n\n`;
+    });
+  }
+
+  html += `${"─".repeat(52)}\n`;
+  html += `⏭️ 이상 없으면 [✅ 샘플 COMMIT] 클릭\n`;
+
+  showReport(html);
+  showToast("DRY_RUN 완료 — 아래 리포트를 확인하세요.");
+}
+
+/**
+ * 2️⃣ COMMIT — 실제 데이터 반영
+ * - IMPORT_RAW_KEY에서 원본 로드 (DRY_RUN 필수 선행)
+ * - 신규 품목: confirm 대화상자 (COMMIT에서만)
+ * - trade 이력: 승인된 건수만 golab_trade_v1에 반영
+ */
+function sampleCommit() {
+  // DRY_RUN 선행 확인
+  const rawStr = localStorage.getItem(IMPORT_RAW_KEY);
+  if (!rawStr) {
+    alert("DRY_RUN을 먼저 실행해주세요.");
+    return;
+  }
+  const raw = JSON.parse(rawStr);
+  if (!confirm(`DRY_RUN 결과를 확인했습니까?\n${raw.length}건을 실제 반영합니다.`)) return;
+
+  const importedIds = loadImportedIds();
+  let inv = JSON.parse(localStorage.getItem(INV_KEY) || "[]");
+  let hist = JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
+  const existing = load(); // golab_trade_v1
+
+  // 결과 집계
+  const result = {
+    tradeAdded: 0,          // trade 이력 추가
+    dupSkip: 0,             // idempotency 중복 스킵
+    invExisting: 0,         // 기존 품목 이동평균 반영
+    invNewApproved: 0,      // 신규 품목 승인
+    invNewRejected: 0,      // 신규 품목 거부
+    invSkipQtyZero: 0,      // qty=0 재고 미반영
+    failed: 0,
+    details: []             // 건별 상세
+  };
+
+  const newRecords = [];
+
+  raw.forEach((r, i) => {
+    const hash = sampleDupKey(r);
+
+    // 1️⃣ idempotency 중복 체크
+    if (importedIds.has(hash)) {
+      result.dupSkip++;
+      result.details.push({ idx: i+1, itemId: r.itemId, action: "DUP_SKIP" });
+      return;
+    }
+
+    // trade 이력에 추가 (normalizeRecord)
+    let rec;
+    try {
+      rec = normalizeRecord(r);
+    } catch (e) {
+      result.failed++;
+      result.details.push({ idx: i+1, itemId: r.itemId, action: "FAILED", reason: e.message });
+      return;
+    }
+    newRecords.push(rec);
+    result.tradeAdded++;
+
+    // 재고 반영
+    const qty = normNum(r.qty);
+    const unitPrice = normNum(r.buyUnitPrice);
+
+    if (qty <= 0) {
+      result.invSkipQtyZero++;
+      result.details.push({ idx: i+1, itemId: r.itemId, action: "TRADE_ONLY", reason: "qty=0, 재고 미반영" });
+      importedIds.add(hash);
+      return;
+    }
+
+    // 재고 품목 찾기
+    let target = inv.find(x => x.id === rec.itemId)
+              || inv.find(x => (x.name || "").trim() === (rec.itemName || "").trim());
+
+    if (!target) {
+      // 2️⃣ 신규 품목 — COMMIT에서만 confirm
+      const approved = confirm(
+        `신규 품목입니다. 등록하시겠습니까?\n\n` +
+        `품목코드: ${rec.itemId}\n` +
+        `품목명: ${rec.itemName}\n` +
+        `수량: ${qty} ${rec.unit}\n` +
+        `단가: ${unitPrice.toLocaleString()}원`
+      );
+
+      if (!approved) {
+        result.invNewRejected++;
+        result.details.push({ idx: i+1, itemId: r.itemId, action: "NEW_REJECTED" });
+        importedIds.add(hash);
+        return;
+      }
+
+      // 신규 등록
+      target = {
+        id: rec.itemId || crypto.randomUUID(),
+        name: rec.itemName,
+        spec: rec.unit,
+        vendor: rec.vendor,
+        buyPrice: 0,
+        qty: 0,
+        minQty: 0,
+        note: "",
+        updatedAt: new Date().toISOString()
+      };
+      inv.unshift(target);
+      result.invNewApproved++;
+    } else {
+      result.invExisting++;
+    }
+
+    // 이동평균 계산 (공통 함수 — Math.round 내장)
+    const avg = GoLabCosting.calcMovingAverageUnitCost(
+      n(target.qty), n(target.buyPrice), qty, unitPrice
+    );
+    target.buyPrice = avg.newAvgCost;
+    target.qty = avg.newQty;
+    target.updatedAt = new Date().toISOString();
+
+    const stamp = `샘플입고 +${qty}${rec.unit} from ${rec.vendor} (${todayStr()})`;
+    target.note = (target.note ? (target.note + " | ") : "") + stamp;
+
+    // 입고 이력 기록
+    hist.unshift({
+      at: new Date().toISOString(),
+      batchId: "SAMPLE_IMPORT",
+      batchName: "샘플 10건 Import",
+      date: todayStr(),
+      inventoryItemId: target.id,
+      name: rec.itemName,
+      qty: qty,
+      unit: rec.unit,
+      unitPriceKrw: unitPrice,
+      addedValueKrw: qty * unitPrice,
+      memo: rec.memo || ""
+    });
+
+    result.details.push({
+      idx: i+1,
+      itemId: r.itemId,
+      action: target ? "EXISTING_UPDATE" : "NEW_CREATED",
+      qty: avg.newQty,
+      avgPrice: avg.newAvgCost
+    });
+
+    importedIds.add(hash);
+  });
+
+  // 저장
+  while (hist.length > 500) hist.pop();
+  const merged = [...newRecords, ...existing];
+  save(merged);
+  localStorage.setItem(INV_KEY, JSON.stringify(inv));
+  localStorage.setItem(HIST_KEY, JSON.stringify(hist));
+  saveImportedIds(importedIds);
+
+  // audit 기록
+  emitAudit("SAMPLE_IMPORT_COMMIT", {
+    tradeAdded: result.tradeAdded,
+    dupSkip: result.dupSkip,
+    invExisting: result.invExisting,
+    invNewApproved: result.invNewApproved,
+    invNewRejected: result.invNewRejected,
+    invSkipQtyZero: result.invSkipQtyZero,
+    failed: result.failed,
+    totalTradeAfter: merged.length
+  });
+
+  // UI 갱신
+  invalidateCache();
+  refreshAC();
+  refreshFilterSelects();
+  computeKPI();
+  render();
+
+  // COMMIT 리포트
+  let html = "";
+  html += `<b>✅ COMMIT 결과 리포트</b>  (${new Date().toLocaleString("ko-KR")})\n`;
+  html += `<b>반올림 규칙: Math.round (KRW 1원 단위)</b>\n`;
+  html += `${"─".repeat(52)}\n`;
+  html += `📋 구매이력(trade): +${result.tradeAdded}건 등록\n`;
+  html += `   (N=${result.tradeAdded}, 승인된 건수 7~10 범위)\n`;
+  html += `   raw log: ${raw.length}건 (항상 10건)\n\n`;
+  html += `🔑 Idempotency: 중복 스킵 ${result.dupSkip}건\n\n`;
+  html += `📦 재고 반영:\n`;
+  html += `   기존 품목 이동평균: ${result.invExisting}건\n`;
+  html += `   신규 품목 승인: ${result.invNewApproved}건\n`;
+  html += `   신규 품목 거부: ${result.invNewRejected}건\n`;
+  html += `   qty=0 재고 미반영: ${result.invSkipQtyZero}건\n`;
+  html += `   실패: ${result.failed}건\n\n`;
+
+  // 건별 상세
+  html += `📝 건별 상세:\n`;
+  html += `${"─".repeat(52)}\n`;
+  result.details.forEach(d => {
+    let line = `  #${d.idx} ${d.itemId}  → ${d.action}`;
+    if (d.qty !== undefined) line += `  qty=${d.qty}, avg=${d.avgPrice?.toLocaleString()}`;
+    if (d.reason) line += `  (${d.reason})`;
+    html += line + "\n";
+  });
+
+  // item-a52fed58 이동평균 검증
+  const checkItem = inv.find(x => x.id === "item-a52fed58");
+  if (checkItem) {
+    html += `\n📊 이동평균 검증 (item-a52fed58):\n`;
+    html += `   결과: qty=${checkItem.qty}, avgPrice=${checkItem.buyPrice.toLocaleString()}\n`;
+    html += `   기대: qty=2, avgPrice=412,000\n`;
+    html += `   일치: ${checkItem.buyPrice === 412000 ? "✓ PASS" : "✗ FAIL ("+checkItem.buyPrice+")"}\n`;
+  }
+
+  html += `\n${"─".repeat(52)}\n`;
+  html += `총 trade 건수: ${merged.length}건\n`;
+
+  showReport(html);
+  showToast(`COMMIT 완료 — trade +${result.tradeAdded}건, 재고 반영 ${result.invExisting + result.invNewApproved}건`);
+}
+
+/**
+ * 4️⃣ 테스트용 기존 품목 7건 seed
+ * - IS_DEV === true 일 때만 실행 가능
+ * - 실행 전 confirm 필수
+ * - qty=0, buyPrice=0 빈 껍데기 (실데이터 오염 방지)
+ */
+function seedTestInventory() {
+  if (!IS_DEV) {
+    alert("⛔ dev 모드에서만 실행 가능합니다.\nURL에 ?dev=1 을 추가하세요.");
+    return;
+  }
+  if (!confirm("⚠️ 테스트용 기존 품목 7건을 재고에 등록합니다.\n(qty=0, buyPrice=0 빈 껍데기)\n실행하시겠습니까?")) {
+    return;
+  }
+
+  const seedItems = [
+    { id:"item-a52fed58", name:"벽면실험대(알루미늄형)  LSA-1112 / 1200X750X800" },
+    { id:"item-9bc4278f", name:"이동식 테이블 SUS 카트 C04-55-003 / LSHA900-1  900X600X800mm" },
+    { id:"item-0e9b1024", name:"벽면실험대(알루미늄형)  LSA-1118 / 1800X750X800" },
+    { id:"item-59e57ebe", name:"벽면실험대(알루미늄형)  LSA-1115 / 1500X750X800" },
+    { id:"item-ef67ec2f", name:"3M 전기 절연 테이프 1711 흑색 10M  3M 스카치35 (레드):1개" },
+    { id:"item-badb9340", name:"3M 프리미엄 +35 코팅 전기 절연 테이프" },
+    { id:"item-c61ce647", name:"3M 스카치 슈퍼 35+ 비닐 전기 절연 테이프 레드" }
+  ];
+
+  let inv = JSON.parse(localStorage.getItem(INV_KEY) || "[]");
+  const existingIds = new Set(inv.map(x => x.id));
+  let added = 0;
+
+  seedItems.forEach(s => {
+    if (existingIds.has(s.id)) return; // 중복 방지
+    inv.unshift({
+      id: s.id,
+      name: s.name,
+      spec: "ea",
+      vendor: "SEED(테스트용)",
+      buyPrice: 0,
+      qty: 0,
+      minQty: 0,
+      note: "DEV seed — 테스트용 빈 껍데기",
+      updatedAt: new Date().toISOString()
+    });
+    added++;
+  });
+
+  localStorage.setItem(INV_KEY, JSON.stringify(inv));
+  alert(`Seed 완료: ${added}건 등록 (기존 중복 ${seedItems.length - added}건 스킵)`);
+}
+
+/* ── 샘플 Import 이벤트 바인딩 ── */
+$("btnSampleDry").onclick = sampleDryRun;
+$("btnSampleCommit").onclick = sampleCommit;
+$("btnSeed").onclick = seedTestInventory;
+
+// 4️⃣ dev 모드에서만 seed 버튼 표시
+if (IS_DEV) $("btnSeed").style.display = "";
 
 /* ── Init ── */
 refreshAC();
