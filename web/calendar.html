@@ -1385,6 +1385,9 @@ document.addEventListener("keydown", e => {
   }
 });
 
+/* ── 크로스탭 동기화: 다른 탭(console)에서 ACTION 변경 시 자동 반영 (INIT_KEY 제외) ── */
+window.addEventListener("storage", e => { if(e.key === ACTION_KEY) refreshAll(); });
+
 /* ── Init ── */
 refreshAll();
 </script>

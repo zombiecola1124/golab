@@ -1042,6 +1042,9 @@ document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){ closeActionModal(); closeDrawer(); closeSearch(); }
 });
 
+/* ── 크로스탭 동기화: 다른 탭(calendar)에서 ACTION 변경 시 자동 반영 ── */
+window.addEventListener("storage", e => { if(e.key === ACTION_KEY) renderAll(); });
+
 /* ── Init ── */
 renderAll();
 </script>

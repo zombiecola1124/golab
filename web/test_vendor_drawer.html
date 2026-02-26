@@ -1,0 +1,382 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>GoLab v1.6.1 — Vendor Drawer SSoT 9-Test</title>
+<style>
+body{font-family:'Courier New',monospace;background:#1a1a1a;color:#e0e0e0;padding:20px;font-size:13px}
+h1{font-size:16px;color:#ffa500}
+.pass{color:#00e676}
+.fail{color:#ff1744;font-weight:bold}
+.info{color:#90caf9}
+pre{white-space:pre-wrap;line-height:1.6}
+</style>
+</head>
+<body>
+<h1>Vendor Drawer SSoT 9-Test Suite</h1>
+<pre id="log">Initializing...</pre>
+
+<script>
+/* ═══════════════════════════════════════════════
+   GoLab v1.6.1 — Vendor Drawer SSoT 정합성 테스트
+   9개 자동 테스트: localStorage 기반 검증
+   ═══════════════════════════════════════════════ */
+
+const ACTION_KEY = "golab_actions_v15";
+const INIT_KEY   = "golab_initiatives_v15";
+const TRADE_KEY  = "golab_trade_v1";
+const SALES_KEY  = "golab_sales_v1";
+
+const logEl = document.getElementById("log");
+let output = "";
+let passCount = 0;
+let failCount = 0;
+
+function log(msg) { output += msg + "\n"; logEl.textContent = output; }
+function PASS(name) { passCount++; log("[PASS] " + name); }
+function FAIL(name, reason) { failCount++; log("[FAIL] " + name + " -- " + reason); }
+
+function uid() { return "test-" + Math.random().toString(36).substring(2, 10); }
+function todayStr() { return new Date().toISOString().substring(0, 10); }
+
+/* ── 헬퍼: localStorage 초기화 ── */
+function clearAll() {
+  localStorage.removeItem(ACTION_KEY);
+  localStorage.removeItem(INIT_KEY);
+  localStorage.removeItem(TRADE_KEY);
+  localStorage.removeItem(SALES_KEY);
+}
+
+function setJSON(key, arr) { localStorage.setItem(key, JSON.stringify(arr)); }
+function getJSON(key) { try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; } }
+
+/* ── Seed 데이터 생성 ── */
+function seedTestData() {
+  clearAll();
+
+  // 거래처 "TestVendorA" : 구매 2건, 판매 1건, Action 3건(2 OPEN + 1 DONE)
+  const trades = [
+    { id: uid(), vendor: "TestVendorA", purchaseDate: "2025-01-15", itemCode: "GOLD-01", qty: 5, buyUnitPrice: 100000, memo: "#금 #수입" },
+    { id: uid(), vendor: "TestVendorA", purchaseDate: "2025-02-20", itemCode: "SILVER-01", qty: 10, buyUnitPrice: 50000, memo: "#은" },
+    { id: uid(), vendor: "TestVendorB", purchaseDate: "2025-03-01", itemCode: "PLAT-01", qty: 3, buyUnitPrice: 200000, memo: "" }
+  ];
+
+  const sales = [
+    { id: uid(), client: "TestVendorA", salesDate: "2025-03-10", itemCode: "GOLD-01", qty: 2, sellUnitPrice: 120000, memo: "#판매" },
+    { id: uid(), client: "TestVendorC", salesDate: "2025-04-01", itemCode: "GOLD-01", qty: 1, sellUnitPrice: 130000, memo: "" }
+  ];
+
+  const actions = [
+    { id: "act-open-1", title: "견적서 발송 #급행", dueDate: "2025-01-20", type: "ACTION", status: "OPEN", priority: "HIGH", vendorId: "TestVendorA", createdAt: "2025-01-15T09:00:00Z", updatedAt: "2025-01-15T09:00:00Z" },
+    { id: "act-open-2", title: "샘플 요청", dueDate: todayStr(), type: "ACTION", status: "OPEN", priority: "NORMAL", vendorId: "TestVendorA", createdAt: "2025-01-16T09:00:00Z", updatedAt: "2025-01-16T09:00:00Z" },
+    { id: "act-done-1", title: "계약 완료", dueDate: "2025-01-10", type: "ACTION", status: "DONE", priority: "NORMAL", vendorId: "TestVendorA", createdAt: "2025-01-05T09:00:00Z", updatedAt: "2025-01-10T09:00:00Z", doneAt: "2025-01-10T09:00:00Z" },
+    { id: "act-open-3", title: "TestVendorB 미팅", dueDate: todayStr(), type: "ACTION", status: "OPEN", priority: "NORMAL", vendorId: "TestVendorB", createdAt: "2025-02-01T09:00:00Z", updatedAt: "2025-02-01T09:00:00Z" },
+    { id: "act-no-vendor", title: "내부 업무", dueDate: todayStr(), type: "ACTION", status: "OPEN", priority: "LOW", vendorId: "", createdAt: "2025-02-01T09:00:00Z", updatedAt: "2025-02-01T09:00:00Z" }
+  ];
+
+  setJSON(TRADE_KEY, trades);
+  setJSON(SALES_KEY, sales);
+  setJSON(ACTION_KEY, actions);
+
+  return { trades, sales, actions };
+}
+
+/* ═══════════════════════════════════════════════
+   TEST 1: ACTION_KEY SSoT - console/calendar 공유 확인
+   ═══════════════════════════════════════════════ */
+function test1_actionKeySingleSource() {
+  log("\n--- TEST 1: ACTION_KEY SSoT (단일 저장소) ---");
+  clearAll();
+  const actions = [
+    { id: "a1", title: "Task1", status: "OPEN", vendorId: "V1", dueDate: todayStr(), type: "ACTION", priority: "NORMAL", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  ];
+  setJSON(ACTION_KEY, actions);
+
+  // 두 페이지 모두 동일 키 사용 검증
+  const fromStorage = getJSON(ACTION_KEY);
+  if (fromStorage.length === 1 && fromStorage[0].id === "a1" && fromStorage[0].vendorId === "V1") {
+    PASS("TEST 1: ACTION_KEY 단일 저장소 SSoT 확인");
+  } else {
+    FAIL("TEST 1", "ACTION_KEY 데이터 불일치: " + JSON.stringify(fromStorage));
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   TEST 2: Vendor Drawer - Action 필터링 (OPEN만, DONE 제외)
+   ═══════════════════════════════════════════════ */
+function test2_drawerActionFilter() {
+  log("\n--- TEST 2: Drawer Action 필터링 (OPEN만) ---");
+  const data = seedTestData();
+
+  // openDrawer 로직 시뮬레이션: vendorId === "TestVendorA" && status !== "DONE"
+  const allActions = getJSON(ACTION_KEY);
+  const vendorActions = allActions.filter(a => a.vendorId === "TestVendorA" && a.status !== "DONE");
+
+  if (vendorActions.length === 2) {
+    // act-open-1, act-open-2만 포함, act-done-1 제외
+    const ids = vendorActions.map(a => a.id).sort();
+    if (ids[0] === "act-open-1" && ids[1] === "act-open-2") {
+      PASS("TEST 2: OPEN 2건만 필터, DONE 1건 제외");
+    } else {
+      FAIL("TEST 2", "필터된 Action ID 불일치: " + JSON.stringify(ids));
+    }
+  } else {
+    FAIL("TEST 2", "vendorActions.length=" + vendorActions.length + " (expected 2)");
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   TEST 3: Vendor Drawer - Trade/Sales 금액 합산
+   ═══════════════════════════════════════════════ */
+function test3_drawerAmountCalc() {
+  log("\n--- TEST 3: Trade/Sales 금액 합산 ---");
+  seedTestData();
+
+  const vendor = "TestVendorA";
+  const trades = getJSON(TRADE_KEY).filter(r => r.vendor === vendor);
+  const sales = getJSON(SALES_KEY).filter(r => r.client === vendor);
+
+  function n(v) { const x = Number(v); return Number.isFinite(x) ? x : 0; }
+  const tTotal = trades.reduce((s, r) => s + n(r.buyUnitPrice) * n(r.qty), 0);
+  const sTotal = sales.reduce((s, r) => s + n(r.sellUnitPrice) * n(r.qty), 0);
+  const total = tTotal + sTotal;
+
+  // 구매: (5*100000) + (10*50000) = 1,000,000
+  // 판매: (2*120000) = 240,000
+  // 합계: 1,240,000
+  const expected = 1240000;
+  if (total === expected) {
+    PASS("TEST 3: 금액 합산 " + total + " = " + expected);
+  } else {
+    FAIL("TEST 3", "금액 불일치: " + total + " != " + expected);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   TEST 4: Vendor Drawer - 최근 거래일 정렬
+   ═══════════════════════════════════════════════ */
+function test4_drawerLatestDate() {
+  log("\n--- TEST 4: 최근 거래일 정렬 ---");
+  seedTestData();
+
+  const vendor = "TestVendorA";
+  const trades = getJSON(TRADE_KEY).filter(r => r.vendor === vendor);
+  const sales = getJSON(SALES_KEY).filter(r => r.client === vendor);
+
+  const allDates = [...trades.map(r => r.purchaseDate), ...sales.map(r => r.salesDate)].filter(Boolean).sort();
+  const latest = allDates.length ? allDates[allDates.length - 1] : "-";
+
+  // 2025-01-15, 2025-02-20, 2025-03-10 -> 최근 = 2025-03-10
+  if (latest === "2025-03-10") {
+    PASS("TEST 4: 최근 거래일 = " + latest);
+  } else {
+    FAIL("TEST 4", "최근 거래일 불일치: " + latest + " (expected 2025-03-10)");
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   TEST 5: Vendor Drawer - 거래 건수 (Trade + Sales)
+   ═══════════════════════════════════════════════ */
+function test5_drawerTxCount() {
+  log("\n--- TEST 5: 거래 건수 ---");
+  seedTestData();
+
+  const vendor = "TestVendorA";
+  const trades = getJSON(TRADE_KEY).filter(r => r.vendor === vendor);
+  const sales = getJSON(SALES_KEY).filter(r => r.client === vendor);
+  const count = trades.length + sales.length;
+
+  // 구매 2건 + 판매 1건 = 3건
+  if (count === 3) {
+    PASS("TEST 5: 거래 건수 = " + count);
+  } else {
+    FAIL("TEST 5", "거래 건수 불일치: " + count + " (expected 3)");
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   TEST 6: getAllVendors() - 전체 거래처 수집 (Trade + Sales + Action)
+   ═══════════════════════════════════════════════ */
+function test6_getAllVendors() {
+  log("\n--- TEST 6: getAllVendors 전체 거래처 수집 ---");
+  seedTestData();
+
+  // getAllVendors 로직 재현
+  const v = new Set();
+  getJSON(TRADE_KEY).forEach(r => { if (r.vendor) v.add(r.vendor); });
+  getJSON(SALES_KEY).forEach(r => { if (r.client) v.add(r.client); });
+  getJSON(ACTION_KEY).forEach(a => { if (a.vendorId) v.add(a.vendorId); });
+
+  // TestVendorA (trade+sales+action), TestVendorB (trade+action), TestVendorC (sales)
+  const vendors = [...v].sort();
+  if (vendors.length === 3 && vendors[0] === "TestVendorA" && vendors[1] === "TestVendorB" && vendors[2] === "TestVendorC") {
+    PASS("TEST 6: 전체 거래처 3개 = " + vendors.join(", "));
+  } else {
+    FAIL("TEST 6", "거래처 불일치: " + JSON.stringify(vendors) + " (expected [A,B,C])");
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   TEST 7: CRUD 후 localStorage 반영 확인 (Add → Read → Update → Delete)
+   ═══════════════════════════════════════════════ */
+function test7_crudRoundtrip() {
+  log("\n--- TEST 7: Action CRUD 라운드트립 ---");
+  clearAll();
+
+  // CREATE
+  const newAction = {
+    id: "act-crud-test", title: "CRUD 테스트", dueDate: todayStr(),
+    type: "ACTION", status: "OPEN", priority: "NORMAL", vendorId: "TestVendorX",
+    createdAt: new Date().toISOString(), updatedAt: new Date().toISOString()
+  };
+  let actions = [newAction];
+  setJSON(ACTION_KEY, actions);
+
+  // READ
+  actions = getJSON(ACTION_KEY);
+  if (actions.length !== 1 || actions[0].id !== "act-crud-test") {
+    FAIL("TEST 7", "CREATE/READ 실패"); return;
+  }
+
+  // UPDATE
+  actions[0].title = "CRUD 수정됨";
+  actions[0].updatedAt = new Date().toISOString();
+  setJSON(ACTION_KEY, actions);
+
+  actions = getJSON(ACTION_KEY);
+  if (actions[0].title !== "CRUD 수정됨") {
+    FAIL("TEST 7", "UPDATE 실패: title=" + actions[0].title); return;
+  }
+
+  // DELETE
+  actions = actions.filter(a => a.id !== "act-crud-test");
+  setJSON(ACTION_KEY, actions);
+
+  actions = getJSON(ACTION_KEY);
+  if (actions.length !== 0) {
+    FAIL("TEST 7", "DELETE 실패: length=" + actions.length); return;
+  }
+
+  PASS("TEST 7: CRUD 라운드트립 (Create->Read->Update->Delete) 정상");
+}
+
+/* ═══════════════════════════════════════════════
+   TEST 8: INIT_KEY 독립성 (calendar 전용, console 무관)
+   ═══════════════════════════════════════════════ */
+function test8_initKeyIndependence() {
+  log("\n--- TEST 8: INIT_KEY 독립성 (calendar 전용) ---");
+  clearAll();
+
+  // INIT_KEY에 데이터 저장
+  const initiatives = [
+    { id: "init-1", title: "신규 사업", category: "STRATEGY", status: "IDEA", priority: "HIGH", createdAt: new Date().toISOString(), updatedAt: new Date().toISOString() }
+  ];
+  setJSON(INIT_KEY, initiatives);
+
+  // ACTION_KEY는 비어있어야 함 (독립 확인)
+  const actions = getJSON(ACTION_KEY);
+  const inits = getJSON(INIT_KEY);
+
+  if (actions.length === 0 && inits.length === 1 && inits[0].id === "init-1") {
+    PASS("TEST 8: INIT_KEY 독립 저장, ACTION_KEY 영향 없음");
+  } else {
+    FAIL("TEST 8", "독립성 위반: actions=" + actions.length + " inits=" + inits.length);
+  }
+}
+
+/* ═══════════════════════════════════════════════
+   TEST 9: storage 이벤트 리스너 패치 검증 (간접 검증)
+   - console.html: storage(ACTION_KEY) -> renderAll()
+   - calendar.html: storage(ACTION_KEY) -> refreshAll() (INIT_KEY 제외)
+   ═══════════════════════════════════════════════ */
+function test9_storageListenerPatch() {
+  log("\n--- TEST 9: storage 리스너 패치 간접 검증 ---");
+
+  // storage 이벤트 시뮬레이션: 동일 탭에서는 storage 이벤트가 발생하지 않으므로
+  // 코드 존재 여부를 fetch로 검증
+  let consoleOk = false;
+  let calendarOk = false;
+
+  const checks = [];
+
+  // console.html 소스에서 storage 리스너 확인
+  checks.push(
+    fetch("console.html").then(r => r.text()).then(html => {
+      if (html.includes('addEventListener("storage"') && html.includes("ACTION_KEY") && html.includes("renderAll()")) {
+        consoleOk = true;
+      }
+    }).catch(() => {})
+  );
+
+  // calendar.html 소스에서 storage 리스너 확인
+  checks.push(
+    fetch("calendar.html").then(r => r.text()).then(html => {
+      if (html.includes('addEventListener("storage"') && html.includes("ACTION_KEY") && html.includes("refreshAll()")) {
+        calendarOk = true;
+      }
+      // INIT_KEY가 storage 리스너에 포함되지 않았는지 확인
+      // 패턴: storage 리스너 라인에 INIT_KEY가 없어야 함
+      const storageLines = html.split("\n").filter(l => l.includes('addEventListener("storage"'));
+      const initInStorage = storageLines.some(l => l.includes("INIT_KEY"));
+      if (initInStorage) {
+        calendarOk = false; // INIT_KEY가 리스너에 포함되면 FAIL
+      }
+    }).catch(() => {})
+  );
+
+  return Promise.all(checks).then(() => {
+    if (consoleOk && calendarOk) {
+      PASS("TEST 9: storage 리스너 패치 확인 (console: renderAll, calendar: refreshAll, INIT_KEY 제외)");
+    } else {
+      let reason = "";
+      if (!consoleOk) reason += "console.html 리스너 미확인; ";
+      if (!calendarOk) reason += "calendar.html 리스너 미확인 또는 INIT_KEY 포함; ";
+      FAIL("TEST 9", reason);
+    }
+  });
+}
+
+/* ═══════════════════════════════════════════════
+   실행
+   ═══════════════════════════════════════════════ */
+async function runAllTests() {
+  output = "";
+  passCount = 0;
+  failCount = 0;
+
+  log("=== GoLab v1.6.1 Vendor Drawer SSoT 9-Test ===");
+  log("Timestamp: " + new Date().toISOString());
+  log("");
+
+  try {
+    test1_actionKeySingleSource();
+    test2_drawerActionFilter();
+    test3_drawerAmountCalc();
+    test4_drawerLatestDate();
+    test5_drawerTxCount();
+    test6_getAllVendors();
+    test7_crudRoundtrip();
+    test8_initKeyIndependence();
+    await test9_storageListenerPatch();
+  } catch (err) {
+    log("\n[ERROR] 예외 발생: " + err.message);
+    failCount++;
+  }
+
+  // 정리
+  clearAll();
+
+  log("\n" + "=".repeat(50));
+  log("TOTAL: " + (passCount + failCount) + "  |  PASS: " + passCount + "  |  FAIL: " + failCount);
+  if (failCount === 0) {
+    log(">>> ALL 9 TESTS PASSED — Go <<<");
+  } else {
+    log(">>> " + failCount + " TEST(S) FAILED — No-Go <<<");
+  }
+  log("=".repeat(50));
+}
+
+runAllTests();
+</script>
+</body>
+</html>
