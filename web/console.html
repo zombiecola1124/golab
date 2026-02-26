@@ -190,6 +190,58 @@
     .search-results li{padding:8px 10px;cursor:pointer;border-radius:6px;font-size:12px;color:var(--text);transition:background .1s}
     .search-results li:hover{background:rgba(37,99,235,.08)}
 
+    /* ─ Data Management Section ─ */
+    .data-mgmt{margin-top:auto;border-top:1px solid var(--border);padding-top:12px}
+    .data-mgmt-toggle{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;width:100%;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .data-mgmt-toggle:hover{color:var(--text);border-color:#cbd5e1}
+    .data-mgmt-toggle .dm-icon{font-size:14px}
+    .data-mgmt-toggle .dm-arrow{margin-left:auto;font-size:10px;transition:transform .2s}
+    .data-mgmt-toggle.open .dm-arrow{transform:rotate(180deg)}
+    .data-mgmt-body{display:none;margin-top:8px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .data-mgmt-body.open{display:block}
+    .dm-info{font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.6}
+    .dm-info .dm-val{font-weight:700;color:var(--text)}
+    .dm-btn{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--chip);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;margin-bottom:6px}
+    .dm-btn:last-child{margin-bottom:0}
+    .dm-btn:hover{border-color:rgba(37,99,235,.3);background:rgba(37,99,235,.04)}
+    .dm-btn .dm-bi{font-size:14px;width:20px;text-align:center}
+
+    /* ─ Restore Panel (overlay in center) ─ */
+    .restore-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:120;align-items:flex-start;justify-content:center;padding-top:60px}
+    .restore-overlay.open{display:flex}
+    .restore-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;width:560px;max-width:92vw;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.15)}
+    .restore-panel h3{font-size:15px;font-weight:800;color:var(--text);margin-bottom:4px}
+    .restore-panel .rp-sub{font-size:11px;color:var(--muted);margin-bottom:16px}
+    .rp-mode{display:flex;gap:8px;margin-bottom:16px}
+    .rp-mode label{display:flex;align-items:center;gap:6px;font-size:12px;font-weight:600;cursor:pointer;padding:8px 14px;border-radius:8px;border:1px solid var(--border);transition:all .15s}
+    .rp-mode label:hover{border-color:rgba(37,99,235,.3)}
+    .rp-mode input[type=radio]{accent-color:var(--primary)}
+    .rp-mode label.active{border-color:var(--primary);background:rgba(37,99,235,.06)}
+    .rp-report{background:var(--chip);border:1px solid var(--border);border-radius:10px;padding:16px;margin-bottom:16px}
+    .rp-report h4{font-size:12px;font-weight:700;color:var(--text);margin-bottom:10px}
+    .rp-row{display:flex;align-items:center;gap:8px;padding:5px 0;font-size:12px;border-bottom:1px solid var(--border)}
+    .rp-row:last-child{border-bottom:none}
+    .rp-row .rp-icon{font-size:14px;width:22px;text-align:center}
+    .rp-row .rp-label{flex:1;color:var(--text)}
+    .rp-row .rp-count{font-weight:700;color:var(--text)}
+    .rp-capacity{margin-top:12px;padding:10px;background:rgba(37,99,235,.04);border-radius:8px;font-size:11px;color:var(--text)}
+    .rp-capacity.warn{background:rgba(220,38,38,.06);color:var(--warn)}
+    .rp-keys{margin-top:10px;max-height:200px;overflow-y:auto}
+    .rp-key-item{font-size:11px;padding:4px 8px;display:flex;gap:6px;align-items:center;border-bottom:1px solid var(--border)}
+    .rp-key-item:last-child{border-bottom:none}
+    .rp-key-item .kname{flex:1;font-family:monospace;color:var(--text)}
+    .rp-key-item .kstatus{font-size:10px;font-weight:700;padding:1px 6px;border-radius:4px}
+    .rp-key-item .kstatus.overwrite{background:#dbeafe;color:var(--primary)}
+    .rp-key-item .kstatus.add{background:#dcfce7;color:var(--accent)}
+    .rp-key-item .kstatus.delete{background:#fee2e2;color:var(--warn)}
+    .rp-key-item .kstatus.keep{background:#dcfce7;color:var(--accent)}
+    .rp-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:16px}
+    .rp-btns button{border:1px solid var(--border);background:var(--card);color:var(--text);border-radius:8px;padding:10px 20px;font-size:12px;cursor:pointer;font-weight:600;transition:all .15s}
+    .rp-btns button:hover{border-color:#cbd5e1;background:#f8fafc}
+    .rp-btns .btn-commit{background:var(--warn);border:none;color:#fff;font-weight:700}
+    .rp-btns .btn-commit:hover{background:#b91c1c}
+    .rp-btns .btn-commit:disabled{background:#94a3b8;cursor:not-allowed}
+
     /* ─ Responsive ─ */
     @media(max-width:1280px){
       .bento{grid-template-columns:1fr 280px}
@@ -223,6 +275,27 @@
     <button class="quick-btn" id="btnQuickTask"><span class="icon">✏️</span>Action 추가</button>
     <button class="quick-btn" id="btnQuickSearch"><span class="icon">🔍</span>거래처 검색</button>
     <a class="quick-btn" href="./calendar.html"><span class="icon">📅</span>캘린더</a>
+
+    <!-- ═══ 데이터 관리 (접이식) ═══ -->
+    <div class="data-mgmt">
+      <button class="data-mgmt-toggle" id="dmToggle">
+        <span class="dm-icon">⚙️</span>데이터 관리
+        <span class="dm-arrow">▼</span>
+      </button>
+      <div class="data-mgmt-body" id="dmBody">
+        <div class="dm-info">
+          현재 용량: <span class="dm-val" id="dmSize">-</span> / 5MB<br>
+          golab_ 키: <span class="dm-val" id="dmKeyCount">-</span>개
+        </div>
+        <button class="dm-btn" id="btnFullBackup">
+          <span class="dm-bi">📦</span>전체 백업
+        </button>
+        <button class="dm-btn" id="btnFullRestore">
+          <span class="dm-bi">📥</span>백업에서 복원
+        </button>
+        <input type="file" id="restoreFileIn" accept="application/json" style="display:none" />
+      </div>
+    </div>
   </aside>
 
   <!-- CENTER: Today Zone + Week + Timeline -->
@@ -379,6 +452,34 @@
   <div class="drawer-footer" id="vpFooter">
     <h4>미완료 Action</h4>
     <div id="vpTodos"></div>
+  </div>
+</div>
+
+<!-- ═══ RESTORE PANEL ═══ -->
+<div class="restore-overlay" id="restoreOverlay">
+  <div class="restore-panel">
+    <h3>📥 백업에서 복원</h3>
+    <div class="rp-sub">DRY_RUN 결과를 확인한 뒤 COMMIT을 실행하세요</div>
+
+    <!-- 모드 선택 -->
+    <div class="rp-mode" id="rpMode">
+      <label class="active"><input type="radio" name="restoreMode" value="replace" checked /> Replace (초기화 후 교체)</label>
+      <label><input type="radio" name="restoreMode" value="merge" /> Merge (기존 유지 + 덮어쓰기)</label>
+    </div>
+
+    <!-- DRY_RUN 리포트 -->
+    <div class="rp-report" id="rpReport">
+      <h4>DRY_RUN 리포트</h4>
+      <div id="rpSummary"></div>
+      <div class="rp-capacity" id="rpCapacity"></div>
+      <div class="rp-keys" id="rpKeys"></div>
+    </div>
+
+    <!-- 버튼 -->
+    <div class="rp-btns">
+      <button id="rpCancel">취소</button>
+      <button class="btn-commit" id="rpCommit">COMMIT 실행</button>
+    </div>
   </div>
 </div>
 
@@ -1039,11 +1140,369 @@ $("calPrev").onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}rende
 $("calNext").onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderMiniCal();};
 
 document.addEventListener("keydown",e=>{
-  if(e.key==="Escape"){ closeActionModal(); closeDrawer(); closeSearch(); }
+  if(e.key==="Escape"){ closeActionModal(); closeDrawer(); closeSearch(); closeRestorePanel(); }
 });
 
 /* ── 크로스탭 동기화: 다른 탭(calendar)에서 ACTION 변경 시 자동 반영 ── */
 window.addEventListener("storage", e => { if(e.key === ACTION_KEY) renderAll(); });
+
+/* ══════════════════════════════════════════
+   DATA MANAGEMENT — 전체 백업/복원
+   (golab_ 접두사 키 전수 스캔)
+   ══════════════════════════════════════════ */
+
+/* ── golab_ 키 전수 스캔 유틸 ── */
+function scanGolabKeys(){
+  const keys = [];
+  for(let i=0; i<localStorage.length; i++){
+    const k = localStorage.key(i);
+    if(k && k.startsWith("golab_")) keys.push(k);
+  }
+  return keys.sort();
+}
+
+/* ── 용량 계산 (bytes) ── */
+function calcStorageBytes(keys){
+  let total = 0;
+  keys.forEach(k => {
+    const v = localStorage.getItem(k) || "";
+    total += new Blob([k]).size + new Blob([v]).size;
+  });
+  return total;
+}
+
+function fmtBytes(b){
+  if(b < 1024) return b + " B";
+  if(b < 1048576) return (b/1024).toFixed(1) + " KB";
+  return (b/1048576).toFixed(2) + " MB";
+}
+
+/* ── 데이터 관리 패널 토글 ── */
+$("dmToggle").onclick = () => {
+  $("dmToggle").classList.toggle("open");
+  $("dmBody").classList.toggle("open");
+  if($("dmBody").classList.contains("open")) refreshDmInfo();
+};
+
+function refreshDmInfo(){
+  const keys = scanGolabKeys();
+  const bytes = calcStorageBytes(keys);
+  $("dmSize").textContent = fmtBytes(bytes);
+  $("dmKeyCount").textContent = keys.length;
+}
+
+/* ── 전체 백업 (Full Backup) ── */
+$("btnFullBackup").onclick = function(){
+  const keys = scanGolabKeys();
+  if(!keys.length){ alert("백업할 golab_ 키가 없습니다."); return; }
+
+  // golab_ 키 전수 수집
+  const data = {};
+  keys.forEach(k => {
+    try{ data[k] = JSON.parse(localStorage.getItem(k)); }
+    catch{ data[k] = localStorage.getItem(k); }
+  });
+
+  const totalBytes = calcStorageBytes(keys);
+  const now = new Date();
+  const ts = now.toISOString().replace(/[-:]/g,"").replace("T","_").substring(0,15);
+  const filename = `GoLab_FullBackup_${ts}.json`;
+
+  // 메타 정보 포함
+  const payload = {
+    _meta: {
+      version: "1.6.1",
+      timestamp: now.toISOString(),
+      keyCount: keys.length,
+      totalBytes: totalBytes
+    },
+    keys: data
+  };
+
+  // Blob 다운로드
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  // audit 기록: FULL_BACKUP
+  emitWorkAudit("FULL_BACKUP", { keyCount: keys.length, totalBytes, filename });
+
+  alert(`전체 백업 완료!\n\n키: ${keys.length}개\n용량: ${fmtBytes(totalBytes)}\n파일: ${filename}`);
+  refreshDmInfo();
+};
+
+/* ── 복원: 파일 선택 → DRY_RUN ── */
+var restorePayload = null; // 파싱된 백업 데이터 보관 (var: 콘솔 테스트 접근 허용)
+
+$("btnFullRestore").onclick = () => $("restoreFileIn").click();
+
+$("restoreFileIn").addEventListener("change", e => {
+  const f = e.target.files?.[0];
+  if(!f) return;
+  e.target.value = "";
+
+  const reader = new FileReader();
+  reader.onload = ev => {
+    try{
+      const parsed = JSON.parse(ev.target.result);
+
+      // 검증: _meta + keys 구조
+      if(!parsed._meta || !parsed.keys || typeof parsed.keys !== "object"){
+        alert("올바른 GoLab 전체 백업 파일이 아닙니다.\n(_meta + keys 구조 필요)");
+        return;
+      }
+
+      restorePayload = parsed;
+      runDryRun();
+    }catch(err){
+      alert("JSON 파싱 실패:\n" + err.message);
+    }
+  };
+  reader.readAsText(f);
+});
+
+/* ── DRY_RUN 리포트 생성 ── */
+function runDryRun(){
+  if(!restorePayload) return;
+
+  const backupKeys = Object.keys(restorePayload.keys).filter(k => k.startsWith("golab_")).sort();
+  const currentKeys = scanGolabKeys();
+  const mode = getRestoreMode();
+
+  const backupSet = new Set(backupKeys);
+  const currentSet = new Set(currentKeys);
+
+  // 키 분류
+  const overwrite = []; // 백업에도 있고 현재에도 있음
+  const add = [];       // 백업에 있고 현재에 없음
+  const extra = [];     // 현재에 있고 백업에 없음
+
+  backupKeys.forEach(k => {
+    if(currentSet.has(k)) overwrite.push(k);
+    else add.push(k);
+  });
+  currentKeys.forEach(k => {
+    if(!backupSet.has(k)) extra.push(k);
+  });
+
+  // 용량 계산
+  let estimatedBytes = 0;
+  backupKeys.forEach(k => {
+    const v = JSON.stringify(restorePayload.keys[k]) || "";
+    estimatedBytes += new Blob([k]).size + new Blob([v]).size;
+  });
+  if(mode === "merge"){
+    extra.forEach(k => {
+      const v = localStorage.getItem(k) || "";
+      estimatedBytes += new Blob([k]).size + new Blob([v]).size;
+    });
+  }
+
+  // 리포트 렌더링
+  const extraLabel = mode === "replace"
+    ? `🔴 삭제됨: ${extra.length}개 키`
+    : `🟢 유지됨: ${extra.length}개 키`;
+
+  $("rpSummary").innerHTML = `
+    <div class="rp-row"><span class="rp-icon">✅</span><span class="rp-label">덮어쓰기</span><span class="rp-count">${overwrite.length}개 키</span></div>
+    <div class="rp-row"><span class="rp-icon">➕</span><span class="rp-label">새로 추가</span><span class="rp-count">${add.length}개 키</span></div>
+    <div class="rp-row"><span class="rp-icon">${mode==="replace"?"🔴":"🟢"}</span><span class="rp-label">${mode==="replace"?"삭제됨":"유지됨"}</span><span class="rp-count">${extra.length}개 키</span></div>
+  `;
+
+  // 용량 가드
+  const MB5 = 5 * 1024 * 1024;
+  const MB4_5 = 4.5 * 1024 * 1024;
+  const capClass = estimatedBytes > MB4_5 ? "rp-capacity warn" : "rp-capacity";
+  let capMsg = `예상 용량: ${fmtBytes(estimatedBytes)} / 5MB`;
+  if(estimatedBytes > MB5) capMsg += " ⛔ 용량 초과! 복원 불가";
+  else if(estimatedBytes > MB4_5) capMsg += " ⚠️ 용량 경고";
+  $("rpCapacity").className = capClass;
+  $("rpCapacity").textContent = capMsg;
+
+  // COMMIT 버튼 활성/비활성
+  $("rpCommit").disabled = (estimatedBytes > MB5);
+
+  // 키 상세 목록
+  let keysHtml = "";
+  overwrite.forEach(k => {
+    keysHtml += `<div class="rp-key-item"><span class="kname">${k}</span><span class="kstatus overwrite">덮어쓰기</span></div>`;
+  });
+  add.forEach(k => {
+    keysHtml += `<div class="rp-key-item"><span class="kname">${k}</span><span class="kstatus add">추가</span></div>`;
+  });
+  extra.forEach(k => {
+    if(mode === "replace"){
+      keysHtml += `<div class="rp-key-item"><span class="kname">${k}</span><span class="kstatus delete">삭제됨</span></div>`;
+    } else {
+      keysHtml += `<div class="rp-key-item"><span class="kname">${k}</span><span class="kstatus keep">유지됨</span></div>`;
+    }
+  });
+  $("rpKeys").innerHTML = keysHtml;
+
+  // 메타 정보
+  const meta = restorePayload._meta;
+  $("rpReport").querySelector("h4").innerHTML = `DRY_RUN 리포트 <span style="font-size:10px;color:var(--muted);font-weight:400">(백업: ${meta.timestamp?.substring(0,16)||"?"}, ${meta.keyCount||"?"}키, ${fmtBytes(meta.totalBytes||0)})</span>`;
+
+  // 패널 표시
+  $("restoreOverlay").classList.add("open");
+}
+
+/* ── 모드 선택 헬퍼 ── */
+function getRestoreMode(){
+  const radios = document.querySelectorAll('input[name="restoreMode"]');
+  for(const r of radios) if(r.checked) return r.value;
+  return "replace";
+}
+
+// 모드 전환 시 DRY_RUN 재실행
+$("rpMode").addEventListener("change", e => {
+  // active 클래스 토글
+  $("rpMode").querySelectorAll("label").forEach(l => l.classList.remove("active"));
+  e.target.closest("label").classList.add("active");
+  if(restorePayload) runDryRun();
+});
+
+/* ── pre-restore 백업 (자동 다운로드) ── */
+function downloadPreRestoreBackup(){
+  const keys = scanGolabKeys();
+  const data = {};
+  keys.forEach(k => {
+    try{ data[k] = JSON.parse(localStorage.getItem(k)); }
+    catch{ data[k] = localStorage.getItem(k); }
+  });
+
+  const totalBytes = calcStorageBytes(keys);
+  const now = new Date();
+  const ts = now.getFullYear()
+    + String(now.getMonth()+1).padStart(2,"0")
+    + String(now.getDate()).padStart(2,"0")
+    + "_" + String(now.getHours()).padStart(2,"0")
+    + String(now.getMinutes()).padStart(2,"0")
+    + String(now.getSeconds()).padStart(2,"0");
+  const filename = `pre_restore_${ts}.json`;
+
+  const payload = {
+    _meta: {
+      version: "1.6.1",
+      timestamp: now.toISOString(),
+      keyCount: keys.length,
+      totalBytes: totalBytes,
+      type: "PRE_RESTORE_BACKUP"
+    },
+    keys: data
+  };
+
+  const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = filename;
+  a.click();
+  URL.revokeObjectURL(a.href);
+
+  // audit: BACKUP_PRE_RESTORE
+  emitWorkAudit("BACKUP_PRE_RESTORE", { keyCount: keys.length, totalBytes, filename });
+
+  return filename;
+}
+
+/* ── COMMIT 실행 (3중 안전장치) ── */
+$("rpCommit").onclick = function(){
+  if(!restorePayload) return;
+  const mode = getRestoreMode();
+
+  if(mode === "replace"){
+    // ① confirm 1회
+    if(!confirm("전체 데이터를 교체합니다. 계속하시겠습니까?")) return;
+    // ② confirm 2회
+    if(!confirm("이 작업은 되돌릴 수 없습니다. 정말 실행하시겠습니까?")) return;
+    // ③ RESET 타이핑 확인
+    const input = prompt("최종 확인: RESET을 입력하세요");
+    if(input !== "RESET"){
+      alert("RESET이 일치하지 않습니다. 복원이 취소되었습니다.");
+      return;
+    }
+  } else {
+    // Merge: confirm 1회만
+    if(!confirm(`Merge 모드로 복원합니다. ${Object.keys(restorePayload.keys).length}개 키를 덮어쓰기/추가합니다. 계속하시겠습니까?`)) return;
+  }
+
+  // ④ pre-restore 자동 백업
+  const preFile = downloadPreRestoreBackup();
+
+  // ⑤ 실행
+  const backupKeys = Object.keys(restorePayload.keys).filter(k => k.startsWith("golab_"));
+  const currentKeys = scanGolabKeys();
+  const backupSet = new Set(backupKeys);
+
+  let deletedKeys = [];
+  let overwrittenKeys = [];
+  let addedKeys = [];
+
+  try{
+    if(mode === "replace"){
+      // Replace: 기존 golab_ 키 전체 삭제
+      currentKeys.forEach(k => {
+        if(!backupSet.has(k)) deletedKeys.push(k);
+        else overwrittenKeys.push(k);
+        localStorage.removeItem(k);
+      });
+
+      // 백업 키 전체 세팅
+      backupKeys.forEach(k => {
+        const val = restorePayload.keys[k];
+        localStorage.setItem(k, typeof val === "string" ? val : JSON.stringify(val));
+        if(!overwrittenKeys.includes(k)) addedKeys.push(k);
+      });
+    } else {
+      // Merge: 기존 키 유지, 백업 키로 덮어쓰기/추가
+      const currentSet = new Set(currentKeys);
+      backupKeys.forEach(k => {
+        const val = restorePayload.keys[k];
+        if(currentSet.has(k)) overwrittenKeys.push(k);
+        else addedKeys.push(k);
+        localStorage.setItem(k, typeof val === "string" ? val : JSON.stringify(val));
+      });
+    }
+
+    // ⑥ audit: FULL_RESTORE
+    const totalBytes = calcStorageBytes(scanGolabKeys());
+    emitWorkAudit("FULL_RESTORE", {
+      mode: mode.toUpperCase(),
+      keyCount: backupKeys.length,
+      overwritten: overwrittenKeys.length,
+      added: addedKeys.length,
+      deleted: deletedKeys.length,
+      totalBytes,
+      preRestoreFile: preFile
+    });
+
+    // ⑦ 완료 리포트
+    closeRestorePanel();
+    alert(
+      `✅ 복원 완료! (${mode.toUpperCase()} 모드)\n\n`
+      + `덮어쓰기: ${overwrittenKeys.length}개\n`
+      + `추가: ${addedKeys.length}개\n`
+      + (mode==="replace" ? `삭제: ${deletedKeys.length}개\n` : "")
+      + `\npre-restore 백업: ${preFile}\n\n`
+      + `페이지를 새로고침합니다.`
+    );
+    location.reload();
+
+  }catch(err){
+    alert("복원 중 오류 발생:\n" + err.message + "\n\npre-restore 백업(" + preFile + ")으로 복구 가능합니다.");
+  }
+};
+
+/* ── 복원 패널 닫기 ── */
+function closeRestorePanel(){
+  $("restoreOverlay").classList.remove("open");
+  restorePayload = null;
+}
+$("rpCancel").onclick = closeRestorePanel;
+$("restoreOverlay").onclick = e => { if(e.target===$("restoreOverlay")) closeRestorePanel(); };
 
 /* ── Init ── */
 renderAll();
