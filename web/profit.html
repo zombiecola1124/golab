@@ -1,0 +1,547 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GoLab · 수익 대시보드</title>
+  <style>
+    :root{
+      --bg:#f5f7fa;--card:#ffffff;--border:#e5e7eb;
+      --text:#0f172a;--muted:#64748b;
+      --primary:#2563eb;--warn:#dc2626;--accent:#16a34a;--orange:#d97706;
+      --purple:#7c3aed;--chip:#f8fafc;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+      font-size:13px;line-height:1.5}
+
+    /* ─ Header ─ */
+    header{padding:12px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);z-index:20;display:flex;align-items:center;justify-content:space-between}
+    header h1{font-size:15px;font-weight:800;color:var(--primary);letter-spacing:-.2px}
+    .tabs{display:flex;gap:6px;flex-wrap:wrap}
+    .tab{padding:6px 10px;border-radius:8px;border:1px solid var(--border);color:var(--muted);text-decoration:none;font-size:11px;font-weight:600;background:transparent;transition:all .15s}
+    .tab:hover{color:var(--text);border-color:#cbd5e1}
+    .tab.active{color:var(--primary);background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3)}
+
+    /* ─ Container ─ */
+    .container{max-width:1200px;margin:0 auto;padding:20px}
+
+    /* ─ 경고 카드 ─ */
+    .warn-bar{display:flex;gap:12px;margin-bottom:16px;flex-wrap:wrap}
+    .warn-card{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;font-size:12px;font-weight:600;border:1px solid}
+    .warn-card.orange{background:#fffbeb;border-color:#fbbf24;color:#92400e}
+    .warn-card.red{background:#fef2f2;border-color:#fca5a5;color:#991b1b}
+    .warn-card .wi{font-size:16px}
+    .warn-card .wv{font-weight:800;margin-left:4px}
+
+    /* ─ 기간 필터 ─ */
+    .filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap}
+    .fbtn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+    .fbtn:hover{color:var(--text);border-color:#cbd5e1}
+    .fbtn.active{color:var(--primary);background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3)}
+    .date-input{padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-size:11px;font-family:inherit;color:var(--text);background:var(--chip);outline:none}
+    .date-input:focus{border-color:var(--primary)}
+    .date-sep{color:var(--muted);font-size:11px}
+
+    /* ─ KPI 카드 4개 ─ */
+    .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:16px;margin-bottom:24px}
+    .kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .kpi .label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+    .kpi .value{font-size:28px;font-weight:800;margin-top:6px;letter-spacing:-.5px}
+    .kpi .sub{font-size:10px;color:var(--muted);margin-top:4px}
+    .kpi .value.blue{color:var(--primary)}
+    .kpi .value.red{color:var(--warn)}
+    .kpi .value.green{color:var(--accent)}
+    .kpi .value.orange{color:var(--orange)}
+
+    /* ─ 테이블 카드 ─ */
+    .table-row{display:grid;grid-template-columns:1fr 1fr;gap:20px;margin-bottom:24px}
+    .tcard{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .tcard h3{font-size:13px;font-weight:700;color:var(--text);margin-bottom:14px;display:flex;align-items:center;gap:8px}
+    .tcard h3 .badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700;background:#dbeafe;color:var(--primary)}
+    table{width:100%;border-collapse:collapse;font-size:12px}
+    thead th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.3px}
+    thead th.right{text-align:right}
+    tbody td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text)}
+    tbody td.right{text-align:right;font-weight:600;font-variant-numeric:tabular-nums}
+    tbody td.name{font-weight:600;max-width:200px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    tbody tr:hover{background:rgba(37,99,235,.03)}
+    .margin-positive{color:var(--accent)}
+    .margin-negative{color:var(--warn)}
+    .no-data{text-align:center;padding:30px 20px;color:var(--muted);font-size:12px}
+
+    /* ─ 마진 바 (인라인) ─ */
+    .margin-bar{display:inline-block;height:6px;border-radius:3px;min-width:2px;vertical-align:middle;margin-right:6px}
+
+    /* ─ Responsive ─ */
+    @media(max-width:900px){
+      .kpi-row{grid-template-columns:repeat(2,1fr)}
+      .table-row{grid-template-columns:1fr}
+    }
+    @media(max-width:600px){
+      .kpi-row{grid-template-columns:1fr}
+      .container{padding:12px}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>GoLab</h1>
+  <nav class="tabs">
+    <a class="tab" href="./console.html">콘솔</a>
+    <a class="tab" href="./purchases.html">입고/원가</a>
+    <a class="tab" href="./index.html">재고</a>
+    <a class="tab" href="./trade.html">구매 이력</a>
+    <a class="tab" href="./sales.html">매출</a>
+    <a class="tab active" href="./profit.html">수익</a>
+    <a class="tab" href="./calendar.html">캘린더</a>
+  </nav>
+</header>
+
+<div class="container">
+
+  <!-- ═══ 경고 바 ═══ -->
+  <div class="warn-bar" id="warnBar"></div>
+
+  <!-- ═══ 기간 필터 ═══ -->
+  <div class="filter-bar">
+    <button class="fbtn active" data-range="month">이번 달</button>
+    <button class="fbtn" data-range="30d">최근 30일</button>
+    <button class="fbtn" data-range="all">전체</button>
+    <button class="fbtn" data-range="custom">직접 입력</button>
+    <input type="date" class="date-input" id="dateFrom" style="display:none" />
+    <span class="date-sep" id="dateSep" style="display:none">~</span>
+    <input type="date" class="date-input" id="dateTo" style="display:none" />
+  </div>
+
+  <!-- ═══ KPI 요약 카드 ═══ -->
+  <div class="kpi-row">
+    <div class="kpi">
+      <div class="label">총 매출</div>
+      <div class="value orange" id="kRevenue">₩0</div>
+      <div class="sub" id="kRevenueSub">0건</div>
+    </div>
+    <div class="kpi">
+      <div class="label">총 원가</div>
+      <div class="value blue" id="kCost">₩0</div>
+      <div class="sub" id="kCostSub">0건</div>
+    </div>
+    <div class="kpi">
+      <div class="label">총 마진</div>
+      <div class="value green" id="kMargin">₩0</div>
+      <div class="sub" id="kMarginSub">원가 확인된 매출 기준</div>
+    </div>
+    <div class="kpi">
+      <div class="label">마진율</div>
+      <div class="value green" id="kRate">0.0%</div>
+      <div class="sub" id="kRateSub">마진 ÷ 매출</div>
+    </div>
+  </div>
+
+  <!-- ═══ 테이블 2개 ═══ -->
+  <div class="table-row">
+    <!-- 거래처별 마진 TOP -->
+    <div class="tcard">
+      <h3>거래처별 마진 TOP <span class="badge" id="clientBadge">0</span></h3>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>거래처</th>
+            <th class="right">매출</th>
+            <th class="right">원가</th>
+            <th class="right">마진</th>
+            <th class="right">마진율</th>
+          </tr>
+        </thead>
+        <tbody id="clientTable"></tbody>
+      </table>
+      <div class="no-data" id="clientEmpty" style="display:none">해당 기간 데이터 없음</div>
+    </div>
+
+    <!-- 품목별 마진 TOP -->
+    <div class="tcard">
+      <h3>품목별 마진 TOP <span class="badge" id="itemBadge">0</span></h3>
+      <table>
+        <thead>
+          <tr>
+            <th>#</th>
+            <th>품목</th>
+            <th class="right">매출</th>
+            <th class="right">원가</th>
+            <th class="right">마진</th>
+            <th class="right">마진율</th>
+          </tr>
+        </thead>
+        <tbody id="itemTable"></tbody>
+      </table>
+      <div class="no-data" id="itemEmpty" style="display:none">해당 기간 데이터 없음</div>
+    </div>
+  </div>
+
+</div>
+
+<script>
+/* ══════════════════════════════════════════
+   GoLab Profit Dashboard v1.0
+   읽기 전용 — golab_* localStorage만 참조
+   ══════════════════════════════════════════ */
+
+const $ = id => document.getElementById(id);
+
+/* ── 유틸 ── */
+function n(v, fb=0){ const x=Number(v); return Number.isFinite(x)?x:fb; }
+function fmtW(v){ return "₩"+Math.round(v).toLocaleString(); }
+function fmtRate(v){ return (v*100).toFixed(1)+"%"; }
+
+/* ── 날짜 유틸 ── */
+function todayStr(){ return new Date().toISOString().substring(0,10); }
+function monthStart(){
+  const d=new Date();
+  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-01";
+}
+function daysAgo(n){
+  const d=new Date(); d.setDate(d.getDate()-n);
+  return d.toISOString().substring(0,10);
+}
+
+/* ══════════════════════════════════════════
+   1️⃣ 날짜 필드 자동 탐지
+   우선순위: salesDate → saleDate → date → createdAt
+   ══════════════════════════════════════════ */
+const DATE_FIELDS = ["salesDate","saleDate","date","createdAt"];
+
+function extractDate(rec){
+  for(const f of DATE_FIELDS){
+    if(rec[f] && typeof rec[f] === "string" && rec[f].length >= 10){
+      return rec[f].substring(0,10);
+    }
+  }
+  return null; // 날짜 미정
+}
+
+/* ══════════════════════════════════════════
+   2️⃣ 원가(avgPrice) 매핑 — 자동 탐지
+   소스: golab_trade_v1 → buyUnitPrice 기준 품목별 가중평균
+         golab_inventory_v01 → buyPrice (이동평균 원가)
+         golab_purchases_v2 → inbound_history unitPriceKrw
+   매핑 키: partNo → itemName fallback
+   ══════════════════════════════════════════ */
+function buildCostMap(){
+  const costMap = new Map(); // key → { totalCost, totalQty }
+
+  // (A) golab_trade_v1 — 구매 이력에서 품목별 가중평균 원가
+  try{
+    const trades = JSON.parse(localStorage.getItem("golab_trade_v1")||"[]");
+    trades.forEach(t => {
+      const price = n(t.buyUnitPrice);
+      const qty = n(t.qty);
+      if(price <= 0 || qty <= 0) return;
+
+      // partNo 우선, 없으면 itemName
+      const keys = [];
+      if(t.partNo) keys.push("partNo:"+t.partNo);
+      if(t.itemName) keys.push("name:"+t.itemName);
+      // itemId도 시도
+      if(t.itemId) keys.push("itemId:"+t.itemId);
+
+      keys.forEach(k => {
+        const prev = costMap.get(k) || {totalCost:0, totalQty:0};
+        prev.totalCost += price * qty;
+        prev.totalQty += qty;
+        costMap.set(k, prev);
+      });
+    });
+  }catch{}
+
+  // (B) golab_inventory_v01 — 재고 마스터의 buyPrice
+  try{
+    const inv = JSON.parse(localStorage.getItem("golab_inventory_v01")||"[]");
+    inv.forEach(item => {
+      const price = n(item.buyPrice);
+      if(price <= 0) return;
+      if(item.name){
+        const k = "name:"+item.name;
+        if(!costMap.has(k)){
+          costMap.set(k, {totalCost: price, totalQty: 1}); // 단가 직접
+        }
+      }
+    });
+  }catch{}
+
+  // (C) golab_purchases_v2 → inbound_history에서 단가
+  try{
+    const history = JSON.parse(localStorage.getItem("golab_inventory_inbound_history_v01")||"[]");
+    history.forEach(h => {
+      const price = n(h.unitPriceKrw);
+      const qty = n(h.qty);
+      if(price <= 0 || qty <= 0) return;
+      if(h.name){
+        const k = "name:"+h.name;
+        const prev = costMap.get(k) || {totalCost:0, totalQty:0};
+        prev.totalCost += price * qty;
+        prev.totalQty += qty;
+        costMap.set(k, prev);
+      }
+    });
+  }catch{}
+
+  // 가중평균 단가로 변환
+  const avgMap = new Map();
+  costMap.forEach((v,k) => {
+    if(v.totalQty > 0) avgMap.set(k, Math.round(v.totalCost / v.totalQty));
+  });
+
+  return avgMap;
+}
+
+/* ── 매출 레코드에서 원가 찾기 ── */
+function lookupCost(rec, avgMap){
+  // 1순위: partNo (itemCode) 기준
+  if(rec.partNo){
+    const v = avgMap.get("partNo:"+rec.partNo);
+    if(v !== undefined) return v;
+  }
+  // 2순위: itemId
+  if(rec.itemId){
+    const v = avgMap.get("itemId:"+rec.itemId);
+    if(v !== undefined) return v;
+  }
+  // 3순위: itemName fallback
+  if(rec.itemName){
+    const v = avgMap.get("name:"+rec.itemName);
+    if(v !== undefined) return v;
+  }
+  return null; // 매핑 실패 → 마진 계산 제외
+}
+
+/* ══════════════════════════════════════════
+   데이터 로드 + 분석
+   ══════════════════════════════════════════ */
+let currentRange = "month";
+let customFrom = "";
+let customTo = "";
+
+function loadSales(){
+  try{ return JSON.parse(localStorage.getItem("golab_sales_v1")||"[]"); }
+  catch{ return []; }
+}
+
+function getDateRange(){
+  if(currentRange === "month") return { from: monthStart(), to: "9999-12-31" };
+  if(currentRange === "30d") return { from: daysAgo(30), to: "9999-12-31" };
+  if(currentRange === "all") return { from: "0000-01-01", to: "9999-12-31" };
+  if(currentRange === "custom") return { from: customFrom || "0000-01-01", to: customTo || "9999-12-31" };
+  return { from: monthStart(), to: "9999-12-31" };
+}
+
+function analyze(){
+  const sales = loadSales();
+  const avgMap = buildCostMap();
+  const range = getDateRange();
+
+  // 집계 변수
+  let totalRevenue = 0;
+  let totalCost = 0;
+  let totalMargin = 0;
+  let revenueCount = 0;     // 기간 내 전체 매출 건수
+  let marginCount = 0;      // 원가 확인된 건수
+  let noDateCount = 0;       // 날짜 미정 건수
+  let noCostCount = 0;       // 원가 미정 건수
+  let noCostRevenue = 0;     // 원가 미정 매출액
+  let marginRevenue = 0;     // 마진 계산 포함 매출액
+
+  // 거래처별 / 품목별 집계
+  const byClient = new Map();
+  const byItem = new Map();
+
+  sales.forEach(rec => {
+    const dt = extractDate(rec);
+
+    // 날짜 미정: 기간 필터에서 제외
+    if(!dt){
+      noDateCount++;
+      return;
+    }
+
+    // 기간 필터
+    if(dt < range.from || dt > range.to) return;
+
+    const revenue = n(rec.sellUnitPrice) * n(rec.qty);
+    totalRevenue += revenue;
+    revenueCount++;
+
+    // 원가 조회
+    const unitCost = lookupCost(rec, avgMap);
+
+    if(unitCost === null){
+      // 3️⃣ 원가 미정: 마진 계산에서 제외
+      noCostCount++;
+      noCostRevenue += revenue;
+      // 거래처/품목 집계에는 매출만 포함 (원가=null 표시)
+      accumulateGroup(byClient, rec.client || "(미지정)", revenue, null, n(rec.qty));
+      accumulateGroup(byItem, rec.itemName || rec.partNo || "(미지정)", revenue, null, n(rec.qty));
+      return;
+    }
+
+    const cost = unitCost * n(rec.qty);
+    const margin = revenue - cost;
+    totalCost += cost;
+    totalMargin += margin;
+    marginCount++;
+    marginRevenue += revenue;
+
+    accumulateGroup(byClient, rec.client || "(미지정)", revenue, cost, n(rec.qty));
+    accumulateGroup(byItem, rec.itemName || rec.partNo || "(미지정)", revenue, cost, n(rec.qty));
+  });
+
+  return {
+    totalRevenue, totalCost, totalMargin, marginRevenue,
+    revenueCount, marginCount,
+    noDateCount, noCostCount, noCostRevenue,
+    byClient, byItem
+  };
+}
+
+function accumulateGroup(map, key, revenue, cost, qty){
+  const prev = map.get(key) || {revenue:0, cost:0, qty:0, hasCost:false, count:0, noCostRevenue:0, noCostCount:0};
+  prev.revenue += revenue;
+  prev.qty += qty;
+  prev.count++;
+  if(cost !== null){
+    prev.cost += cost;
+    prev.hasCost = true;
+  } else {
+    prev.noCostRevenue += revenue;
+    prev.noCostCount++;
+  }
+  map.set(key, prev);
+}
+
+/* ══════════════════════════════════════════
+   렌더링
+   ══════════════════════════════════════════ */
+function render(){
+  const r = analyze();
+
+  // ── 경고 바 ──
+  let warns = "";
+  if(r.noDateCount > 0){
+    warns += `<div class="warn-card orange"><span class="wi">⚠️</span>날짜 미정 매출<span class="wv">${r.noDateCount}건</span> — 기간 필터 집계에서 제외됨</div>`;
+  }
+  if(r.noCostCount > 0){
+    warns += `<div class="warn-card red"><span class="wi">🔴</span>원가 미정 매출<span class="wv">${fmtW(r.noCostRevenue)} (${r.noCostCount}건)</span> — 마진 계산에서 제외됨</div>`;
+  }
+  $("warnBar").innerHTML = warns;
+
+  // ── KPI 카드 ──
+  $("kRevenue").textContent = fmtW(r.totalRevenue);
+  $("kRevenueSub").textContent = r.revenueCount + "건";
+
+  $("kCost").textContent = fmtW(r.totalCost);
+  $("kCostSub").textContent = r.marginCount + "건 (원가 확인)";
+
+  $("kMargin").textContent = fmtW(r.totalMargin);
+  $("kMargin").className = "value " + (r.totalMargin >= 0 ? "green" : "red");
+  $("kMarginSub").textContent = `원가 확인된 ${r.marginCount}건 기준`;
+
+  const rate = r.marginRevenue > 0 ? r.totalMargin / r.marginRevenue : 0;
+  $("kRate").textContent = fmtRate(rate);
+  $("kRate").className = "value " + (rate >= 0 ? "green" : "red");
+  $("kRateSub").textContent = `마진 ÷ 원가확인 매출`;
+
+  // ── 거래처별 테이블 ──
+  renderGroupTable(r.byClient, "clientTable", "clientEmpty", "clientBadge");
+
+  // ── 품목별 테이블 ──
+  renderGroupTable(r.byItem, "itemTable", "itemEmpty", "itemBadge");
+}
+
+function renderGroupTable(map, tbodyId, emptyId, badgeId){
+  // 마진 계산 가능한 항목만 정렬 (원가 있는 매출 - 원가)
+  const entries = [...map.entries()].map(([name, v]) => {
+    const marginableRevenue = v.revenue - v.noCostRevenue;
+    const margin = marginableRevenue - v.cost;
+    const marginRate = marginableRevenue > 0 ? margin / marginableRevenue : 0;
+    return { name, revenue: v.revenue, cost: v.cost, margin, marginRate, count: v.count, hasCost: v.hasCost, noCostCount: v.noCostCount };
+  });
+
+  // 마진 내림차순 정렬
+  entries.sort((a,b) => b.margin - a.margin);
+  const top20 = entries.slice(0, 20);
+
+  $(badgeId).textContent = entries.length;
+
+  if(!top20.length){
+    $(tbodyId).innerHTML = "";
+    $(emptyId).style.display = "block";
+    return;
+  }
+
+  $(emptyId).style.display = "none";
+  const maxMargin = Math.max(...top20.map(e => Math.abs(e.margin)), 1);
+
+  $(tbodyId).innerHTML = top20.map((e, i) => {
+    const barWidth = Math.max(2, Math.round(Math.abs(e.margin) / maxMargin * 60));
+    const barColor = e.margin >= 0 ? "var(--accent)" : "var(--warn)";
+    const marginClass = e.margin >= 0 ? "margin-positive" : "margin-negative";
+    const costDisplay = e.hasCost ? fmtW(e.cost) : '<span style="color:var(--muted)">미정</span>';
+    const marginDisplay = e.hasCost
+      ? `<span class="${marginClass}">${fmtW(e.margin)}</span>`
+      : '<span style="color:var(--muted)">—</span>';
+    const rateDisplay = e.hasCost
+      ? `<span class="${marginClass}">${fmtRate(e.marginRate)}</span>`
+      : '<span style="color:var(--muted)">—</span>';
+
+    return `<tr>
+      <td>${i+1}</td>
+      <td class="name" title="${esc(e.name)}">${esc(e.name)}${e.noCostCount ? ' <span style="color:var(--warn);font-size:9px">⚠'+e.noCostCount+'</span>' : ''}</td>
+      <td class="right">${fmtW(e.revenue)}</td>
+      <td class="right">${costDisplay}</td>
+      <td class="right"><span class="margin-bar" style="width:${barWidth}px;background:${barColor}"></span>${marginDisplay}</td>
+      <td class="right">${rateDisplay}</td>
+    </tr>`;
+  }).join("");
+}
+
+function esc(s){ return (s||"").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* ══════════════════════════════════════════
+   기간 필터 이벤트
+   ══════════════════════════════════════════ */
+document.querySelectorAll(".fbtn").forEach(btn => {
+  btn.addEventListener("click", () => {
+    document.querySelectorAll(".fbtn").forEach(b => b.classList.remove("active"));
+    btn.classList.add("active");
+    currentRange = btn.dataset.range;
+
+    const isCustom = currentRange === "custom";
+    $("dateFrom").style.display = isCustom ? "inline-block" : "none";
+    $("dateSep").style.display = isCustom ? "inline" : "none";
+    $("dateTo").style.display = isCustom ? "inline-block" : "none";
+
+    if(isCustom){
+      if(!$("dateFrom").value) $("dateFrom").value = monthStart();
+      if(!$("dateTo").value) $("dateTo").value = todayStr();
+      customFrom = $("dateFrom").value;
+      customTo = $("dateTo").value;
+    }
+
+    render();
+  });
+});
+
+$("dateFrom").addEventListener("change", e => { customFrom = e.target.value; render(); });
+$("dateTo").addEventListener("change", e => { customTo = e.target.value; render(); });
+
+/* ── 크로스탭 동기화 ── */
+window.addEventListener("storage", e => {
+  if(e.key && e.key.startsWith("golab_")) render();
+});
+
+/* ── Init ── */
+render();
+</script>
+</body>
+</html>
