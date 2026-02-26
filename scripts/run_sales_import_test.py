@@ -1,6 +1,6 @@
 """
-GoLab v1.6.1 — Vendor Drawer SSoT 9-Test (Playwright headless)
-test_vendor_drawer.html을 headless Chromium으로 실행하고 결과 캡처
+GoLab v1.6.1 — Sales Import 자동 테스트 (Playwright headless)
+test_sales_import.html 실행: DRY_RUN → COMMIT → Idempotency 검증
 """
 import sys
 import io
@@ -27,14 +27,14 @@ def check_server(url="http://localhost:8080", timeout=3):
 
 
 def main():
-    print("=== GoLab v1.6.1 Vendor Drawer SSoT 9-Test ===\n")
+    print("=== GoLab v1.6.1 Sales Import Auto Test ===\n")
 
-    # Step 0: WEB_DIR 존재 확인
+    # WEB_DIR 존재 확인
     if not os.path.isdir(WEB_DIR):
         print(f"[FATAL] web 디렉토리 없음: {WEB_DIR}")
         sys.exit(1)
 
-    # Step 0: 서버 200 OK 체크
+    # 서버 200 OK 체크
     print("[Pre-check] http://localhost:8080 서버 상태 확인...")
     if not check_server():
         print("[FAIL] 서버 미응답 — 테스트 중단")
@@ -46,20 +46,20 @@ def main():
         browser = p.chromium.launch(headless=True)
         page = browser.new_page()
 
-        print("Loading test_vendor_drawer.html...")
-        page.goto("http://localhost:8080/test_vendor_drawer.html")
+        print("Loading test_sales_import.html...")
+        page.goto("http://localhost:8080/test_sales_import.html")
         page.wait_for_selector("#log", timeout=10000)
 
-        # async 테스트(fetch) 완료 대기
-        time.sleep(3)
+        # async fetch 완료 대기
+        time.sleep(4)
 
         # 결과 텍스트 추출
         result = page.inner_text("#log")
         print(result)
 
         # 스크린샷
-        page.screenshot(path="test_vendor_result.png", full_page=True)
-        print("\n[Screenshot: test_vendor_result.png]")
+        page.screenshot(path="test_sales_import_result.png", full_page=True)
+        print("\n[Screenshot: test_sales_import_result.png]")
 
         # PASS/FAIL 판정
         if "[FAIL]" in result:
@@ -67,13 +67,13 @@ def main():
             browser.close()
             sys.exit(1)
 
-        if "ALL 9 TESTS PASSED" in result:
-            print("\n>>> 9개 전부 PASS — 완료 <<<")
+        if "ALL TESTS PASSED" in result:
+            print("\n>>> Sales Import 테스트 전부 PASS — 완료 <<<")
         else:
             print("\n[WARN] 결과 파싱 불확실 — 수동 확인 필요")
 
         browser.close()
-        print("\n=== Vendor Drawer SSoT 테스트 완료 ===")
+        print("\n=== Sales Import 테스트 완료 ===")
 
 
 if __name__ == "__main__":

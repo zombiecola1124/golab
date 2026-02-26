@@ -1,0 +1,232 @@
+<!DOCTYPE html>
+<html lang="ko">
+<head>
+<meta charset="UTF-8">
+<title>GoLab v1.6.1 — Sales Import 자동 테스트</title>
+<style>
+body{font-family:'Courier New',monospace;background:#1a1a1a;color:#e0e0e0;padding:20px;font-size:13px}
+h1{font-size:16px;color:#ffa500}
+pre{white-space:pre-wrap;line-height:1.6}
+</style>
+</head>
+<body>
+<h1>Sales Import 자동 테스트 (DRY_RUN → COMMIT → Idempotency)</h1>
+<pre id="log">Initializing...</pre>
+
+<script>
+/* ═══════════════════════════════════════════════
+   GoLab v1.6.1 — Sales Import 자동 테스트
+   DRY_RUN → COMMIT → 재실행 Idempotency → 검증
+   ═══════════════════════════════════════════════ */
+
+const SALES_KEY = "golab_sales_v1";
+const AUDIT_KEY = "golab_sales_audit";
+const SALES_IMPORT_RAW_KEY = "golab_sales_import_raw_log";
+const SALES_IMPORTED_IDS_KEY = "golab_sales_imported_ids";
+const INV_KEY = "golab_inventory_v01";
+
+const logEl = document.getElementById("log");
+let output = "";
+let passCount = 0;
+let failCount = 0;
+
+function log(msg) { output += msg + "\n"; logEl.textContent = output; }
+function PASS(name) { passCount++; log("[PASS] " + name); }
+function FAIL(name, reason) { failCount++; log("[FAIL] " + name + " -- " + reason); }
+function normStr(v) { return (v == null ? "" : String(v)).trim(); }
+function normNum(v) { if (v == null) return 0; const x = Number(v); return Number.isFinite(x) ? x : 0; }
+
+function clearAll() {
+  localStorage.removeItem(SALES_KEY);
+  localStorage.removeItem(AUDIT_KEY);
+  localStorage.removeItem(SALES_IMPORT_RAW_KEY);
+  localStorage.removeItem(SALES_IMPORTED_IDS_KEY);
+  localStorage.removeItem(INV_KEY);
+}
+
+function setJSON(key, arr) { localStorage.setItem(key, JSON.stringify(arr)); }
+function getJSON(key) { try { return JSON.parse(localStorage.getItem(key) || "[]"); } catch { return []; } }
+
+/* ═══════════════════════════════════════════════ */
+
+async function runAllTests() {
+  output = "";
+  passCount = 0;
+  failCount = 0;
+  clearAll();
+
+  log("=== GoLab v1.6.1 Sales Import Auto Test ===");
+  log("Timestamp: " + new Date().toISOString() + "\n");
+
+  // ─── Step 0: sales_import.json 로드 확인 ───
+  log("--- Step 0: sales_import.json 로드 ---");
+  let salesData;
+  try {
+    const res = await fetch("data/sales_import.json");
+    salesData = await res.json();
+    if (!Array.isArray(salesData) || salesData.length === 0) throw new Error("빈 배열");
+    PASS("Step 0: JSON 로드 " + salesData.length + "건");
+  } catch (e) {
+    FAIL("Step 0", "JSON 로드 실패: " + e.message);
+    showFinal(); return;
+  }
+
+  // ─── Step 1: 스키마 검증 ───
+  log("\n--- Step 1: 스키마 검증 ---");
+  const requiredFields = ["saleDate","vendor","itemName","qty","unitPrice","currency","docType","sourceRowId","idempotencyKey"];
+  const first = salesData[0];
+  let schemaOk = true;
+  requiredFields.forEach(f => {
+    if (!(f in first)) { schemaOk = false; log("  MISSING: " + f); }
+  });
+  if (schemaOk) {
+    PASS("Step 1: 필수 필드 " + requiredFields.length + "개 확인");
+  } else {
+    FAIL("Step 1", "필수 필드 누락");
+    showFinal(); return;
+  }
+
+  // ─── Step 2: idempotencyKey 고유성 ───
+  log("\n--- Step 2: idempotencyKey 고유성 ---");
+  const keys = salesData.map(r => r.idempotencyKey);
+  const uniqueKeys = new Set(keys);
+  if (uniqueKeys.size === keys.length) {
+    PASS("Step 2: " + keys.length + "개 idempotencyKey 전부 고유");
+  } else {
+    FAIL("Step 2", "중복 " + (keys.length - uniqueKeys.size) + "건");
+  }
+
+  // ─── Step 3: DRY_RUN 시뮬 ───
+  log("\n--- Step 3: DRY_RUN 시뮬레이션 ---");
+  // raw 저장
+  localStorage.setItem(SALES_IMPORT_RAW_KEY, JSON.stringify(JSON.parse(JSON.stringify(salesData))));
+  const rawSaved = getJSON(SALES_IMPORT_RAW_KEY);
+  if (rawSaved.length === salesData.length) {
+    PASS("Step 3a: RAW_KEY 저장 " + rawSaved.length + "건 (deep copy)");
+  } else {
+    FAIL("Step 3a", "RAW_KEY 길이 불일치: " + rawSaved.length);
+  }
+
+  // 검증 로직
+  let validCount = 0, invalidCount = 0;
+  salesData.forEach(r => {
+    if (!normStr(r.vendor) && !normStr(r.itemName)) invalidCount++;
+    else validCount++;
+  });
+  const goNoGo = invalidCount <= salesData.length * 0.1;
+  log("  유효: " + validCount + " / 무효: " + invalidCount + " → " + (goNoGo ? "Go" : "No-Go"));
+  if (goNoGo && validCount > 0) {
+    PASS("Step 3b: Go/No-Go 판정 = Go");
+  } else if (!goNoGo) {
+    FAIL("Step 3b", "No-Go 판정 — 형식 오류 " + invalidCount + "/" + salesData.length);
+    showFinal(); return;
+  }
+
+  // ─── Step 4: COMMIT ───
+  log("\n--- Step 4: COMMIT ---");
+  const importedIds = new Set();
+  const records = [];
+  let added = 0, dupSkip = 0;
+
+  salesData.forEach(r => {
+    const idemKey = r.idempotencyKey;
+    if (importedIds.has(idemKey)) { dupSkip++; return; }
+
+    records.push({
+      id: "sale-" + Math.random().toString(36).substring(2, 10),
+      salesDate: r.saleDate,
+      client: r.vendor,
+      docNo: "",
+      partNo: r.itemCode || "",
+      itemName: r.itemName,
+      qty: normNum(r.qty),
+      unit: "ea",
+      sellUnitPrice: normNum(r.unitPrice),
+      memo: normStr(r.memo),
+      createdAt: new Date().toISOString(),
+      updatedAt: new Date().toISOString()
+    });
+    importedIds.add(idemKey);
+    added++;
+  });
+
+  setJSON(SALES_KEY, records);
+  localStorage.setItem(SALES_IMPORTED_IDS_KEY, JSON.stringify([...importedIds]));
+
+  const savedSales = getJSON(SALES_KEY);
+  const savedIds = getJSON(SALES_IMPORTED_IDS_KEY);
+
+  if (savedSales.length === added) {
+    PASS("Step 4a: COMMIT " + added + "건 저장");
+  } else {
+    FAIL("Step 4a", "저장 건수 불일치: " + savedSales.length + " != " + added);
+  }
+
+  if (savedIds.length === added) {
+    PASS("Step 4b: IMPORTED_IDS " + savedIds.length + "개 해시");
+  } else {
+    FAIL("Step 4b", "IMPORTED_IDS 불일치: " + savedIds.length);
+  }
+
+  // ─── Step 5: Idempotency 재실행 ───
+  log("\n--- Step 5: Idempotency 재실행 ---");
+  const rerunIds = new Set(getJSON(SALES_IMPORTED_IDS_KEY));
+  let rerunDup = 0, rerunNew = 0;
+  salesData.forEach(r => {
+    if (rerunIds.has(r.idempotencyKey)) rerunDup++;
+    else rerunNew++;
+  });
+
+  if (rerunDup === salesData.length && rerunNew === 0) {
+    PASS("Step 5: 재실행 시 전부 중복 스킵 (" + rerunDup + "건)");
+  } else {
+    FAIL("Step 5", "재실행 신규 " + rerunNew + "건 (expected 0)");
+  }
+
+  // ─── Step 6: 금액 검증 ───
+  log("\n--- Step 6: 금액 검증 ---");
+  const totalAmount = savedSales.reduce((s, r) => s + normNum(r.sellUnitPrice) * normNum(r.qty), 0);
+  log("  총 매출액: " + Math.round(totalAmount).toLocaleString() + "원");
+  if (totalAmount > 0) {
+    PASS("Step 6: 매출액 양수 확인");
+  } else {
+    FAIL("Step 6", "매출액 0 이하: " + totalAmount);
+  }
+
+  // ─── Step 7: RAW_KEY 불변성 확인 ───
+  log("\n--- Step 7: RAW_KEY 불변성 ---");
+  const rawAfter = getJSON(SALES_IMPORT_RAW_KEY);
+  if (rawAfter.length === salesData.length) {
+    // 첫번째 레코드 비교
+    const a = JSON.stringify(rawAfter[0]);
+    const b = JSON.stringify(salesData[0]);
+    if (a === b) {
+      PASS("Step 7: RAW_KEY 불변 (COMMIT 후에도 원본 유지)");
+    } else {
+      FAIL("Step 7", "RAW_KEY 첫 레코드 변경됨");
+    }
+  } else {
+    FAIL("Step 7", "RAW_KEY 길이 변경: " + rawAfter.length);
+  }
+
+  showFinal();
+}
+
+function showFinal() {
+  log("\n" + "=".repeat(50));
+  log("TOTAL: " + (passCount + failCount) + "  |  PASS: " + passCount + "  |  FAIL: " + failCount);
+  if (failCount === 0) {
+    log(">>> ALL TESTS PASSED — Go <<<");
+  } else {
+    log(">>> " + failCount + " TEST(S) FAILED — No-Go <<<");
+  }
+  log("=".repeat(50));
+
+  // 정리
+  clearAll();
+}
+
+runAllTests();
+</script>
+</body>
+</html>

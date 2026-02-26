@@ -216,6 +216,15 @@
       <button id="btnImport" class="secondary">가져오기(JSON)</button>
       <input id="fileIn" type="file" accept="application/json" />
       <button id="btnReset" class="danger">전체 초기화</button>
+      <!-- 매출 Import 2-Phase 버튼 -->
+      <button id="btnSalesDry" class="secondary"
+        style="border-color:rgba(217,119,6,.4);color:#d97706;margin-left:16px">
+        🔍 매출 DRY_RUN
+      </button>
+      <button id="btnSalesCommit" class="secondary"
+        style="border-color:rgba(22,163,74,.4);color:#16a34a">
+        ✅ 매출 COMMIT
+      </button>
     </div>
     <div class="tableWrap">
       <table>
@@ -244,12 +253,24 @@
   <div class="note-box">
     💡 이 페이지는 <b>매출(판매) 관리</b> 전용입니다. 원가/마진 분석은 향후 수익 분석 모듈에서 별도 처리됩니다.
   </div>
+
+  <!-- 매출 Import 리포트 영역 -->
+  <div id="salesReport" class="card" style="display:none;font-family:monospace;white-space:pre-wrap;font-size:12px;line-height:1.6;max-height:500px;overflow:auto;margin-top:12px">
+    <div id="salesReportBody"></div>
+  </div>
 </div>
 
+<script src="js/costing.js"></script>
 <script>
 /* ── Constants ── */
 const SALES_KEY = "golab_sales_v1";
 const AUDIT_KEY = "golab_sales_audit";
+
+/* ── 매출 Import 전용 키 (데이터 저장 분리) ── */
+const SALES_IMPORT_RAW_KEY = "golab_sales_import_raw_log";
+const SALES_IMPORTED_IDS_KEY = "golab_sales_imported_ids";
+const INV_KEY = "golab_inventory_v01";
+const IS_DEV = new URLSearchParams(location.search).has("dev");
 const PAGE_SIZE = 50;
 const DEBOUNCE_MS = 300;
 const $ = id => document.getElementById(id);
@@ -651,6 +672,253 @@ function importJson(file){
   reader.readAsText(file);
 }
 
+/* ═══════════════════════════════════════════════
+   매출 Import 2-Phase (DRY_RUN / COMMIT)
+   ═══════════════════════════════════════════════ */
+
+/* ── 매출 Import Idempotency 해시 (8필드) ── */
+function salesDupKey(r) {
+  return [
+    normStr(r.vendor || r.client || ""),
+    normDate(r.saleDate || r.salesDate || ""),
+    normUpper(r.itemCode || r.partNo || ""),
+    String(normNum(r.qty)),
+    String(normNum(r.unitPrice || r.sellUnitPrice)),
+    normStr(r.currency || "KRW"),
+    normStr(r.docType || "SALE"),
+    String(r.sourceRowId || "")
+  ].join("|");
+}
+
+function loadSalesImportedIds() {
+  try { return new Set(JSON.parse(localStorage.getItem(SALES_IMPORTED_IDS_KEY) || "[]")); }
+  catch { return new Set(); }
+}
+function saveSalesImportedIds(setObj) {
+  localStorage.setItem(SALES_IMPORTED_IDS_KEY, JSON.stringify([...setObj]));
+}
+
+function showSalesReport(html) {
+  $("salesReport").style.display = "";
+  $("salesReportBody").innerHTML = html;
+  $("salesReport").scrollIntoView({ behavior: "smooth" });
+}
+
+/* ── DRY_RUN: 검증만, 데이터 변경 없음 ── */
+async function salesDryRun() {
+  let raw;
+  try {
+    const res = await fetch("data/sales_import.json");
+    raw = await res.json();
+  } catch (e) {
+    alert("매출 JSON 로드 실패: " + e.message);
+    return;
+  }
+  if (!Array.isArray(raw) || raw.length === 0) {
+    alert("매출 JSON이 비어있거나 배열이 아닙니다.");
+    return;
+  }
+
+  // 원본 불변 저장 (deep copy)
+  localStorage.setItem(SALES_IMPORT_RAW_KEY, JSON.stringify(JSON.parse(JSON.stringify(raw))));
+
+  const importedIds = loadSalesImportedIds();
+  const inv = JSON.parse(localStorage.getItem(INV_KEY) || "[]");
+
+  const result = {
+    total: raw.length,
+    valid: 0,
+    invalid: 0,
+    dupSkip: 0,
+    newCount: 0,
+    totalAmount: 0,
+    marginPreview: [],
+    missingInv: [],
+    goNoGo: true,
+    errors: []
+  };
+
+  raw.forEach((r, i) => {
+    const rowId = r.sourceRowId || (i + 1);
+
+    // 필수 필드 검증: vendor 또는 itemName 중 1개 이상
+    if (!normStr(r.vendor) && !normStr(r.itemName)) {
+      result.invalid++;
+      result.errors.push("행 " + rowId + ": vendor/itemName 모두 비어있음");
+      return;
+    }
+    result.valid++;
+
+    // idempotency 중복 체크
+    const idemKey = r.idempotencyKey || salesDupKey(r);
+    if (importedIds.has(idemKey)) {
+      result.dupSkip++;
+      return;
+    }
+    result.newCount++;
+
+    const qty = normNum(r.qty);
+    const unitPrice = normNum(r.unitPrice || r.sellUnitPrice);
+    result.totalAmount += unitPrice * qty;
+
+    // 마진 시뮬 (재고 avgPrice 조회)
+    const itemCode = normUpper(r.itemCode || r.partNo || "");
+    const itemName = normStr(r.itemName || "");
+    let invItem = null;
+    if (itemCode) invItem = inv.find(x => x.id === itemCode);
+    if (!invItem && itemName) invItem = inv.find(x => normStr(x.name || "").indexOf(itemName.slice(0, 10)) >= 0);
+
+    if (invItem) {
+      const avgPrice = n(invItem.buyPrice);
+      const margin = (unitPrice - avgPrice) * qty;
+      const rate = unitPrice > 0 ? ((unitPrice - avgPrice) / unitPrice * 100).toFixed(1) : "N/A";
+      result.marginPreview.push({ row: rowId, vendor: normStr(r.vendor), item: itemName.slice(0, 25), qty, unitPrice, avgPrice, margin, rate });
+    } else if (itemCode || itemName) {
+      result.missingInv.push({ row: rowId, code: itemCode, name: itemName.slice(0, 25) });
+    }
+  });
+
+  // Go/No-Go: 형식 오류 10% 초과 → No-Go
+  if (result.invalid > result.total * 0.1) result.goNoGo = false;
+
+  // audit 기록
+  emitAudit("SALES_IMPORT_DRY_RUN", {
+    total: result.total, valid: result.valid, invalid: result.invalid,
+    dupSkip: result.dupSkip, newCount: result.newCount,
+    marginPreviewCount: result.marginPreview.length,
+    missingInvCount: result.missingInv.length,
+    goNoGo: result.goNoGo
+  });
+
+  // 리포트 생성
+  let h = "";
+  h += "<b>매출 Import DRY_RUN 리포트</b>  (" + new Date().toLocaleString("ko-KR") + ")\n";
+  h += "────────────────────────────────────────────────────\n";
+  h += "원본: " + result.total + "건 → SALES_IMPORT_RAW_KEY 저장 완료\n";
+  h += "   유효: " + result.valid + "건 / 형식오류: " + result.invalid + "건\n";
+  h += "Idempotency: 신규 " + result.newCount + "건 / 중복 스킵 " + result.dupSkip + "건\n";
+  h += "신규 매출액 합계: " + Math.round(result.totalAmount).toLocaleString() + "원\n\n";
+
+  h += result.goNoGo
+    ? ">>> <b>Go</b> — COMMIT 가능 <<<\n\n"
+    : ">>> <b>No-Go</b> — 형식 오류 비율 초과 (" + result.invalid + "/" + result.total + ") <<<\n\n";
+
+  // 마진 미리보기 (상위 20건)
+  if (result.marginPreview.length > 0) {
+    h += "마진 미리보기 (재고 매칭 " + result.marginPreview.length + "건, display-only):\n";
+    h += "────────────────────────────────────────────────────\n";
+    result.marginPreview.slice(0, 20).forEach(m => {
+      h += "  [" + m.row + "] " + m.vendor + " " + m.item + "\n";
+      h += "    판매 " + m.unitPrice.toLocaleString() + " - 원가 " + m.avgPrice.toLocaleString();
+      h += " = 마진 " + Math.round(m.margin).toLocaleString() + " (" + m.rate + "%)\n";
+    });
+    if (result.marginPreview.length > 20) h += "  ... 외 " + (result.marginPreview.length - 20) + "건\n";
+    h += "\n";
+  }
+
+  // 재고 미매칭 경고
+  if (result.missingInv.length > 0) {
+    h += "재고 미매칭 (마진 계산 불가): " + result.missingInv.length + "건\n";
+    result.missingInv.slice(0, 15).forEach(m => {
+      h += "  [" + m.row + "] " + m.code + " " + m.name + "\n";
+    });
+    if (result.missingInv.length > 15) h += "  ... 외 " + (result.missingInv.length - 15) + "건\n";
+    h += "\n";
+  }
+
+  // 오류
+  if (result.errors.length > 0) {
+    h += "오류 상세:\n";
+    result.errors.slice(0, 10).forEach(e => { h += "  " + e + "\n"; });
+    if (result.errors.length > 10) h += "  ... 외 " + (result.errors.length - 10) + "건\n";
+  }
+
+  h += "────────────────────────────────────────────────────\n";
+  h += result.goNoGo ? ">>> [매출 COMMIT] 클릭하여 반영 <<<\n" : ">>> 형식 오류를 수정 후 재실행하세요 <<<\n";
+
+  showSalesReport(h);
+}
+
+/* ── COMMIT: DRY_RUN 후 실제 저장 ── */
+function salesCommit() {
+  const rawStr = localStorage.getItem(SALES_IMPORT_RAW_KEY);
+  if (!rawStr) {
+    alert("DRY_RUN을 먼저 실행해주세요.");
+    return;
+  }
+  const raw = JSON.parse(rawStr);
+  if (!confirm("DRY_RUN 결과를 확인했습니까?\n" + raw.length + "건을 매출 데이터에 반영합니다.")) return;
+
+  const importedIds = loadSalesImportedIds();
+  const existing = load();
+
+  const result = { added: 0, dupSkip: 0, failed: 0 };
+  const newRecords = [];
+
+  raw.forEach((r, i) => {
+    const idemKey = r.idempotencyKey || salesDupKey(r);
+
+    if (importedIds.has(idemKey)) {
+      result.dupSkip++;
+      return;
+    }
+
+    try {
+      // 기존 normalizeRecord 재사용
+      const memoParts = [normStr(r.memo)];
+      if (r.docType && r.docType !== "SALE") memoParts.push("유형:" + r.docType);
+      if (r.currency && r.currency !== "KRW") memoParts.push("통화:" + r.currency);
+      if (r.vatIncluded) memoParts.push("VAT포함");
+      if (r.priceBasis && r.priceBasis !== "SUPPLY") memoParts.push("기준:" + r.priceBasis);
+      if (r.customerType && r.customerType !== "B2B") memoParts.push("구분:" + r.customerType);
+
+      const rec = normalizeRecord({
+        salesDate: r.saleDate || r.salesDate,
+        client: r.vendor || r.client,
+        docNo: r.docNo || "",
+        partNo: r.itemCode || r.partNo || "",
+        itemName: r.itemName || "",
+        qty: r.qty,
+        unit: r.unit || "ea",
+        sellUnitPrice: r.unitPrice || r.sellUnitPrice,
+        memo: memoParts.filter(Boolean).join(" / ")
+      });
+
+      newRecords.push(rec);
+      importedIds.add(idemKey);
+      result.added++;
+    } catch (e) {
+      result.failed++;
+    }
+  });
+
+  // 저장
+  const merged = [...newRecords, ...existing];
+  save(merged);
+  saveSalesImportedIds(importedIds);
+  invalidateCache();
+  refreshAC();
+  refreshFilterSelects();
+  computeKPI();
+  render();
+
+  // audit 기록
+  emitAudit("SALES_IMPORT_COMMIT", {
+    added: result.added, dupSkip: result.dupSkip, failed: result.failed,
+    totalAfter: merged.length
+  });
+
+  // COMMIT 리포트
+  let h = "";
+  h += "<b>매출 COMMIT 결과</b>  (" + new Date().toLocaleString("ko-KR") + ")\n";
+  h += "────────────────────────────────────────────────────\n";
+  h += "매출 등록: +" + result.added + "건\n";
+  h += "중복 스킵: " + result.dupSkip + "건\n";
+  h += "실패: " + result.failed + "건\n";
+  h += "총 매출 건수: " + merged.length + "건\n";
+  showSalesReport(h);
+}
+
 /* ── Debounced filter ── */
 function debouncedRender(){
   clearTimeout(debounceTimer);
@@ -692,6 +960,10 @@ $("fTo").addEventListener("change",()=>{ currentPage=1; computeKPI(); render(); 
 // Form calc preview
 $("inQty").addEventListener("input",updateFormCalc);
 $("inPrice").addEventListener("input",updateFormCalc);
+
+// 매출 Import 이벤트 바인딩
+$("btnSalesDry").onclick = salesDryRun;
+$("btnSalesCommit").onclick = salesCommit;
 
 /* ── Init ── */
 refreshAC();
