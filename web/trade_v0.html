@@ -1,0 +1,554 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GoLab · 구매/납품 실적 (Trade History)</title>
+  <style>
+    :root{
+      --bg:#0b1220; --card:#101a2f; --muted:#8aa0c6; --text:#e7efff;
+      --line:#203255; --accent:#3ee087; --warn:#ffcc66; --bad:#ff6b6b; --point:#57a1ff;
+      --chip:#0c1530;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:#070b14;color:var(--text);
+      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", Arial;}
+    header{padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(7,11,20,.85);backdrop-filter:blur(8px);z-index:10}
+    header .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    header h1{margin:0;font-size:16px;letter-spacing:.2px;color:var(--point)}
+    .tabs{display:flex;gap:8px;align-items:center}
+    .tab{
+      display:inline-flex;align-items:center;gap:8px;
+      padding:8px 10px;border-radius:10px;border:1px solid var(--line);
+      color:var(--muted);text-decoration:none;background:rgba(12,21,48,.35);font-size:12px;
+    }
+    .tab.active{color:#fff;background:rgba(87,161,255,.18);border-color:rgba(87,161,255,.45)}
+    .wrap{max-width:1400px;margin:0 auto;padding:16px 16px 36px}
+    .card{background:rgba(16,26,47,.9);border:1px solid var(--line);border-radius:14px;padding:16px;margin-bottom:16px}
+    .card h2{margin:0 0 12px;font-size:13px;color:var(--point);display:flex;align-items:center;gap:8px}
+    .kpi-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:10px}
+    .kpi{padding:14px;border-radius:12px;border:1px solid var(--line);background:rgba(12,21,48,0.5)}
+    .kpi .t{font-size:11px;color:var(--muted)}
+    .kpi .v{margin-top:8px;font-size:18px;font-weight:900;color:var(--accent)}
+    .kpi .v.blue{color:var(--point)}
+    .row{display:grid;gap:10px;margin-bottom:10px}
+    .row2{grid-template-columns:1fr 1fr}
+    .row3{grid-template-columns:1fr 1fr 1fr}
+    .row4{grid-template-columns:1fr 1fr 1fr 1fr}
+    .row6{grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr}
+    label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:700}
+    input,select,textarea{
+      width:100%;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--text);
+      padding:9px 10px;font-size:12px;outline:none;transition:border 0.2s;
+    }
+    input:focus,select:focus{border-color:var(--point)}
+    .btns{display:flex;gap:8px;flex-wrap:wrap}
+    button{
+      border:1px solid var(--line);background:#1a2b4b;color:var(--text);
+      border-radius:10px;padding:10px 14px;font-size:12px;cursor:pointer;font-weight:700;
+    }
+    button.primary{background:var(--point);border:none;color:#fff}
+    button.save{background:var(--accent);border:none;color:#0b1220}
+    button.danger{color:var(--bad);background:none;border:1px solid rgba(255,107,107,.35)}
+    button.secondary{background:rgba(87,161,255,.10);border:1px solid rgba(87,161,255,.35)}
+    button:disabled{opacity:0.5;cursor:not-allowed}
+    .tableWrap{overflow:auto;border-radius:12px;border:1px solid var(--line)}
+    table{width:100%;border-collapse:collapse;min-width:1200px;font-size:12px}
+    th{background:#162440;color:var(--muted);text-align:left;padding:10px 12px;position:sticky;top:0;white-space:nowrap}
+    td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+    tr:hover{background:rgba(87,161,255,0.04)}
+    .highlight{color:var(--accent);font-weight:900}
+    .muted{color:var(--muted)}
+    .mini{font-size:11px;color:var(--muted);margin-top:6px;line-height:1.5}
+    .filter-bar{display:flex;gap:10px;align-items:flex-end;flex-wrap:wrap;margin-bottom:12px}
+    .filter-bar>div{flex:1;min-width:140px}
+    .filter-bar .search-box{flex:2;min-width:200px}
+    .badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;border:1px solid var(--line)}
+    .badge.sell{color:var(--accent);border-color:rgba(62,224,135,.3)}
+    .badge.buy{color:var(--point);border-color:rgba(87,161,255,.3)}
+    .pagination{display:flex;gap:6px;align-items:center;justify-content:center;margin-top:12px}
+    .pagination button{padding:6px 12px;font-size:11px}
+    .pagination .current{color:var(--accent);font-weight:900;font-size:12px}
+    input[type="file"]{display:none}
+    .note-box{padding:12px;background:rgba(87,161,255,0.06);border-left:3px solid var(--point);font-size:12px;color:var(--muted);line-height:1.6;border-radius:10px}
+    .tools-row{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .stat-inline{font-size:11px;color:var(--muted);margin-left:auto}
+    @media(max-width:900px){
+      .kpi-grid{grid-template-columns:1fr 1fr}
+      .row4,.row6{grid-template-columns:1fr 1fr}
+      .filter-bar{flex-direction:column}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>GoLab · 구매/납품 실적</h1>
+    <nav class="tabs">
+      <a class="tab" href="./purchases.html">📦 입고/원가</a>
+      <a class="tab" href="./index.html">📍 재고 현황</a>
+      <a class="tab active" href="./trade.html">📊 구매 실적</a>
+    </nav>
+  </div>
+</header>
+<div class="wrap">
+  <div class="card">
+    <h2>📊 구매 현황 요약</h2>
+    <div class="kpi-grid">
+      <div class="kpi">
+        <div class="t">총 거래 건수</div>
+        <div id="kCount" class="v">0 건</div>
+      </div>
+      <div class="kpi">
+        <div class="t">총 매입액</div>
+        <div id="kPurchase" class="v">₩ 0</div>
+      </div>
+      <div class="kpi">
+        <div class="t">총 판매액</div>
+        <div id="kSales" class="v blue">₩ 0</div>
+      </div>
+      <div class="kpi">
+        <div class="t">거래처 수</div>
+        <div id="kVendors" class="v">0</div>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>➕ 거래 등록</h2>
+    <div class="row row4">
+      <div>
+        <label>날짜</label>
+        <input id="inDate" type="date" />
+      </div>
+      <div>
+        <label>업체명</label>
+        <input id="inVendor" list="vendorList" placeholder="예: 대성금속" />
+        <datalist id="vendorList"></datalist>
+      </div>
+      <div>
+        <label>품번</label>
+        <input id="inPartNo" placeholder="예: AGC-123" />
+      </div>
+      <div>
+        <label>상품명</label>
+        <input id="inProduct" placeholder="예: Silver Powder 1kg" />
+      </div>
+    </div>
+    <div class="row row6">
+      <div>
+        <label>수량</label>
+        <input id="inQty" type="number" step="0.01" placeholder="0" />
+      </div>
+      <div>
+        <label>판매단가</label>
+        <input id="inSellPrice" type="number" step="1" placeholder="판매 UP" />
+      </div>
+      <div>
+        <label>소비자가</label>
+        <input id="inConsumer" type="number" step="1" placeholder="소비자가" />
+      </div>
+      <div>
+        <label>구매가(내 비용)</label>
+        <input id="inBuyPrice" type="number" step="1" placeholder="매입 단가" />
+      </div>
+      <div>
+        <label>판매처</label>
+        <input id="inSellCh" list="sellChList" placeholder="예: 네이버" />
+        <datalist id="sellChList"></datalist>
+      </div>
+      <div>
+        <label>구매처</label>
+        <input id="inBuyCh" list="buyChList" placeholder="예: 코아테크" />
+        <datalist id="buyChList"></datalist>
+      </div>
+    </div>
+    <div class="row row2">
+      <div>
+        <label>비고</label>
+        <input id="inNote" placeholder="특이사항" />
+      </div>
+      <div style="display:flex;align-items:flex-end;gap:8px">
+        <button id="btnAdd" class="save" style="flex:1">등록</button>
+        <button id="btnCancel" class="secondary" style="display:none">취소</button>
+      </div>
+    </div>
+  </div>
+
+  <div class="card">
+    <h2>
+      📋 거래 내역
+      <span id="filterCount" class="stat-inline"></span>
+    </h2>
+    <div class="filter-bar">
+      <div class="search-box">
+        <label>검색 (품명/품번/업체/비고)</label>
+        <input id="fSearch" placeholder="검색어 입력..." />
+      </div>
+      <div>
+        <label>업체 필터</label>
+        <select id="fVendor"><option value="">전체</option></select>
+      </div>
+      <div>
+        <label>판매처 필터</label>
+        <select id="fSellCh"><option value="">전체</option></select>
+      </div>
+      <div>
+        <label>기간 (시작)</label>
+        <input id="fDateFrom" type="date" />
+      </div>
+      <div>
+        <label>기간 (종료)</label>
+        <input id="fDateTo" type="date" />
+      </div>
+    </div>
+    <div class="tools-row" style="margin-bottom:10px">
+      <button id="btnExport" class="secondary">내보내기(JSON)</button>
+      <button id="btnImport" class="secondary">가져오기(JSON)</button>
+      <input id="fileIn" type="file" accept="application/json" />
+      <button id="btnReset" class="danger">전체 초기화</button>
+    </div>
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>날짜</th>
+            <th>업체명</th>
+            <th>품번</th>
+            <th>상품명</th>
+            <th>수량</th>
+            <th>판매단가</th>
+            <th>판매가</th>
+            <th>소비자가</th>
+            <th>구매가</th>
+            <th>총매입</th>
+            <th>판매처</th>
+            <th>구매처</th>
+            <th>비고</th>
+            <th style="text-align:right">관리</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div class="pagination" id="pagination"></div>
+    <div class="mini">※ 판매가 = 수량 × 판매단가 · 총매입 = 수량 × 구매가</div>
+  </div>
+
+  <div class="note-box">
+    💡 <b>엑셀 데이터 가져오기</b>: 기존 엑셀(고랩 납품실적.xlsx)의 구매 시트를 JSON으로 변환하여 "가져오기" 버튼으로 임포트할 수 있습니다.
+  </div>
+</div>
+<script>
+const TRADE_KEY = "golab_trade_v1";
+const PAGE_SIZE = 50;
+const $ = id => document.getElementById(id);
+let editingId = null;
+let currentPage = 1;
+
+$("inDate").value = new Date().toISOString().substring(0,10);
+
+function n(v, fb=0){ const x = Number(v); return Number.isFinite(x) ? x : fb; }
+function load(){ try { return JSON.parse(localStorage.getItem(TRADE_KEY)||"[]"); } catch{ return []; } }
+function save(data){ localStorage.setItem(TRADE_KEY, JSON.stringify(data)); }
+function esc(s){ return (s||"").replace(/</g,"&lt;"); }
+
+function uniqueVals(arr, key){
+  return [...new Set(arr.map(x=>(x[key]||"").trim()).filter(Boolean))].sort();
+}
+
+function refreshAutoComplete(){
+  const all = load();
+  const fill = (dlId, key) => {
+    const dl = $(dlId); dl.innerHTML = "";
+    uniqueVals(all, key).forEach(v => { const o = document.createElement("option"); o.value = v; dl.appendChild(o); });
+  };
+  fill("vendorList","vendor");
+  fill("sellChList","sellChannel");
+  fill("buyChList","buyChannel");
+}
+
+function refreshFilters(){
+  const all = load();
+  const fillSelect = (selId, key) => {
+    const sel = $(selId);
+    const current = sel.value;
+    const opts = uniqueVals(all, key);
+    sel.innerHTML = '<option value="">전체</option>';
+    opts.forEach(v => { const o = document.createElement("option"); o.value = v; o.textContent = v; sel.appendChild(o); });
+    sel.value = current;
+  };
+  fillSelect("fVendor","vendor");
+  fillSelect("fSellCh","sellChannel");
+}
+
+function getFiltered(){
+  let data = load();
+  const search = ($("fSearch").value||"").trim().toLowerCase();
+  const vendor = $("fVendor").value;
+  const sellCh = $("fSellCh").value;
+  const from = $("fDateFrom").value;
+  const to = $("fDateTo").value;
+  if(search){
+    data = data.filter(r =>
+      (r.product||"").toLowerCase().includes(search) ||
+      (r.partNo||"").toLowerCase().includes(search) ||
+      (r.vendor||"").toLowerCase().includes(search) ||
+      (r.note||"").toLowerCase().includes(search)
+    );
+  }
+  if(vendor) data = data.filter(r => r.vendor === vendor);
+  if(sellCh) data = data.filter(r => r.sellChannel === sellCh);
+  if(from) data = data.filter(r => (r.date||"") >= from);
+  if(to) data = data.filter(r => (r.date||"") <= to);
+  return data;
+}
+
+function computeKPI(){
+  const all = load();
+  let totalBuy = 0, totalSell = 0;
+  const vendors = new Set();
+  all.forEach(r => {
+    totalBuy += n(r.buyPrice) * n(r.qty);
+    totalSell += n(r.sellPrice) * n(r.qty);
+    if(r.vendor) vendors.add(r.vendor);
+  });
+  $("kCount").textContent = all.length.toLocaleString() + " 건";
+  $("kPurchase").textContent = "₩ " + Math.round(totalBuy).toLocaleString();
+  $("kSales").textContent = "₩ " + Math.round(totalSell).toLocaleString();
+  $("kVendors").textContent = vendors.size.toLocaleString();
+}
+
+function render(){
+  const filtered = getFiltered();
+  const totalPages = Math.max(1, Math.ceil(filtered.length / PAGE_SIZE));
+  if(currentPage > totalPages) currentPage = totalPages;
+  const start = (currentPage - 1) * PAGE_SIZE;
+  const page = filtered.slice(start, start + PAGE_SIZE);
+
+  $("filterCount").textContent = filtered.length === load().length
+    ? `${filtered.length}건`
+    : `${filtered.length} / ${load().length}건 (필터 적용 중)`;
+
+  const tb = $("tbody");
+  tb.innerHTML = "";
+  if(page.length === 0){
+    tb.innerHTML = `<tr><td colspan="14" class="muted" style="text-align:center;padding:24px">데이터가 없습니다.</td></tr>`;
+  }
+  page.forEach(r => {
+    const sellTotal = n(r.sellPrice) * n(r.qty);
+    const buyTotal = n(r.buyPrice) * n(r.qty);
+    const tr = document.createElement("tr");
+    tr.innerHTML = `
+      <td class="muted">${esc(r.date)}</td>
+      <td><b>${esc(r.vendor)}</b></td>
+      <td class="muted">${esc(r.partNo)}</td>
+      <td>${esc(r.product)}</td>
+      <td>${n(r.qty).toLocaleString()}</td>
+      <td>₩${n(r.sellPrice).toLocaleString()}</td>
+      <td class="highlight">₩${Math.round(sellTotal).toLocaleString()}</td>
+      <td class="muted">₩${n(r.consumerPrice).toLocaleString()}</td>
+      <td>₩${n(r.buyPrice).toLocaleString()}</td>
+      <td style="color:var(--point);font-weight:700">₩${Math.round(buyTotal).toLocaleString()}</td>
+      <td>${r.sellChannel ? `<span class="badge sell">${esc(r.sellChannel)}</span>` : ""}</td>
+      <td>${r.buyChannel ? `<span class="badge buy">${esc(r.buyChannel)}</span>` : ""}</td>
+      <td class="muted">${esc(r.note)}</td>
+      <td style="text-align:right;white-space:nowrap">
+        <button class="secondary" style="padding:5px 8px;font-size:11px" data-edit="${r.id}">수정</button>
+        <button class="danger" style="padding:5px 8px;font-size:11px" data-del="${r.id}">삭제</button>
+      </td>
+    `;
+    tb.appendChild(tr);
+  });
+  tb.querySelectorAll("button[data-del]").forEach(btn => {
+    btn.onclick = e => { e.stopPropagation(); deleteRecord(btn.dataset.del); };
+  });
+  tb.querySelectorAll("button[data-edit]").forEach(btn => {
+    btn.onclick = e => { e.stopPropagation(); startEdit(btn.dataset.edit); };
+  });
+
+  // Pagination
+  const pg = $("pagination");
+  pg.innerHTML = "";
+  if(totalPages > 1){
+    const mkBtn = (label, page, disabled) => {
+      const b = document.createElement("button");
+      b.textContent = label;
+      b.className = "secondary";
+      b.disabled = disabled;
+      b.onclick = () => { currentPage = page; render(); };
+      return b;
+    };
+    pg.appendChild(mkBtn("◀ 이전", currentPage-1, currentPage<=1));
+    const span = document.createElement("span");
+    span.className = "current";
+    span.textContent = `${currentPage} / ${totalPages}`;
+    pg.appendChild(span);
+    pg.appendChild(mkBtn("다음 ▶", currentPage+1, currentPage>=totalPages));
+  }
+}
+
+function clearForm(){
+  $("inDate").value = new Date().toISOString().substring(0,10);
+  $("inVendor").value = "";
+  $("inPartNo").value = "";
+  $("inProduct").value = "";
+  $("inQty").value = "";
+  $("inSellPrice").value = "";
+  $("inConsumer").value = "";
+  $("inBuyPrice").value = "";
+  $("inSellCh").value = "";
+  $("inBuyCh").value = "";
+  $("inNote").value = "";
+  editingId = null;
+  $("btnAdd").textContent = "등록";
+  $("btnCancel").style.display = "none";
+}
+
+function addOrUpdate(){
+  const vendor = $("inVendor").value.trim();
+  const product = $("inProduct").value.trim();
+  if(!vendor && !product){ alert("업체명 또는 상품명을 입력해주세요."); return; }
+
+  const record = {
+    id: editingId || crypto.randomUUID(),
+    date: $("inDate").value,
+    vendor,
+    partNo: $("inPartNo").value.trim(),
+    product,
+    qty: n($("inQty").value),
+    sellPrice: n($("inSellPrice").value),
+    consumerPrice: n($("inConsumer").value),
+    buyPrice: n($("inBuyPrice").value),
+    sellChannel: $("inSellCh").value.trim(),
+    buyChannel: $("inBuyCh").value.trim(),
+    note: $("inNote").value.trim(),
+    updatedAt: new Date().toISOString()
+  };
+
+  const all = load();
+  if(editingId){
+    const idx = all.findIndex(x => x.id === editingId);
+    if(idx >= 0) all[idx] = record;
+  } else {
+    all.unshift(record);
+  }
+  save(all);
+  clearForm();
+  refreshAutoComplete();
+  refreshFilters();
+  computeKPI();
+  render();
+}
+
+function startEdit(id){
+  const all = load();
+  const r = all.find(x => x.id === id);
+  if(!r) return;
+  editingId = r.id;
+  $("inDate").value = r.date || "";
+  $("inVendor").value = r.vendor || "";
+  $("inPartNo").value = r.partNo || "";
+  $("inProduct").value = r.product || "";
+  $("inQty").value = n(r.qty) || "";
+  $("inSellPrice").value = n(r.sellPrice) || "";
+  $("inConsumer").value = n(r.consumerPrice) || "";
+  $("inBuyPrice").value = n(r.buyPrice) || "";
+  $("inSellCh").value = r.sellChannel || "";
+  $("inBuyCh").value = r.buyChannel || "";
+  $("inNote").value = r.note || "";
+  $("btnAdd").textContent = "저장";
+  $("btnCancel").style.display = "block";
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function deleteRecord(id){
+  if(!confirm("이 거래 기록을 삭제하시겠습니까?")) return;
+  save(load().filter(x => x.id !== id));
+  refreshFilters();
+  computeKPI();
+  render();
+}
+
+function exportJson(){
+  const data = localStorage.getItem(TRADE_KEY) || "[]";
+  const blob = new Blob([data], {type:"application/json"});
+  const a = document.createElement("a");
+  a.href = URL.createObjectURL(blob);
+  a.download = `GoLab_Trade_${new Date().toISOString().slice(0,10)}.json`;
+  a.click();
+}
+
+function importJson(file){
+  const r = new FileReader();
+  r.onload = () => {
+    try {
+      const data = JSON.parse(r.result);
+      if(!Array.isArray(data)) throw new Error("not array");
+      // Validate and ensure IDs
+      const cleaned = data.map(rec => ({
+        id: rec.id || crypto.randomUUID(),
+        date: rec.date || "",
+        vendor: rec.vendor || "",
+        partNo: rec.partNo || "",
+        product: rec.product || "",
+        qty: n(rec.qty),
+        sellPrice: n(rec.sellPrice),
+        consumerPrice: n(rec.consumerPrice),
+        buyPrice: n(rec.buyPrice),
+        sellChannel: rec.sellChannel || "",
+        buyChannel: rec.buyChannel || "",
+        note: rec.note || "",
+        updatedAt: rec.updatedAt || new Date().toISOString()
+      }));
+      const existing = load();
+      const merged = [...cleaned, ...existing];
+      save(merged);
+      refreshAutoComplete();
+      refreshFilters();
+      computeKPI();
+      render();
+      alert(`${cleaned.length}건 가져오기 완료 (기존 ${existing.length}건 + 신규 ${cleaned.length}건 = 총 ${merged.length}건)`);
+    } catch(e) {
+      alert("JSON 형식이 올바르지 않습니다.\n" + e.message);
+    }
+  };
+  r.readAsText(file);
+}
+
+// Bind events
+$("btnAdd").onclick = addOrUpdate;
+$("btnCancel").onclick = clearForm;
+$("btnExport").onclick = exportJson;
+$("btnImport").onclick = () => $("fileIn").click();
+$("fileIn").addEventListener("change", e => {
+  const f = e.target.files?.[0];
+  if(f) importJson(f);
+  e.target.value = "";
+});
+$("btnReset").onclick = () => {
+  if(!confirm("구매/납품 실적 데이터를 전체 초기화할까요? (되돌릴 수 없음)")) return;
+  localStorage.removeItem(TRADE_KEY);
+  currentPage = 1;
+  refreshAutoComplete();
+  refreshFilters();
+  computeKPI();
+  render();
+  alert("초기화 완료");
+};
+
+// Filter events
+$("fSearch").addEventListener("input", () => { currentPage=1; render(); });
+$("fVendor").addEventListener("change", () => { currentPage=1; render(); });
+$("fSellCh").addEventListener("change", () => { currentPage=1; render(); });
+$("fDateFrom").addEventListener("change", () => { currentPage=1; render(); });
+$("fDateTo").addEventListener("change", () => { currentPage=1; render(); });
+
+// Init
+refreshAutoComplete();
+refreshFilters();
+computeKPI();
+render();
+</script>
+</body>
+</html>
