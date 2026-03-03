@@ -23,7 +23,10 @@ window.GoLabOpportunity = (function () {
     SALES_SURGE: 1.3,        // 최근/평균 130% → 2점 (판매증가)
     SALES_UP: 1.1,           // 최근/평균 110% → 1점 (판매증가)
     LOOKBACK_DAYS: 90,       // 가격 비교 기간
-    RECENT_DAYS: 30          // 최근 판매 기간
+    RECENT_DAYS: 30,         // 최근 판매 기간
+    PRICE_GUARDRAIL: -3,     // 가드레일: 이 이하 하락 아니면 6점 cap
+    GUARDRAIL_CAP: 5,        // 가격 메리트 없을 때 최대 점수
+    RECOMMEND_MONTHS: 3      // 권장재고 기준 개월수
   };
 
   /* ── 유틸 ── */
@@ -341,6 +344,14 @@ window.GoLabOpportunity = (function () {
               score += 1;
               reasons.push("판매증가");
             }
+          }
+        }
+
+        // ── 가드레일: 가격 메리트 없으면 6점 Cap ──
+        // deltaPct > PRICE_GUARDRAIL(-3%) → '꿀딜'이 아님 → 최대 GUARDRAIL_CAP(5)점
+        if (deltaPct === null || deltaPct > CONFIG.PRICE_GUARDRAIL) {
+          if (score > CONFIG.GUARDRAIL_CAP) {
+            score = CONFIG.GUARDRAIL_CAP;
           }
         }
 
