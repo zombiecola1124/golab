@@ -1,0 +1,328 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GoLab · 매입 기회</title>
+  <style>
+    :root{
+      --bg:#f5f7fa;--card:#ffffff;--border:#e5e7eb;
+      --text:#0f172a;--muted:#64748b;
+      --primary:#2563eb;--warn:#dc2626;--accent:#16a34a;--orange:#d97706;
+      --purple:#7c3aed;--chip:#f8fafc;
+    }
+    *{box-sizing:border-box;margin:0;padding:0}
+    body{background:var(--bg);color:var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+      font-size:13px;line-height:1.5}
+
+    /* ─ Header ─ */
+    header{padding:12px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);z-index:20;display:flex;align-items:center;justify-content:space-between}
+    header h1{font-size:15px;font-weight:800;color:var(--primary);letter-spacing:-.2px}
+    .tabs{display:flex;gap:6px;flex-wrap:wrap}
+    .tab{padding:6px 10px;border-radius:8px;border:1px solid var(--border);color:var(--muted);text-decoration:none;font-size:11px;font-weight:600;background:transparent;transition:all .15s}
+    .tab:hover{color:var(--text);border-color:#cbd5e1}
+    .tab.active{color:var(--primary);background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3)}
+
+    /* ─ Container ─ */
+    .container{max-width:1200px;margin:0 auto;padding:20px}
+
+    /* ─ 매입 기회 섹션 ─ */
+    .opp-section{margin-bottom:20px}
+    .opp-header{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .opp-header h2{font-size:15px;font-weight:800;color:var(--text);margin:0}
+    .opp-header .opp-count{font-size:11px;padding:2px 10px;border-radius:12px;font-weight:800;background:var(--warn);color:#fff}
+
+    .opp-body{display:flex;flex-direction:column;gap:10px}
+
+    .opp-card{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:border-color .15s}
+    .opp-card:hover{border-color:rgba(37,99,235,.3)}
+    .opp-score{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#fff;flex-shrink:0}
+    .opp-score.high{background:var(--warn)}
+    .opp-score.mid{background:var(--orange)}
+    .opp-info{flex:1;min-width:0}
+    .opp-name{font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .opp-badges{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
+    .opp-tag{font-size:9px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap}
+    .opp-tag.low-price{background:#dcfce7;color:#166534}
+    .opp-tag.low-stock{background:#fef2f2;color:#991b1b}
+    .opp-tag.high-margin{background:#dbeafe;color:#1e40af}
+    .opp-tag.sales-up{background:#fff7ed;color:#9a3412}
+    .opp-tag.needs-data{background:#f1f5f9;color:#475569}
+    .opp-metrics{display:grid;grid-template-columns:repeat(3,minmax(70px,1fr));gap:8px;flex-shrink:0;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
+    .opp-metrics .om{display:flex;flex-direction:column;align-items:flex-end}
+    .opp-metrics .om-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+    .opp-metrics .om-value{font-size:13px;font-weight:800;color:var(--text);white-space:nowrap}
+    .opp-metrics .om-value.red{color:var(--warn)}
+    .opp-metrics .om-value.green{color:var(--accent)}
+    .opp-metrics .om-value.orange{color:var(--orange)}
+
+    .opp-action{flex-shrink:0;margin-left:6px}
+    .opp-btn{padding:6px 12px;border-radius:8px;border:1px solid var(--primary);background:rgba(37,99,235,.06);color:var(--primary);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s}
+    .opp-btn:hover{background:rgba(37,99,235,.14)}
+
+    .opp-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px 28px;box-shadow:0 8px 30px rgba(0,0,0,.12);z-index:100;min-width:280px;max-width:360px;text-align:center}
+    .opp-popup h3{font-size:14px;font-weight:800;margin-bottom:12px;color:var(--text)}
+    .opp-popup .opp-popup-body{font-size:13px;line-height:1.7;color:var(--text);margin-bottom:16px}
+    .opp-popup .opp-popup-body strong{color:var(--primary);font-size:18px}
+    .opp-popup .opp-popup-close{padding:8px 24px;border-radius:8px;border:none;background:var(--primary);color:#fff;font-size:12px;font-weight:700;cursor:pointer}
+    .opp-popup .opp-popup-close:hover{background:#1d4ed8}
+    .opp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99}
+
+    .opp-empty{text-align:center;padding:20px;color:var(--muted);font-size:12px;background:var(--card);border:1px dashed var(--border);border-radius:10px}
+
+    .opp-needs-wrap{margin-top:16px}
+    .opp-needs-header{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+    .opp-needs-header .badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700;background:#f1f5f9;color:#475569}
+    .opp-needs-list{display:flex;flex-wrap:wrap;gap:8px}
+    .opp-needs-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--chip);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--text)}
+    .opp-needs-chip .opp-tag{margin:0}
+
+    /* ─ 기준 점수 이하 품목 ─ */
+    .below-section{margin-top:24px}
+    .below-header{font-size:13px;font-weight:700;color:var(--muted);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+    .below-header .badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700;background:#e0e7ff;color:var(--primary)}
+
+    .no-data{text-align:center;padding:40px 20px;color:var(--muted);font-size:13px}
+
+    /* ─ Responsive ─ */
+    @media(max-width:900px){
+      .opp-card{flex-wrap:wrap}
+      .opp-metrics{width:100%;margin-top:6px}
+    }
+    @media(max-width:600px){
+      .container{padding:12px}
+      .opp-metrics{grid-template-columns:repeat(3,1fr);gap:6px}
+      .opp-metrics .om{align-items:flex-start}
+      .opp-action{width:100%;margin-left:0;margin-top:6px}
+      .opp-btn{width:100%;text-align:center}
+      .opp-popup{min-width:auto;width:90%;max-width:320px}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <h1>GoLab</h1>
+  <nav class="tabs">
+    <a class="tab" href="./console.html">🏠 업무</a>
+    <a class="tab" href="./calendar.html">📅 캘린더</a>
+    <a class="tab" href="./profit.html">📊 수익</a>
+    <a class="tab" href="./sales.html">💰 매출</a>
+    <a class="tab" href="./index.html">📦 재고</a>
+    <a class="tab" href="./purchases.html">📥 입고</a>
+    <a class="tab active" href="./deal.html">🔥 기회</a>
+  </nav>
+</header>
+
+<div class="container">
+
+  <!-- ═══ 🔥 오늘의 매입 기회 ═══ -->
+  <div class="opp-section" id="oppSection">
+    <div class="opp-header">
+      <h2>🔥 오늘의 매입 기회</h2>
+      <span class="opp-count" id="oppCount">0</span>
+    </div>
+    <div class="opp-body" id="oppBody">
+      <div id="oppList"></div>
+    </div>
+  </div>
+
+  <!-- ═══ 기준 점수 이하 (참고용) ═══ -->
+  <div class="below-section" id="belowSection" style="display:none">
+    <div class="below-header">📋 기준 미달 품목 (참고) <span class="badge" id="belowCount">0</span></div>
+    <div class="opp-body" id="belowList"></div>
+  </div>
+
+  <!-- ═══ 판매 데이터 필요 ═══ -->
+  <div id="oppNeedsWrap" class="opp-needs-wrap" style="display:none">
+    <div class="opp-needs-header">📋 판매 데이터 필요 <span class="badge" id="needsDataCount">0</span></div>
+    <div class="opp-needs-list" id="needsDataList"></div>
+  </div>
+
+</div>
+
+<script src="js/opportunity_logic.js"></script>
+<script>
+/* ══════════════════════════════════════════
+   GoLab Deal Page v1.0
+   매입 기회 전용 — opportunity_logic.js 재사용
+   SSoT 키 읽기 전용 / 보조 → golab_items_meta_v1
+   ══════════════════════════════════════════ */
+
+var $ = function(id){ return document.getElementById(id); };
+
+/* ── 유틸 ── */
+function fmtW(v){ return "\u20a9"+Math.round(v).toLocaleString(); }
+function esc(s){ return (s||"").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* ── 팝업 ── */
+function closeOppPopup(){
+  var overlay = document.querySelector(".opp-overlay");
+  var popup = document.querySelector(".opp-popup");
+  if(overlay) overlay.remove();
+  if(popup) popup.remove();
+}
+
+function showRecommendPopup(name, avgMonthlySales, currentQty){
+  closeOppPopup();
+  var CONFIG = GoLabOpportunity.CONFIG;
+  var body;
+
+  if(!avgMonthlySales || avgMonthlySales <= 0){
+    body = '<div class="opp-popup-body">' +
+      '<strong>판매 데이터 필요</strong><br>' +
+      '월평균 판매량 입력 후 사용 가능합니다.' +
+      '</div>';
+  } else {
+    var recommended = Math.ceil(avgMonthlySales * CONFIG.RECOMMEND_MONTHS);
+    var toBuy = Math.max(0, recommended - currentQty);
+    body = '<div class="opp-popup-body">' +
+      '월평균 판매: <strong>' + avgMonthlySales.toFixed(1) + '</strong>개<br>' +
+      '권장재고(' + CONFIG.RECOMMEND_MONTHS + '개월): <strong>' + recommended + '</strong>개<br>' +
+      '현재 재고: ' + currentQty + '개<br><br>' +
+      (toBuy > 0
+        ? '사장님, <strong>' + toBuy + '개</strong>를 매입하는 것을 추천합니다.'
+        : '현재 재고가 권장 수준 이상입니다. \u2705') +
+      '</div>';
+  }
+
+  var overlay = document.createElement("div");
+  overlay.className = "opp-overlay";
+  overlay.onclick = closeOppPopup;
+  document.body.appendChild(overlay);
+
+  var popup = document.createElement("div");
+  popup.className = "opp-popup";
+  popup.innerHTML = '<h3>\ud83d\udce6 ' + esc(name) + '</h3>' + body +
+    '<button class="opp-popup-close" onclick="closeOppPopup()">\ud655\uc778</button>';
+  document.body.appendChild(popup);
+}
+
+/* ══════════════════════════════════════════
+   카드 렌더링 헬퍼
+   ══════════════════════════════════════════ */
+function renderOppCard(item){
+  var scoreClass = item.score >= 8 ? "high" : "mid";
+
+  // 사유 배지
+  var badges = item.reasons.map(function(r){
+    var cls = "needs-data";
+    if(r === "\uc800\uc810") cls = "low-price";
+    else if(r === "\uc7ac\uace0\ubd80\uc871") cls = "low-stock";
+    else if(r === "\uace0\ub9c8\uc9c4") cls = "high-margin";
+    else if(r === "\ud310\ub9e4\uc99d\uac00") cls = "sales-up";
+    return '<span class="opp-tag ' + cls + '">' + esc(r) + '</span>';
+  }).join("");
+
+  // 매입가
+  var deltaStr = "";
+  if(item.deltaPct !== null){
+    var dColor = item.deltaPct <= -5 ? "var(--accent)" : item.deltaPct > 0 ? "var(--warn)" : "var(--muted)";
+    deltaStr = '<br><span style="font-size:10px;font-weight:600;color:' + dColor + '">' +
+      (item.deltaPct > 0 ? "+" : "") + item.deltaPct + '%</span>';
+  }
+  var priceVal = item.buyPrice > 0 ? fmtW(item.buyPrice) + deltaStr : "\u2014";
+
+  // 재고
+  var qtyColor = "";
+  var depleteStr = "";
+  if(item.monthsToDeplete !== null){
+    qtyColor = item.monthsToDeplete <= 2 ? " red" : item.monthsToDeplete <= 3 ? " orange" : "";
+    depleteStr = '<br><span style="font-size:10px;color:var(--muted)">' + item.monthsToDeplete + '\uac1c\uc6d4</span>';
+  }
+
+  // 마진
+  var mColor = "";
+  var mVal = "\u2014";
+  if(item.marginRate !== null){
+    mColor = item.marginRate >= 30 ? " green" : item.marginRate >= 20 ? " orange" : "";
+    mVal = item.marginRate + '%';
+  }
+
+  var metrics =
+    '<div class="om"><span class="om-label">\ub9e4\uc785\uac00</span><span class="om-value">' + priceVal + '</span></div>' +
+    '<div class="om"><span class="om-label">\uc7ac\uace0</span><span class="om-value' + qtyColor + '">' + item.currentQty + depleteStr + '</span></div>' +
+    '<div class="om"><span class="om-label">\ub9c8\uc9c4</span><span class="om-value' + mColor + '">' + mVal + '</span></div>';
+
+  var btnHtml = '<div class="opp-action"><button class="opp-btn" onclick="showRecommendPopup(\'' +
+    esc(item.name).replace(/'/g, "\\'") + '\', ' +
+    (item.avgMonthlySales || 0) + ', ' +
+    item.currentQty + ')">\ud83d\udccb \uc218\ub7c9 \uacc4\uc0b0</button></div>';
+
+  return '<div class="opp-card">' +
+    '<div class="opp-score ' + scoreClass + '">' + item.score + '</div>' +
+    '<div class="opp-info"><div class="opp-name" title="' + esc(item.name) + '">' + esc(item.name) + '</div>' +
+    '<div class="opp-badges">' + badges + '</div></div>' +
+    '<div class="opp-metrics">' + metrics + '</div>' +
+    btnHtml +
+    '</div>';
+}
+
+/* ══════════════════════════════════════════
+   메인 렌더
+   ══════════════════════════════════════════ */
+function render(){
+  try {
+    if(typeof GoLabOpportunity === "undefined"){
+      $("oppList").innerHTML = '<div class="no-data">opportunity_logic.js \ub85c\ub4dc \uc2e4\ud328</div>';
+      return;
+    }
+
+    var result = GoLabOpportunity.scoreItems();
+    var opps = result.opportunities;
+    var below = result.belowThreshold;
+    var needs = result.needsData;
+
+    // ── 기회 카운트 ──
+    $("oppCount").textContent = opps.length;
+
+    // ── 기회 리스트 ──
+    if(opps.length === 0){
+      $("oppList").innerHTML = '<div class="opp-empty">\ud604\uc7ac \uae30\uc900\uc810(Score ' + result.CONFIG.OPPORTUNITY_SCORE + ') \uc774\uc0c1\uc778 \ub9e4\uc785 \uae30\ud68c\uac00 \uc5c6\uc2b5\ub2c8\ub2e4</div>';
+    } else {
+      $("oppList").innerHTML = opps.slice(0, 20).map(renderOppCard).join("");
+    }
+
+    // ── 기준 미달 (참고) ──
+    if(below.length > 0){
+      $("belowSection").style.display = "block";
+      $("belowCount").textContent = below.length;
+      $("belowList").innerHTML = below.slice(0, 10).map(renderOppCard).join("");
+    } else {
+      $("belowSection").style.display = "none";
+    }
+
+    // ── 데이터 필요 ──
+    if(needs.length > 0){
+      $("oppNeedsWrap").style.display = "block";
+      $("needsDataCount").textContent = needs.length;
+      $("needsDataList").innerHTML = needs.slice(0, 20).map(function(item){
+        var priceStr = item.buyPrice > 0 ? fmtW(item.buyPrice) : "\u2014";
+        return '<div class="opp-needs-chip">' +
+          '<span class="opp-tag needs-data">\ub370\uc774\ud130 \ud544\uc694</span>' +
+          '<strong>' + esc(item.name) + '</strong>' +
+          '<span style="color:var(--muted)">' + item.currentQty + ' | ' + priceStr + '</span>' +
+          '<button class="opp-btn" style="margin-left:6px" onclick="showRecommendPopup(\'' +
+            esc(item.name).replace(/'/g, "\\'") + '\', 0, ' + item.currentQty + ')">\ud83d\udccb</button>' +
+          '</div>';
+      }).join("");
+    } else {
+      $("oppNeedsWrap").style.display = "none";
+    }
+
+  } catch(e) {
+    console.error("[Deal] \ub80c\ub354 \uc2e4\ud328:", e);
+    $("oppList").innerHTML = '<div class="no-data">\ub370\uc774\ud130 \ub85c\ub4dc \uc911 \uc624\ub958 \ubc1c\uc0dd</div>';
+  }
+}
+
+/* ── \ud06c\ub85c\uc2a4\ud0ed \ub3d9\uae30\ud654 ── */
+window.addEventListener("storage", function(e){
+  if(e.key && e.key.startsWith("golab_")) render();
+});
+
+/* ── Init ── */
+render();
+</script>
+</body>
+</html>

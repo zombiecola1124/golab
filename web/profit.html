@@ -103,65 +103,11 @@
     .reverse-card .rv{font-weight:800;margin-left:4px}
     .reverse-card .rdetail{margin-left:auto;font-size:11px;font-weight:700}
 
-    /* ─ 매입 기회 섹션 ─ */
-    .opp-section{margin-bottom:20px}
-    .opp-header{display:flex;align-items:center;gap:10px;margin-bottom:12px;cursor:pointer;user-select:none}
-    .opp-header h2{font-size:15px;font-weight:800;color:var(--text);margin:0}
-    .opp-header .opp-count{font-size:11px;padding:2px 10px;border-radius:12px;font-weight:800;background:var(--warn);color:#fff}
-    .opp-header .opp-toggle{font-size:10px;color:var(--muted);font-weight:600;margin-left:auto}
-    .opp-body{display:flex;flex-direction:column;gap:10px}
-    .opp-body.hidden{display:none}
-
-    .opp-card{display:flex;align-items:center;gap:12px;padding:14px 18px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.04);transition:border-color .15s}
-    .opp-card:hover{border-color:rgba(37,99,235,.3)}
-    .opp-score{width:36px;height:36px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:14px;font-weight:900;color:#fff;flex-shrink:0}
-    .opp-score.high{background:var(--warn)}
-    .opp-score.mid{background:var(--orange)}
-    .opp-info{flex:1;min-width:0}
-    .opp-name{font-size:13px;font-weight:700;color:var(--text);overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
-    .opp-badges{display:flex;gap:4px;margin-top:4px;flex-wrap:wrap}
-    .opp-tag{font-size:9px;font-weight:700;padding:2px 7px;border-radius:6px;white-space:nowrap}
-    .opp-tag.low-price{background:#dcfce7;color:#166534}
-    .opp-tag.low-stock{background:#fef2f2;color:#991b1b}
-    .opp-tag.high-margin{background:#dbeafe;color:#1e40af}
-    .opp-tag.sales-up{background:#fff7ed;color:#9a3412}
-    .opp-tag.needs-data{background:#f1f5f9;color:#475569}
-    .opp-metrics{display:grid;grid-template-columns:repeat(3,minmax(70px,1fr));gap:8px;flex-shrink:0;font-size:11px;color:var(--muted);font-variant-numeric:tabular-nums;text-align:right}
-    .opp-metrics .om{display:flex;flex-direction:column;align-items:flex-end}
-    .opp-metrics .om-label{font-size:9px;font-weight:600;text-transform:uppercase;letter-spacing:.3px}
-    .opp-metrics .om-value{font-size:13px;font-weight:800;color:var(--text);white-space:nowrap}
-    .opp-metrics .om-value.red{color:var(--warn)}
-    .opp-metrics .om-value.green{color:var(--accent)}
-    .opp-metrics .om-value.orange{color:var(--orange)}
-
-    .opp-action{flex-shrink:0;margin-left:6px}
-    .opp-btn{padding:6px 12px;border-radius:8px;border:1px solid var(--primary);background:rgba(37,99,235,.06);color:var(--primary);font-size:10px;font-weight:700;cursor:pointer;white-space:nowrap;transition:all .15s}
-    .opp-btn:hover{background:rgba(37,99,235,.14)}
-
-    .opp-popup{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%);background:var(--card);border:1px solid var(--border);border-radius:12px;padding:24px 28px;box-shadow:0 8px 30px rgba(0,0,0,.12);z-index:100;min-width:280px;max-width:360px;text-align:center}
-    .opp-popup h3{font-size:14px;font-weight:800;margin-bottom:12px;color:var(--text)}
-    .opp-popup .opp-popup-body{font-size:13px;line-height:1.7;color:var(--text);margin-bottom:16px}
-    .opp-popup .opp-popup-body strong{color:var(--primary);font-size:18px}
-    .opp-popup .opp-popup-close{padding:8px 24px;border-radius:8px;border:none;background:var(--primary);color:#fff;font-size:12px;font-weight:700;cursor:pointer}
-    .opp-popup .opp-popup-close:hover{background:#1d4ed8}
-    .opp-overlay{position:fixed;inset:0;background:rgba(0,0,0,.3);z-index:99}
-
-    .opp-empty{text-align:center;padding:20px;color:var(--muted);font-size:12px;background:var(--card);border:1px dashed var(--border);border-radius:10px}
-
-    .opp-needs-wrap{margin-top:10px}
-    .opp-needs-header{font-size:12px;font-weight:700;color:var(--muted);margin-bottom:8px;display:flex;align-items:center;gap:6px}
-    .opp-needs-header .badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700;background:#f1f5f9;color:#475569}
-    .opp-needs-list{display:flex;flex-wrap:wrap;gap:8px}
-    .opp-needs-chip{display:inline-flex;align-items:center;gap:6px;padding:6px 12px;background:var(--chip);border:1px solid var(--border);border-radius:8px;font-size:11px;color:var(--text)}
-    .opp-needs-chip .opp-tag{margin:0}
-
     /* ─ Responsive ─ */
     @media(max-width:900px){
       .kpi-row{grid-template-columns:repeat(2,1fr)}
       .fx-kpi-row{grid-template-columns:1fr 1fr}
       .table-row{grid-template-columns:1fr}
-      .opp-card{flex-wrap:wrap}
-      .opp-metrics{width:100%;margin-top:6px}
     }
     @media(max-width:600px){
       .kpi-row{grid-template-columns:1fr}
@@ -169,11 +115,6 @@
       .container{padding:12px}
       .fx-body{flex-direction:column;align-items:stretch}
       .fx-field input{width:100%}
-      .opp-metrics{grid-template-columns:repeat(3,1fr);gap:6px}
-      .opp-metrics .om{align-items:flex-start}
-      .opp-action{width:100%;margin-left:0;margin-top:6px}
-      .opp-btn{width:100%;text-align:center}
-      .opp-popup{min-width:auto;width:90%;max-width:320px}
     }
   </style>
 </head>
@@ -181,12 +122,13 @@
 <header>
   <h1>GoLab</h1>
   <nav class="tabs">
-    <a class="tab" href="./console.html">🏠 콘솔</a>
-    <a class="tab" href="./index.html">📦 재고</a>
-    <a class="tab" href="./purchases.html">📥 입고</a>
-    <a class="tab" href="./sales.html">💰 매출</a>
+    <a class="tab" href="./console.html">🏠 업무</a>
     <a class="tab" href="./calendar.html">📅 캘린더</a>
     <a class="tab active" href="./profit.html">📊 수익</a>
+    <a class="tab" href="./sales.html">💰 매출</a>
+    <a class="tab" href="./index.html">📦 재고</a>
+    <a class="tab" href="./purchases.html">📥 입고</a>
+    <a class="tab" href="./deal.html">🔥 기회</a>
   </nav>
 </header>
 
@@ -194,22 +136,6 @@
 
   <!-- ═══ 경고 바 ═══ -->
   <div class="warn-bar" id="warnBar"></div>
-
-  <!-- ═══ 🔥 오늘의 매입 기회 (독립 모듈) ═══ -->
-  <div class="opp-section" id="oppSection" style="display:none">
-    <div class="opp-header" id="oppHeaderToggle">
-      <h2>🔥 오늘의 매입 기회</h2>
-      <span class="opp-count" id="oppCount">0</span>
-      <span class="opp-toggle" id="oppToggleLabel">▼ 접기</span>
-    </div>
-    <div class="opp-body" id="oppBody">
-      <div id="oppList"></div>
-      <div id="oppNeedsWrap" class="opp-needs-wrap" style="display:none">
-        <div class="opp-needs-header">📋 판매 데이터 필요 <span class="badge" id="needsDataCount">0</span></div>
-        <div class="opp-needs-list" id="needsDataList"></div>
-      </div>
-    </div>
-  </div>
 
   <!-- ═══ 기간 필터 ═══ -->
   <div class="filter-bar">
@@ -331,12 +257,11 @@
 
 </div>
 
-<script src="js/opportunity_logic.js"></script>
 <script>
 /* ══════════════════════════════════════════
-   GoLab Profit Dashboard v1.1
+   GoLab Profit Dashboard v1.2
    읽기 전용 — golab_* localStorage만 참조
-   매입 기회 로직 → js/opportunity_logic.js
+   매입 기회 → deal.html로 분리됨
    ══════════════════════════════════════════ */
 
 const $ = id => document.getElementById(id);
@@ -712,9 +637,6 @@ function render(){
   // ── 역마진 경고 ──
   renderReverseMargins(r.avgMap, r.sales);
 
-  // ── 매입 기회 (독립 모듈, fail-safe) ──
-  try { renderOpportunities(); } catch(e) { console.warn("[Profit] 매입 기회 렌더 실패:", e); }
-
   // ── 거래처별 테이블 ──
   renderGroupTable(r.byClient, "clientTable", "clientEmpty", "clientBadge");
 
@@ -862,178 +784,6 @@ function renderGroupTable(map, tbodyId, emptyId, badgeId){
 }
 
 function esc(s){ return (s||"").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
-
-/* ══════════════════════════════════════════
-   매입 기회 렌더링 (독립 모듈)
-   GoLabOpportunity.scoreItems() → UI
-   v1.1: 줄맞춤 그리드 + [수량 계산] 버튼 + 인라인 팝업
-   ══════════════════════════════════════════ */
-
-// 팝업 닫기 헬퍼
-function closeOppPopup(){
-  var overlay = document.querySelector(".opp-overlay");
-  var popup = document.querySelector(".opp-popup");
-  if(overlay) overlay.remove();
-  if(popup) popup.remove();
-}
-
-// [수량 계산] 클릭 핸들러
-function showRecommendPopup(name, avgMonthlySales, currentQty){
-  closeOppPopup(); // 기존 팝업 닫기
-
-  var CONFIG = GoLabOpportunity.CONFIG;
-  var body;
-
-  if(!avgMonthlySales || avgMonthlySales <= 0){
-    // 월평균 판매량 없음
-    body = '<div class="opp-popup-body">' +
-      '<strong>판매 데이터 필요</strong><br>' +
-      '월평균 판매량 입력 후 사용 가능합니다.' +
-      '</div>';
-  } else {
-    var recommended = Math.ceil(avgMonthlySales * CONFIG.RECOMMEND_MONTHS);
-    var toBuy = Math.max(0, recommended - currentQty);
-    body = '<div class="opp-popup-body">' +
-      '월평균 판매: <strong>' + avgMonthlySales.toFixed(1) + '</strong>개<br>' +
-      '권장재고(' + CONFIG.RECOMMEND_MONTHS + '개월): <strong>' + recommended + '</strong>개<br>' +
-      '현재 재고: ' + currentQty + '개<br><br>' +
-      (toBuy > 0
-        ? '사장님, <strong>' + toBuy + '개</strong>를 매입하는 것을 추천합니다.'
-        : '현재 재고가 권장 수준 이상입니다. ✅') +
-      '</div>';
-  }
-
-  // 오버레이 + 팝업 생성
-  var overlay = document.createElement("div");
-  overlay.className = "opp-overlay";
-  overlay.onclick = closeOppPopup;
-  document.body.appendChild(overlay);
-
-  var popup = document.createElement("div");
-  popup.className = "opp-popup";
-  popup.innerHTML = '<h3>📦 ' + esc(name) + '</h3>' + body +
-    '<button class="opp-popup-close" onclick="closeOppPopup()">확인</button>';
-  document.body.appendChild(popup);
-}
-
-function renderOpportunities(){
-  // GoLabOpportunity가 로드되지 않으면 스킵
-  if(typeof GoLabOpportunity === "undefined") return;
-
-  var result = GoLabOpportunity.scoreItems();
-  var opps = result.opportunities;
-  var needs = result.needsData;
-  var section = $("oppSection");
-
-  // 기회 또는 데이터 필요 품목이 있으면 섹션 표시
-  if(opps.length === 0 && needs.length === 0){
-    section.style.display = "none";
-    return;
-  }
-  section.style.display = "block";
-  $("oppCount").textContent = opps.length;
-
-  // ── 기회 리스트 렌더링 ──
-  var listEl = $("oppList");
-  if(opps.length === 0){
-    listEl.innerHTML = '<div class="opp-empty">현재 기준점(Score ' + result.CONFIG.OPPORTUNITY_SCORE + ') 이상인 매입 기회가 없습니다</div>';
-  } else {
-    // 렌더 데이터를 window에 캐시 (버튼 onclick에서 참조)
-    window._oppData = opps;
-
-    listEl.innerHTML = opps.slice(0, 15).map(function(item, idx){
-      // 점수 색상: 8+ 빨강(강력추천) / 6~7 주황(검토필요)
-      var scoreClass = item.score >= 8 ? "high" : "mid";
-
-      // 사유 배지
-      var badges = item.reasons.map(function(r){
-        var cls = "needs-data";
-        if(r === "저점") cls = "low-price";
-        else if(r === "재고부족") cls = "low-stock";
-        else if(r === "고마진") cls = "high-margin";
-        else if(r === "판매증가") cls = "sales-up";
-        return '<span class="opp-tag ' + cls + '">' + esc(r) + '</span>';
-      }).join("");
-
-      // ── 지표: 3열 그리드 줄맞춤 ──
-      // 매입가
-      var deltaStr = "";
-      if(item.deltaPct !== null){
-        var dColor = item.deltaPct <= -5 ? "var(--accent)" : item.deltaPct > 0 ? "var(--warn)" : "var(--muted)";
-        deltaStr = '<br><span style="font-size:10px;font-weight:600;color:' + dColor + '">' +
-          (item.deltaPct > 0 ? "+" : "") + item.deltaPct + '%</span>';
-      }
-      var priceVal = item.buyPrice > 0 ? fmtW(item.buyPrice) + deltaStr : "—";
-
-      // 재고
-      var qtyColor = "";
-      var depleteStr = "";
-      if(item.monthsToDeplete !== null){
-        qtyColor = item.monthsToDeplete <= 2 ? " red" : item.monthsToDeplete <= 3 ? " orange" : "";
-        depleteStr = '<br><span style="font-size:10px;color:var(--muted)">' + item.monthsToDeplete + '개월</span>';
-      }
-
-      // 마진
-      var mColor = "";
-      var mVal = "—";
-      if(item.marginRate !== null){
-        mColor = item.marginRate >= 30 ? " green" : item.marginRate >= 20 ? " orange" : "";
-        mVal = item.marginRate + '%';
-      }
-
-      var metrics =
-        '<div class="om"><span class="om-label">매입가</span><span class="om-value">' + priceVal + '</span></div>' +
-        '<div class="om"><span class="om-label">재고</span><span class="om-value' + qtyColor + '">' + item.currentQty + depleteStr + '</span></div>' +
-        '<div class="om"><span class="om-label">마진</span><span class="om-value' + mColor + '">' + mVal + '</span></div>';
-
-      // [수량 계산] 버튼
-      var btnHtml = '<div class="opp-action"><button class="opp-btn" onclick="showRecommendPopup(\'' +
-        esc(item.name).replace(/'/g, "\\'") + '\', ' +
-        (item.avgMonthlySales || 0) + ', ' +
-        item.currentQty + ')">📋 수량 계산</button></div>';
-
-      return '<div class="opp-card">' +
-        '<div class="opp-score ' + scoreClass + '">' + item.score + '</div>' +
-        '<div class="opp-info"><div class="opp-name" title="' + esc(item.name) + '">' + esc(item.name) + '</div>' +
-        '<div class="opp-badges">' + badges + '</div></div>' +
-        '<div class="opp-metrics">' + metrics + '</div>' +
-        btnHtml +
-        '</div>';
-    }).join("");
-  }
-
-  // ── 데이터 필요 품목 ──
-  var needsWrap = $("oppNeedsWrap");
-  if(needs.length === 0){
-    needsWrap.style.display = "none";
-  } else {
-    needsWrap.style.display = "block";
-    $("needsDataCount").textContent = needs.length;
-    $("needsDataList").innerHTML = needs.slice(0, 20).map(function(item){
-      var priceStr = item.buyPrice > 0 ? fmtW(item.buyPrice) : "—";
-      // 데이터 필요 품목도 버튼 → 판매 데이터 필요 팝업
-      return '<div class="opp-needs-chip">' +
-        '<span class="opp-tag needs-data">데이터 필요</span>' +
-        '<strong>' + esc(item.name) + '</strong>' +
-        '<span style="color:var(--muted)">' + item.currentQty + ' | ' + priceStr + '</span>' +
-        '<button class="opp-btn" style="margin-left:6px" onclick="showRecommendPopup(\'' +
-          esc(item.name).replace(/'/g, "\\'") + '\', 0, ' + item.currentQty + ')">📋</button>' +
-        '</div>';
-    }).join("");
-  }
-}
-
-// 매입 기회 접기/펼치기 토글
-var oppOpen = true;
-(function(){
-  var toggle = $("oppHeaderToggle");
-  if(!toggle) return;
-  toggle.addEventListener("click", function(){
-    oppOpen = !oppOpen;
-    $("oppBody").classList.toggle("hidden", !oppOpen);
-    $("oppToggleLabel").textContent = oppOpen ? "▼ 접기" : "▶ 펼치기";
-  });
-})();
 
 /* ══════════════════════════════════════════
    기간 필터 이벤트
