@@ -74,14 +74,47 @@
     /* ─ 마진 바 (인라인) ─ */
     .margin-bar{display:inline-block;height:6px;border-radius:3px;min-width:2px;vertical-align:middle;margin-right:6px}
 
+    /* ─ 환율 입력 바 ─ */
+    .fx-bar{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 20px;margin-bottom:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .fx-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+    .fx-title{font-size:12px;font-weight:700;color:var(--text);display:flex;align-items:center;gap:6px}
+    .fx-toggle{font-size:10px;color:var(--muted);font-weight:600}
+    .fx-body{display:flex;align-items:center;gap:16px;margin-top:12px;flex-wrap:wrap}
+    .fx-body.hidden{display:none}
+    .fx-field{display:flex;align-items:center;gap:6px}
+    .fx-field label{font-size:11px;font-weight:700;color:var(--muted);white-space:nowrap}
+    .fx-field input{width:110px;padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-size:12px;font-family:inherit;color:var(--text);background:var(--chip);outline:none;font-variant-numeric:tabular-nums;text-align:right}
+    .fx-field input:focus{border-color:var(--primary)}
+    .fx-updated{font-size:10px;color:var(--muted);margin-left:auto}
+
+    /* ─ 환율 리스크 KPI (3열) ─ */
+    .fx-kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px;margin-bottom:24px}
+    .kpi .value.purple{color:var(--purple)}
+    .kpi .hint{font-size:10px;color:var(--muted);margin-top:2px;font-style:italic}
+    .fx-placeholder{background:var(--card);border:1px dashed var(--border);border-radius:10px;padding:24px 20px;text-align:center;color:var(--muted);font-size:12px;grid-column:1/-1}
+
+    /* ─ 역마진 경고 ─ */
+    .reverse-bar{margin-bottom:20px}
+    .reverse-card{display:flex;align-items:center;gap:8px;padding:10px 16px;border-radius:10px;font-size:12px;font-weight:600;border:1px solid;margin-bottom:8px}
+    .reverse-card:last-child{margin-bottom:0}
+    .reverse-card.danger{background:#fef2f2;border-color:#fca5a5;color:#991b1b}
+    .reverse-card.safe{background:#f0fdf4;border-color:#86efac;color:#166534}
+    .reverse-card .ri{font-size:14px}
+    .reverse-card .rv{font-weight:800;margin-left:4px}
+    .reverse-card .rdetail{margin-left:auto;font-size:11px;font-weight:700}
+
     /* ─ Responsive ─ */
     @media(max-width:900px){
       .kpi-row{grid-template-columns:repeat(2,1fr)}
+      .fx-kpi-row{grid-template-columns:1fr 1fr}
       .table-row{grid-template-columns:1fr}
     }
     @media(max-width:600px){
       .kpi-row{grid-template-columns:1fr}
+      .fx-kpi-row{grid-template-columns:1fr}
       .container{padding:12px}
+      .fx-body{flex-direction:column;align-items:stretch}
+      .fx-field input{width:100%}
     }
   </style>
 </head>
@@ -114,6 +147,25 @@
     <input type="date" class="date-input" id="dateTo" style="display:none" />
   </div>
 
+  <!-- ═══ 환율 입력 ═══ -->
+  <div class="fx-bar">
+    <div class="fx-header" id="fxHeaderToggle">
+      <span class="fx-title">💱 현재 환율</span>
+      <span class="fx-toggle" id="fxToggleLabel">▼ 접기</span>
+    </div>
+    <div class="fx-body" id="fxBody">
+      <div class="fx-field">
+        <label>USD/KRW</label>
+        <input type="number" id="fxUsd" step="0.1" placeholder="예: 1380.0" />
+      </div>
+      <div class="fx-field">
+        <label>JPY/KRW (1엔)</label>
+        <input type="number" id="fxJpy" step="0.01" placeholder="예: 9.20" />
+      </div>
+      <span class="fx-updated" id="fxUpdated"></span>
+    </div>
+  </div>
+
   <!-- ═══ KPI 요약 카드 ═══ -->
   <div class="kpi-row">
     <div class="kpi">
@@ -137,6 +189,29 @@
       <div class="sub" id="kRateSub">마진 ÷ 매출</div>
     </div>
   </div>
+
+  <!-- ═══ 환율 리스크 KPI ═══ -->
+  <div class="fx-kpi-row" id="fxKpiRow">
+    <div class="kpi">
+      <div class="label">확정 마진</div>
+      <div class="value green" id="kConfirmed">₩0</div>
+      <div class="sub" id="kConfirmedSub">매입 시점 환율 기준</div>
+    </div>
+    <div class="kpi">
+      <div class="label">위험 마진 (현재 환율)</div>
+      <div class="value purple" id="kRisk">—</div>
+      <div class="sub" id="kRiskSub">환율 입력 시 계산</div>
+    </div>
+    <div class="kpi">
+      <div class="label">잠재 손실 (환율)</div>
+      <div class="value" id="kFxLoss">—</div>
+      <div class="sub" id="kFxLossSub">환율 입력 시 계산</div>
+      <div class="hint" id="kFxLossHint"></div>
+    </div>
+  </div>
+
+  <!-- ═══ 역마진 경고 ═══ -->
+  <div class="reverse-bar" id="reverseBar"></div>
 
   <!-- ═══ 테이블 2개 ═══ -->
   <div class="table-row">
@@ -295,6 +370,87 @@ function buildCostMap(){
   return avgMap;
 }
 
+/* ══════════════════════════════════════════
+   2-b️⃣ 환율 리스크 계산
+   golab_purchases_v2 배치에서 외화 매입을 현재 환율로 재평가
+   ══════════════════════════════════════════ */
+function loadFxRates(){
+  try{ return JSON.parse(localStorage.getItem("golab_fx_rates_v1")||"{}"); }
+  catch{ return {}; }
+}
+function saveFxRates(rates){
+  rates.updatedAt = new Date().toISOString();
+  localStorage.setItem("golab_fx_rates_v1", JSON.stringify(rates));
+}
+
+/* 환율 리스크 델타 계산 — golab_purchases_v2 기반 */
+function calcFxRisk(currentRates){
+  let confirmedForeignCost = 0;  // 매입 시점 환율 기준 외화 원가(KRW)
+  let revaluedForeignCost = 0;   // 현재 환율 기준 외화 원가(KRW)
+  let hasForeignData = false;
+
+  try{
+    const batches = JSON.parse(localStorage.getItem("golab_purchases_v2")||"[]");
+    batches.forEach(batch => {
+      const cur = batch.currency;
+      if(!cur || cur === "KRW") return; // 원화 배치는 환율 영향 없음
+      const rateKey = cur + "_KRW";
+      const currentRate = n(currentRates[rateKey]);
+      const origRate = n(batch.exchangeRate, 1);
+      if(!currentRate || origRate <= 0) return;
+      hasForeignData = true;
+
+      batch.items.forEach(item => {
+        const foreignAmount = n(item.price) * n(item.qty);
+        confirmedForeignCost += foreignAmount * origRate;
+        revaluedForeignCost += foreignAmount * currentRate;
+      });
+      // 물류비(KRW)는 환율 변동 영향 없으므로 양쪽 동일 → 델타 계산에서 상쇄
+    });
+  }catch(e){}
+
+  return {
+    confirmedForeignCost,
+    revaluedForeignCost,
+    fxDelta: revaluedForeignCost - confirmedForeignCost, // 양수 = 비용 증가 = 손실
+    hasForeignData
+  };
+}
+
+/* 역마진 감지 — avgMap(원가) vs 매출 데이터의 판매단가 비교 */
+function detectReverseMargins(avgMap, sales){
+  // 품목별 평균 판매단가 집계
+  const sellMap = new Map();
+  sales.forEach(rec => {
+    const key = rec.itemName || rec.partNo;
+    if(!key) return;
+    const sell = n(rec.sellUnitPrice);
+    if(sell <= 0) return;
+    const prev = sellMap.get(key) || { totalSell:0, count:0 };
+    prev.totalSell += sell;
+    prev.count++;
+    sellMap.set(key, prev);
+  });
+
+  const reverseItems = [];
+  sellMap.forEach((v, itemName) => {
+    const avgSell = v.totalSell / v.count;
+    // 원가 조회 (name 키 우선)
+    const cost = avgMap.get("name:"+itemName);
+    if(cost === undefined || cost === null) return;
+    if(cost >= avgSell){
+      reverseItems.push({
+        name: itemName,
+        avgCost: Math.round(cost),
+        avgSell: Math.round(avgSell),
+        gap: Math.round(cost - avgSell)
+      });
+    }
+  });
+  reverseItems.sort((a,b) => b.gap - a.gap);
+  return reverseItems;
+}
+
 /* ── 매출 레코드에서 원가 찾기 ── */
 function lookupCost(rec, avgMap){
   // 1순위: partNo (itemCode) 기준
@@ -421,7 +577,8 @@ function analyze(){
     totalRevenue, totalCost, totalMargin, marginRevenue,
     revenueCount, marginCount,
     noDateCount, noCostCount, noCostRevenue,
-    byClient, byItem
+    byClient, byItem,
+    avgMap, sales  // 환율 리스크 + 역마진 계산용
   };
 }
 
@@ -472,11 +629,109 @@ function render(){
   $("kRate").className = "value " + (rate >= 0 ? "green" : "red");
   $("kRateSub").textContent = `마진 ÷ 원가확인 매출`;
 
+  // ── 환율 리스크 KPI ──
+  renderFxRisk(r.totalMargin);
+
+  // ── 역마진 경고 ──
+  renderReverseMargins(r.avgMap, r.sales);
+
   // ── 거래처별 테이블 ──
   renderGroupTable(r.byClient, "clientTable", "clientEmpty", "clientBadge");
 
   // ── 품목별 테이블 ──
   renderGroupTable(r.byItem, "itemTable", "itemEmpty", "itemBadge");
+}
+
+/* ── 환율 리스크 KPI 렌더링 ── */
+function renderFxRisk(confirmedMargin){
+  const fxRates = loadFxRates();
+  const hasUsd = n(fxRates.USD_KRW) > 0;
+  const hasJpy = n(fxRates.JPY_KRW) > 0;
+  const hasRates = hasUsd || hasJpy;
+
+  // 확정 마진 (항상 표시)
+  $("kConfirmed").textContent = fmtW(confirmedMargin);
+  $("kConfirmed").className = "value " + (confirmedMargin >= 0 ? "green" : "red");
+
+  if(!hasRates){
+    // 환율 미입력 — 안내 메시지
+    $("kRisk").textContent = "—";
+    $("kRisk").className = "value purple";
+    $("kRiskSub").textContent = "환율 입력 시 계산";
+    $("kFxLoss").textContent = "—";
+    $("kFxLoss").className = "value";
+    $("kFxLossSub").textContent = "환율 입력 시 계산";
+    $("kFxLossHint").textContent = "💡 위 환율 바에 현재 환율을 입력하세요";
+    return;
+  }
+
+  const fx = calcFxRisk(fxRates);
+
+  if(!fx.hasForeignData){
+    // 외화 배치 없음
+    $("kRisk").textContent = fmtW(confirmedMargin);
+    $("kRisk").className = "value " + (confirmedMargin >= 0 ? "green" : "red");
+    $("kRiskSub").textContent = "외화 매입 데이터 없음 (확정=위험)";
+    $("kFxLoss").textContent = "₩0";
+    $("kFxLoss").className = "value green";
+    $("kFxLossSub").textContent = "환율 영향 없음";
+    $("kFxLossHint").textContent = "";
+    return;
+  }
+
+  // 위험 마진 = 확정 마진 - (현재환율 원가 - 매입환율 원가)
+  const riskMargin = confirmedMargin - fx.fxDelta;
+  $("kRisk").textContent = fmtW(riskMargin);
+  $("kRisk").className = "value " + (riskMargin >= 0 ? "green" : "red");
+  $("kRiskSub").textContent = "현재 환율 반영";
+
+  // 잠재 손실 = fxDelta (양수 = 비용 증가 = 손실)
+  const loss = fx.fxDelta;
+  const absLoss = Math.abs(loss);
+  const absMargin = Math.abs(confirmedMargin) || 1;
+  const pct = absLoss / absMargin;
+
+  // 임계값 색상
+  let lossColor, lossLabel;
+  if(loss <= 0){
+    // 환율 이득 (현재 환율이 매입보다 낮음)
+    lossColor = "green";
+    lossLabel = "환율 이득";
+  } else if(pct < 0.05){
+    lossColor = "green";
+    lossLabel = "안전";
+  } else if(pct < 0.15){
+    lossColor = "orange";
+    lossLabel = "주의";
+  } else {
+    lossColor = "red";
+    lossLabel = "위험";
+  }
+
+  $("kFxLoss").textContent = (loss >= 0 ? "-" : "+") + fmtW(absLoss);
+  $("kFxLoss").className = "value " + lossColor;
+  $("kFxLossSub").textContent = loss >= 0 ? "환율 상승으로 원가 증가" : "환율 하락으로 원가 감소";
+  $("kFxLossHint").textContent = lossLabel + " (확정 마진 대비 " + (pct*100).toFixed(1) + "%)";
+}
+
+/* ── 역마진 경고 렌더링 ── */
+function renderReverseMargins(avgMap, sales){
+  const items = detectReverseMargins(avgMap, sales);
+  const el = $("reverseBar");
+
+  if(!items.length){
+    el.innerHTML = '<div class="reverse-card safe"><span class="ri">✅</span>역마진 품목 없음 — 모든 품목이 원가 이하로 판매되지 않고 있습니다</div>';
+    return;
+  }
+
+  el.innerHTML = items.slice(0,10).map(it =>
+    `<div class="reverse-card danger">
+      <span class="ri">🔴</span>
+      <strong>${esc(it.name)}</strong>
+      <span>원가 ${fmtW(it.avgCost)} &gt; 판매 ${fmtW(it.avgSell)}</span>
+      <span class="rdetail">역마진 -${fmtW(it.gap)}</span>
+    </div>`
+  ).join("");
 }
 
 function renderGroupTable(map, tbodyId, emptyId, badgeId){
@@ -555,6 +810,44 @@ document.querySelectorAll(".fbtn").forEach(btn => {
 
 $("dateFrom").addEventListener("change", e => { customFrom = e.target.value; render(); });
 $("dateTo").addEventListener("change", e => { customTo = e.target.value; render(); });
+
+/* ══════════════════════════════════════════
+   환율 입력 이벤트
+   ══════════════════════════════════════════ */
+// 환율 접기/펼치기 토글
+let fxOpen = true;
+$("fxHeaderToggle").addEventListener("click", () => {
+  fxOpen = !fxOpen;
+  $("fxBody").classList.toggle("hidden", !fxOpen);
+  $("fxToggleLabel").textContent = fxOpen ? "▼ 접기" : "▶ 펼치기";
+});
+
+// 환율 입력 → 저장 + 재계산 (디바운스)
+let fxTimer = null;
+function onFxInput(){
+  clearTimeout(fxTimer);
+  fxTimer = setTimeout(() => {
+    const rates = loadFxRates();
+    const usd = n($("fxUsd").value);
+    const jpy = n($("fxJpy").value);
+    if(usd > 0) rates.USD_KRW = usd;
+    if(jpy > 0) rates.JPY_KRW = jpy;
+    saveFxRates(rates);
+    render();
+  }, 400);
+}
+$("fxUsd").addEventListener("input", onFxInput);
+$("fxJpy").addEventListener("input", onFxInput);
+
+// 초기 환율 로드
+(function initFxInputs(){
+  const rates = loadFxRates();
+  if(n(rates.USD_KRW) > 0) $("fxUsd").value = rates.USD_KRW;
+  if(n(rates.JPY_KRW) > 0) $("fxJpy").value = rates.JPY_KRW;
+  if(rates.updatedAt){
+    $("fxUpdated").textContent = "마지막 입력: " + rates.updatedAt.substring(0,10);
+  }
+})();
 
 /* ── 크로스탭 동기화 ── */
 window.addEventListener("storage", e => {

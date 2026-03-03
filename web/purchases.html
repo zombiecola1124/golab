@@ -390,7 +390,10 @@
         unit: item.unit,
         unitPriceKrw: unitPriceKrw,
         addedValueKrw: realTotalKrw,
-        memo: item.memo || ""
+        memo: item.memo || "",
+        currency: batch.currency,          // 매입 통화 (USD/JPY/KRW)
+        exchangeRate: batch.exchangeRate,  // 매입 시점 환율
+        originalPrice: item.price          // 외화 단가 원본
       });
     });
     while(hist.length > 500) hist.pop();
