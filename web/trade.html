@@ -293,7 +293,6 @@
       <span class="pay-filter-bar" id="payFilterBar">
         <button class="pay-filter-btn active" data-payfilter="">전체</button>
         <button class="pay-filter-btn" data-payfilter="UNPAID">미송금만</button>
-        <button class="pay-filter-btn" data-payfilter="PAID">송금완료</button>
       </span>
       <!-- [/UNPAID PATCH] -->
     </h2>
@@ -759,6 +758,8 @@ function render(){
     const rcvd = n(r.receivedQty);
     const qty = n(r.qty);
     const tr=document.createElement("tr");
+    // [UNPAID PATCH] RECEIVED+UNPAID 경고: 행 배경 연한 빨강
+    try{ if(st==="RECEIVED" && (r.paymentStatus||"UNPAID")==="UNPAID") tr.style.background="rgba(220,38,38,.06)"; }catch(e){}
     tr.innerHTML=`
       <td class="muted">${esc(r.purchaseDate)}</td>
       <td><span class="vendor-link" data-vendor="${esc(r.vendor)}">${esc(r.vendor)}</span></td>
