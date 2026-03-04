@@ -173,6 +173,11 @@
         <input id="inName" class="field-required" placeholder="품목명 (예: AG Powder)" />
         <input id="inSpec" placeholder="규격 (예: 1kg / 1ea)" />
         <input id="inVendor" placeholder="매입처 (예: 일본/국내)" />
+        <select id="inType" style="padding:10px;font-size:12px">
+          <option value="general_goods">일반상품</option>
+          <option value="metal_material">원료(금속/소재)</option>
+          <option value="equipment">장비/설비</option>
+        </select>
         <input id="inPrice" class="field-required" type="number" step="0.01" placeholder="매입단가(KRW)" />
         <input id="inQty" class="field-required" type="number" step="0.01" placeholder="수량" />
         <input id="inMin" type="number" step="0.01" placeholder="최소수량" />
@@ -213,6 +218,10 @@
             <div class="detail-row">
               <div class="label">규격 / 매입처</div>
               <div class="value" id="detailSpecVendor"></div>
+            </div>
+            <div class="detail-row">
+              <div class="label">제품유형</div>
+              <div class="value" id="detailType">일반상품</div>
             </div>
             <div class="detail-row">
               <div class="label">현재 수량</div>
@@ -325,7 +334,7 @@
       empty.style.display = "block";
       body.style.display = "none";
     }
-    const fields = ["detailName","detailSpecVendor","detailQty","detailMin","detailPrice","detailTotal","detailNote","detailHist"];
+    const fields = ["detailName","detailSpecVendor","detailType","detailQty","detailMin","detailPrice","detailTotal","detailNote","detailHist"];
     fields.forEach(id=>{
       const el = $(id);
       if(el) el.textContent = "";
@@ -339,6 +348,8 @@
     $("inQty").value = n(it.qty);
     $("inMin").value = n(it.minQty);
     $("inNote").value = it.note || "";
+    /* [A] product_type 로드 */
+    try{ $("inType").value = it.type || "general_goods"; }catch(_e){}
     $("btnAdd").textContent = "저장";
     $("btnAdd").dataset.editing = it.id;
     validateForm();
@@ -355,6 +366,12 @@
     const total = qty * price;
     $("detailName").textContent = it.name || "";
     $("detailSpecVendor").textContent = `${it.spec || "-"} / ${it.vendor || "-"}`;
+    /* [A] 제품유형 표시 */
+    try{
+      const typeMap = {metal_material:"원료(금속/소재)", general_goods:"일반상품", equipment:"장비/설비"};
+      const dtEl = $("detailType");
+      if(dtEl) dtEl.textContent = typeMap[it.type] || typeMap["general_goods"];
+    }catch(_e){}
     $("detailQty").textContent = (Math.round(qty*100)/100).toLocaleString();
     $("detailMin").textContent = (Math.round(min*100)/100).toLocaleString();
     $("detailPrice").textContent = "₩" + Math.round(price).toLocaleString();
@@ -466,17 +483,23 @@
   function upsert(){
     const name = $("inName").value.trim();
     if(!name){ alert("품목명을 입력하세요."); return; }
+    /* [A] type 필드: 기존 값 보존, 없으면 폼 값 사용 */
+    const _editing = $("btnAdd").dataset.editing;
+    const _existing = _editing ? loadInv().find(x=>x.id===_editing) : null;
     const item = {
-      id: $("btnAdd").dataset.editing || crypto.randomUUID(),
+      id: _editing || crypto.randomUUID(),
       name,
       spec: $("inSpec").value.trim(),
       vendor: $("inVendor").value.trim(),
+      type: $("inType").value || "general_goods",
       buyPrice: n($("inPrice").value),
       qty: n($("inQty").value),
       minQty: n($("inMin").value),
       note: $("inNote").value.trim(),
       updatedAt: new Date().toISOString()
     };
+    /* 기존 필드 보존 (마이그레이션 방지) */
+    if(_existing){ for(const k in _existing){ if(!(k in item)) item[k]=_existing[k]; } }
     const inv = loadInv();
     const idx = inv.findIndex(x=>x.id===item.id);
     if(idx >= 0) inv[idx] = item;
@@ -484,6 +507,7 @@
     saveInv(inv);
     $("inName").value=""; $("inSpec").value=""; $("inVendor").value="";
     $("inPrice").value=""; $("inQty").value=""; $("inMin").value=""; $("inNote").value="";
+    try{ $("inType").value="general_goods"; }catch(_e){}
     $("btnAdd").textContent="추가";
     delete $("btnAdd").dataset.editing;
     render(); compute();
