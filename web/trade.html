@@ -327,6 +327,7 @@
       </div>
     </div>
     <div class="tools-row">
+      <button id="btnCsv" class="secondary" style="background:rgba(22,163,74,.08);border-color:rgba(22,163,74,.3);color:var(--accent)">📥 엑셀 저장</button>
       <button id="btnExport" class="secondary">내보내기(JSON)</button>
       <button id="btnImport" class="secondary">가져오기(JSON)</button>
       <input id="fileIn" type="file" accept="application/json" />
@@ -369,6 +370,9 @@
     <div class="pagination" id="pgArea"></div>
     <div class="mini">※ 구매총액 = 발주수량 × 구매단가. 입고처리 시 재고에 자동 반영됩니다.</div>
   </div>
+
+  <!-- [CSV/AUTOSAVE PATCH] 저장 상태 표시 -->
+  <div id="saveStatus" style="text-align:center;padding:8px;font-size:11px;color:var(--accent);font-weight:600;opacity:0;transition:opacity .3s">💾 저장됨</div>
 
   <div class="note-box">
     💡 이 페이지는 <b>구매 원가 관리</b> 전용입니다. [입고처리] 버튼으로 실제 입고된 수량만 재고에 반영됩니다.
@@ -1861,6 +1865,73 @@ function refreshPayFilterUI(){
 }
 
 /* [/UNPAID PATCH] */
+
+/* ══════════════════════════════════════════
+   [CSV/AUTOSAVE PATCH] 엑셀(CSV) 다운로드 + 자동 저장 표시
+   ══════════════════════════════════════════ */
+
+// [CSV] 엑셀(CSV) 다운로드 — 한글 깨짐 방지 (UTF-8 BOM)
+function exportCsv(){
+  try{
+    const data = load();
+    if(!data.length){ alert("다운로드할 데이터가 없습니다."); return; }
+    // 헤더
+    const headers = ["구매일","구매처","문서번호","품번","상품명","발주수량","입고수량","단위","구매단가","구매총액","입고상태","송금상태","송금일","비고"];
+    const rows = data.map(r => [
+      r.purchaseDate||"",
+      r.vendor||"",
+      r.docNo||"",
+      r.partNo||"",
+      r.itemName||"",
+      n(r.qty),
+      n(r.receivedQty),
+      r.unit||"",
+      n(r.buyUnitPrice),
+      n(r.buyUnitPrice)*n(r.qty),
+      statusLabel(r.status||"ORDERED"),
+      (r.paymentStatus||"UNPAID")==="PAID"?"송금완료":"미송금",
+      r.paymentDate||"",
+      r.memo||""
+    ]);
+    // CSV 문자열 생성
+    const csvContent = [headers, ...rows].map(row =>
+      row.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(",")
+    ).join("\n");
+    // UTF-8 BOM + 다운로드
+    const blob = new Blob(["\uFEFF" + csvContent], {type:"text/csv;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "GoLab_구매원장_" + todayStr() + ".csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+    showToast("📥 엑셀 파일 다운로드 완료");
+  }catch(e){ console.warn("[CSV PATCH] exportCsv error:", e); alert("CSV 저장 실패: "+e.message); }
+}
+
+// [AUTOSAVE] 저장 표시 — save() 호출 후 잠깐 표시
+let _saveStatusTimer = null;
+function flashSaveStatus(){
+  try{
+    const el = $("saveStatus");
+    if(!el) return;
+    el.style.opacity = "1";
+    clearTimeout(_saveStatusTimer);
+    _saveStatusTimer = setTimeout(()=>{ el.style.opacity="0"; }, 2500);
+  }catch(e){}
+}
+
+// [AUTOSAVE] 기존 save() 래핑 — 원본 불변, 호출 후 후크만 추가
+// ※ 할당문 사용 (function 선언문은 호이스팅→무한재귀 발생)
+const _origSave = save;
+save = function(data){
+  _origSave(data);
+  flashSaveStatus();
+};
+
+// [CSV] 버튼 이벤트
+try{ $("btnCsv").onclick = exportCsv; }catch(e){}
+
+/* [/CSV/AUTOSAVE PATCH] */
 
 /* ── Init ── */
 refreshAC();

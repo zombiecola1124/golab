@@ -139,6 +139,7 @@
         요약
         <div class="btns">
           <button id="btnHistory" class="secondary">최근 입고 히스토리</button>
+          <button id="btnCsv" class="secondary" style="background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3);color:var(--point)">📥 엑셀 저장</button>
           <button id="btnExport" class="secondary">내보내기(JSON)</button>
           <button id="btnImport" class="secondary">가져오기(JSON)</button>
           <input id="fileIn" type="file" accept="application/json" />
@@ -245,6 +246,8 @@
       <div class="mini">
         TIP: 수량/단가는 숫자만 입력하세요. "입고/원가"에서 전송된 품목은 매입단가가 <b>실단가(KRW)</b> 기준으로 자동 업데이트됩니다.
       </div>
+      <!-- [CSV PATCH] 저장 상태 표시 -->
+      <div id="csvSaveStatus" style="text-align:center;padding:8px;font-size:11px;color:var(--point);font-weight:600;opacity:0;transition:opacity .3s">💾 저장됨</div>
     </div>
   </div>
 </div>
@@ -636,10 +639,66 @@
     $("inQty").addEventListener("input", validateForm);
     $("inMin").addEventListener("input", validateForm);
   }
+  /* ═══════════════════════════════════════════════
+     [CSV PATCH] 엑셀(CSV) 저장 + 저장 상태 표시
+     ═══════════════════════════════════════════════ */
+
+  // CSV 다운로드 (UTF-8 BOM 포함 → 엑셀 한글 정상)
+  function exportCsvInv(){
+    try{
+      const data = loadInv();
+      if(!data.length){ alert("다운로드할 데이터가 없습니다."); return; }
+      const headers = ["품목명","규격","매입처","매입단가","수량","최소수량","재고총액","상태","비고"];
+      const rows = data.map(it => {
+        const qty = n(it.qty);
+        const min = n(it.minQty);
+        const price = n(it.buyPrice);
+        const total = qty * price;
+        let status = "정상";
+        if(qty <= 0) status = "0 재고";
+        else if(qty <= min) status = "부족";
+        return [
+          it.name||"", it.spec||"", it.vendor||"",
+          price, qty, min, total, status, it.note||""
+        ];
+      });
+      const csvContent = [headers, ...rows].map(row =>
+        row.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(",")
+      ).join("\n");
+      const blob = new Blob(["\uFEFF" + csvContent], {type:"text/csv;charset=utf-8"});
+      const a = document.createElement("a");
+      a.href = URL.createObjectURL(blob);
+      a.download = "GoLab_재고_" + new Date().toISOString().slice(0,10) + ".csv";
+      a.click();
+      URL.revokeObjectURL(a.href);
+    }catch(e){ console.warn("[CSV PATCH] exportCsvInv error:", e); alert("CSV 저장 실패: "+e.message); }
+  }
+
+  // 저장 상태 플래시
+  let _csvSaveTimer = null;
+  function flashCsvSaveStatus(){
+    try{
+      const el = $("csvSaveStatus");
+      if(!el) return;
+      el.style.opacity = "1";
+      clearTimeout(_csvSaveTimer);
+      _csvSaveTimer = setTimeout(()=>{ el.style.opacity="0"; }, 2500);
+    }catch(e){}
+  }
+
+  // 기존 saveInv() 래핑 → 저장 시 상태 표시
+  const _origSaveInv = saveInv;
+  saveInv = function(list){
+    _origSaveInv(list);
+    flashCsvSaveStatus();
+  };
+
   document.addEventListener("DOMContentLoaded", () => {
     render(); compute();
     bindEvents();
     validateForm();
+    // [CSV PATCH] 버튼 바인딩
+    try{ $("btnCsv").onclick = exportCsvInv; }catch(e){}
   });
 </script>
 </body>

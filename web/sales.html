@@ -213,6 +213,7 @@
       </div>
     </div>
     <div class="tools-row">
+      <button id="btnCsv" class="secondary" style="background:rgba(217,119,6,.08);border-color:rgba(217,119,6,.3);color:var(--sales)">📥 엑셀 저장</button>
       <button id="btnExport" class="secondary">내보내기(JSON)</button>
       <button id="btnImport" class="secondary">가져오기(JSON)</button>
       <input id="fileIn" type="file" accept="application/json" />
@@ -250,6 +251,9 @@
     <div class="pagination" id="pgArea"></div>
     <div class="mini">※ 매출액 = 수량 x 판매단가 (자동 계산)</div>
   </div>
+
+  <!-- [CSV PATCH] 저장 상태 표시 -->
+  <div id="saveStatus" style="text-align:center;padding:8px;font-size:11px;color:var(--sales);font-weight:600;opacity:0;transition:opacity .3s">💾 저장됨</div>
 
   <div class="note-box">
     💡 이 페이지는 <b>매출(판매) 관리</b> 전용입니다. 원가/마진 분석은 향후 수익 분석 모듈에서 별도 처리됩니다.
@@ -965,6 +969,56 @@ $("inPrice").addEventListener("input",updateFormCalc);
 // 매출 Import 이벤트 바인딩
 $("btnSalesDry").onclick = salesDryRun;
 $("btnSalesCommit").onclick = salesCommit;
+
+/* ═══════════════════════════════════════════════
+   [CSV PATCH] 엑셀(CSV) 저장 + 저장 상태 표시
+   ═══════════════════════════════════════════════ */
+
+// CSV 다운로드 (UTF-8 BOM 포함 → 엑셀 한글 정상)
+function exportCsv(){
+  try{
+    const data = load();
+    if(!data.length){ alert("다운로드할 데이터가 없습니다."); return; }
+    const headers = ["매출일","거래처","문서번호","품번","상품명","수량","단위","판매단가","매출액","비고"];
+    const rows = data.map(r => [
+      r.salesDate||"", r.client||"", r.docNo||"", r.partNo||"",
+      r.itemName||"", n(r.qty), r.unit||"",
+      n(r.sellUnitPrice), n(r.sellUnitPrice)*n(r.qty),
+      r.memo||""
+    ]);
+    const csvContent = [headers, ...rows].map(row =>
+      row.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(",")
+    ).join("\n");
+    const blob = new Blob(["\uFEFF" + csvContent], {type:"text/csv;charset=utf-8"});
+    const a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = "GoLab_매출_" + new Date().toISOString().slice(0,10) + ".csv";
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }catch(e){ console.warn("[CSV PATCH] exportCsv error:", e); alert("CSV 저장 실패: "+e.message); }
+}
+
+// 저장 상태 플래시
+let _saveStatusTimer = null;
+function flashSaveStatus(){
+  try{
+    const el = $("saveStatus");
+    if(!el) return;
+    el.style.opacity = "1";
+    clearTimeout(_saveStatusTimer);
+    _saveStatusTimer = setTimeout(()=>{ el.style.opacity="0"; }, 2500);
+  }catch(e){}
+}
+
+// 기존 save() 래핑 → 저장 시 상태 표시
+const _origSave = save;
+save = function(data){
+  _origSave(data);
+  flashSaveStatus();
+};
+
+// 버튼 바인딩
+try{ $("btnCsv").onclick = exportCsv; }catch(e){}
 
 /* ── Init ── */
 refreshAC();
