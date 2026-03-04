@@ -23,7 +23,7 @@
     .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .card h2{margin:0 0 12px;font-size:13px;color:var(--point);display:flex;align-items:center;gap:8px}
     /* KPI */
-    .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px}
+    .kpi-grid{display:grid;grid-template-columns:repeat(6,1fr);gap:10px} /* [UNPAID PATCH] 5→6 */
     .kpi{padding:14px;border-radius:10px;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .kpi .t{font-size:11px;color:var(--muted)}
     .kpi .v{margin-top:6px;font-size:24px;font-weight:600;color:var(--point)}
@@ -140,6 +140,19 @@
     .drawer-todo{font-size:12px;color:var(--text);padding:6px 0;border-bottom:1px solid var(--line);display:flex;gap:8px;align-items:center}
     .drawer-todo:last-child{border-bottom:none}
     .drawer-todo .dt-dot{width:6px;height:6px;border-radius:50%;background:var(--orange);flex-shrink:0}
+    /* [UNPAID PATCH] 미송금 관리 스타일 */
+    .pay-tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.2px;cursor:pointer;user-select:none;transition:all .15s}
+    .pay-tag.UNPAID{background:#fee2e2;color:#991b1b}
+    .pay-tag.PAID{background:#dcfce7;color:#166534}
+    .pay-tag:hover{opacity:.75}
+    .unpaid-banner{display:none;padding:12px 16px;background:#fef2f2;border:1px solid #fecaca;border-radius:10px;margin-bottom:12px;cursor:pointer;font-size:13px;font-weight:700;color:#991b1b;transition:all .2s}
+    .unpaid-banner:hover{background:#fee2e2}
+    .unpaid-banner.visible{display:flex;align-items:center;gap:8px}
+    .pay-filter-bar{display:inline-flex;gap:4px;margin-left:10px}
+    .pay-filter-btn{padding:4px 10px;border-radius:999px;font-size:11px;font-weight:700;border:1px solid var(--line);background:var(--card);color:var(--muted);cursor:pointer;transition:all .15s}
+    .pay-filter-btn:hover{border-color:#cbd5e1}
+    .pay-filter-btn.active{background:var(--point);color:#fff;border-color:var(--point)}
+    /* [/UNPAID PATCH] */
     @media(max-width:900px){
       .kpi-grid{grid-template-columns:1fr 1fr}
       .r4,.r5{grid-template-columns:1fr 1fr}
@@ -195,6 +208,13 @@
         <div id="kLatest" class="v blue">-</div>
         <div id="kLatestSub" class="sub"></div>
       </div>
+      <!-- [UNPAID PATCH] KPI 카드 추가 -->
+      <div class="kpi" style="border-color:#fecaca">
+        <div class="t">💸 미송금</div>
+        <div id="kUnpaidAmt" class="v" style="color:var(--bad)">₩0</div>
+        <div id="kUnpaidCnt" class="sub" style="color:var(--bad);font-weight:700">0건</div>
+      </div>
+      <!-- [/UNPAID PATCH] -->
     </div>
   </div>
 
@@ -269,7 +289,17 @@
     <h2>
       📋 구매 내역
       <span id="filterInfo" class="stat-inline"></span>
+      <!-- [UNPAID PATCH] 송금 필터 버튼 -->
+      <span class="pay-filter-bar" id="payFilterBar">
+        <button class="pay-filter-btn active" data-payfilter="">전체</button>
+        <button class="pay-filter-btn" data-payfilter="UNPAID">미송금만</button>
+        <button class="pay-filter-btn" data-payfilter="PAID">송금완료</button>
+      </span>
+      <!-- [/UNPAID PATCH] -->
     </h2>
+    <!-- [UNPAID PATCH] 미송금 경고 배너 -->
+    <div class="unpaid-banner" id="unpaidBanner">🚨 <span id="unpaidBannerText">미송금 0건</span></div>
+    <!-- [/UNPAID PATCH] -->
     <div class="filter-bar">
       <div class="wide">
         <label>검색 (상품명/품번/구매처/비고)</label>
@@ -329,6 +359,7 @@
             <th class="num">구매단가</th>
             <th class="num">구매총액</th>
             <th>상태</th>
+            <th>송금</th><!-- [UNPAID PATCH] -->
             <th>비고</th>
             <th style="text-align:right">관리</th>
           </tr>
@@ -375,6 +406,7 @@
       <div class="d-stat"><div class="t">거래 건수</div><div class="v" id="vpCount">0</div></div>
       <div class="d-stat"><div class="t">최근 거래일</div><div class="v" id="vpLatest">-</div></div>
       <div class="d-stat"><div class="t">미완료 Action</div><div class="v" id="vpTasks">0건</div></div>
+      <div class="d-stat" style="grid-column:span 2;border-color:#fecaca"><div class="t" style="color:var(--bad)">💸 미송금</div><div class="v" id="vpUnpaid" style="color:var(--bad);font-size:12px">-</div></div><!-- [UNPAID PATCH] -->
     </div>
   </div>
   <!-- Vendor Master Info -->
@@ -562,7 +594,10 @@ function normalizeRecord(r){
     status: r.status || "ORDERED",
     memo: normStr(r.memo || r.note || ""),
     createdAt: r.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    // [UNPAID PATCH] 기존 필드 패스스루 (마이그레이션 아님)
+    ...(r.paymentStatus ? {paymentStatus: r.paymentStatus} : {}),
+    ...(r.paymentDate ? {paymentDate: r.paymentDate} : {})
   };
 }
 
@@ -622,6 +657,20 @@ function getFiltered(){
   if(status) data=data.filter(r=>(r.status||"ORDERED")===status);
   if(from) data=data.filter(r=>(r.purchaseDate||"")>=from);
   if(to) data=data.filter(r=>(r.purchaseDate||"")<=to);
+  // [UNPAID PATCH] 송금상태 필터 + UNPAID 우선 정렬
+  try{
+    if(typeof _payFilter!=="undefined" && _payFilter){
+      data=data.filter(r=>(r.paymentStatus||"UNPAID")===_payFilter);
+    }
+    // UNPAID 우선 정렬 (기존 날짜순 앞단에 끼워넣기)
+    data.sort((a,b)=>{
+      const pa=(a.paymentStatus||"UNPAID")==="UNPAID"?0:1;
+      const pb=(b.paymentStatus||"UNPAID")==="UNPAID"?0:1;
+      if(pa!==pb) return pa-pb;
+      return (b.purchaseDate||"").localeCompare(a.purchaseDate||"");
+    });
+  }catch(e){ console.warn("[UNPAID PATCH] filter/sort error:", e); }
+  // [/UNPAID PATCH]
   return data;
 }
 
@@ -631,7 +680,8 @@ function hasActiveFilter(){
     || !!$("fVendor").value
     || !!$("fStatus").value
     || !!$("fFrom").value
-    || !!$("fTo").value;
+    || !!$("fTo").value
+    || !!(typeof _payFilter!=="undefined" && _payFilter); // [UNPAID PATCH]
 }
 function computeKPI(){
   const all=load();
@@ -701,7 +751,7 @@ function render(){
   const tb=$("tbody");
   tb.innerHTML="";
   if(page.length===0){
-    tb.innerHTML='<tr><td colspan="13" class="muted" style="text-align:center;padding:24px">데이터가 없습니다.</td></tr>';
+    tb.innerHTML='<tr><td colspan="14" class="muted" style="text-align:center;padding:24px">데이터가 없습니다.</td></tr>'; // [UNPAID PATCH] 13→14
   }
   page.forEach(r=>{
     const buyTotal=n(r.buyUnitPrice)*n(r.qty);
@@ -721,6 +771,7 @@ function render(){
       <td class="num">${fmt(n(r.buyUnitPrice))}</td>
       <td class="num highlight">${fmt(buyTotal)}</td>
       <td><span class="status-tag ${st}">${statusLabel(st)}</span></td>
+      <td><span class="pay-tag ${r.paymentStatus||'UNPAID'}" data-paytoggle="${r.id}">${(r.paymentStatus||'UNPAID')==='PAID'?'송금완료':'미송금'}</span></td>
       <td class="muted">${esc(r.memo)}</td>
       <td style="text-align:right;white-space:nowrap">
         ${st!=="RECEIVED"?`<button class="receive-btn" data-rcv="${r.id}">입고처리</button>`:''}
@@ -742,6 +793,10 @@ function render(){
   });
   tb.querySelectorAll(".vendor-link").forEach(el=>{
     el.onclick=e=>{ e.stopPropagation(); openDrawer(el.dataset.vendor); };
+  });
+  // [UNPAID PATCH] 송금 토글 배지 이벤트
+  tb.querySelectorAll("[data-paytoggle]").forEach(el=>{
+    el.onclick=e=>{ e.stopPropagation(); togglePaymentStatus(el.dataset.paytoggle); };
   });
 
   // Pagination
@@ -850,6 +905,7 @@ function saveReceive(){
 
   closeReceiveModal();
   computeKPI();
+  try{ computeUnpaidKPI(); }catch(e){} // [UNPAID PATCH]
   render();
   showToast("입고 수량이 반영되어 재고에 업데이트되었습니다.");
 }
@@ -936,6 +992,12 @@ function openDrawer(vendor){
   $("vpCount").textContent = trades.length;
   $("vpLatest").textContent = allDates.length ? allDates[allDates.length-1] : "-";
   $("vpTasks").textContent = vendorActions.length + "건";
+  // [UNPAID PATCH] 드로어 미송금 통계
+  try{
+    const vUnpaid = trades.filter(r=>(r.paymentStatus||"UNPAID")==="UNPAID");
+    const vUnpaidAmt = vUnpaid.reduce((s,r)=>s+n(r.buyUnitPrice)*n(r.qty),0);
+    $("vpUnpaid").textContent = vUnpaid.length+"건 / "+fmt(vUnpaidAmt);
+  }catch(e){ console.warn("[UNPAID PATCH] drawer unpaid error:", e); }
 
   // Vendor Master Info
   const masters = loadVendors();
@@ -1071,7 +1133,10 @@ function addOrUpdate(){
     receivedQty: existing ? existing.receivedQty : 0,
     status: existing ? existing.status : "ORDERED",
     memo: $("inMemo").value,
-    createdAt: existing ? existing.createdAt : undefined
+    createdAt: existing ? existing.createdAt : undefined,
+    // [UNPAID PATCH] 수정 시 기존 송금상태 보존
+    paymentStatus: existing ? existing.paymentStatus : undefined,
+    paymentDate: existing ? existing.paymentDate : undefined
   });
 
   // Recompute status in case qty changed
@@ -1091,6 +1156,7 @@ function addOrUpdate(){
   refreshAC();
   refreshFilterSelects();
   computeKPI();
+  try{ computeUnpaidKPI(); }catch(e){} // [UNPAID PATCH]
   render();
 }
 
@@ -1120,6 +1186,7 @@ function deleteRecord(id){
   save(load().filter(x=>x.id!==id));
   refreshFilterSelects();
   computeKPI();
+  try{ computeUnpaidKPI(); }catch(e){} // [UNPAID PATCH]
   render();
 }
 
@@ -1182,6 +1249,7 @@ function debouncedRender(){
   debounceTimer=setTimeout(()=>{
     currentPage=1;
     computeKPI();
+    try{ computeUnpaidKPI(); }catch(e){} // [UNPAID PATCH]
     render();
   },DEBOUNCE_MS);
 }
@@ -1694,10 +1762,110 @@ $("btnSeed").onclick = seedTestInventory;
 // 4️⃣ dev 모드에서만 seed 버튼 표시
 if (IS_DEV) $("btnSeed").style.display = "";
 
+/* ══════════════════════════════════════════
+   [UNPAID PATCH] 미송금 관리 — 최소 패치
+   - 기존 저장함수(save) 외 새 저장 경로 없음
+   - paymentStatus 없는 레코드는 렌더/계산 시점에서만 UNPAID 간주
+   - 모든 신규 로직 try-catch fail-safe
+   ══════════════════════════════════════════ */
+
+// [UNPAID PATCH] 송금 필터 상태
+let _payFilter = ""; // "" = 전체, "UNPAID", "PAID"
+
+// [UNPAID PATCH] 송금상태 토글 — 기존 save() 함수만 사용
+function togglePaymentStatus(id){
+  try{
+    const all = load();
+    const r = all.find(x => x.id === id);
+    if(!r) return;
+    const cur = r.paymentStatus || "UNPAID";
+    if(cur === "UNPAID"){
+      r.paymentStatus = "PAID";
+      r.paymentDate = todayStr(); // PAID 시 오늘 날짜 기록
+    } else {
+      r.paymentStatus = "UNPAID";
+      r.paymentDate = null;       // UNPAID 복귀 시 날짜 삭제
+    }
+    r.updatedAt = new Date().toISOString();
+    save(all);
+    // 감사로그 기록
+    emitAudit("PAYMENT_TOGGLE", {
+      id: r.id, vendor: r.vendor, itemName: r.itemName,
+      paymentStatus: r.paymentStatus, paymentDate: r.paymentDate
+    });
+    computeUnpaidKPI();
+    render();
+    showToast(r.paymentStatus === "PAID"
+      ? "✅ 송금완료 처리 (" + r.vendor + " · " + (r.itemName||"").slice(0,20) + ")"
+      : "⏳ 미송금으로 되돌림");
+  }catch(e){ console.warn("[UNPAID PATCH] togglePaymentStatus error:", e); }
+}
+
+// [UNPAID PATCH] 미송금 KPI 계산 + 배너 갱신
+function computeUnpaidKPI(){
+  try{
+    const all = load();
+    let unpaidAmt = 0, unpaidCnt = 0;
+    all.forEach(r => {
+      if((r.paymentStatus || "UNPAID") === "UNPAID"){
+        unpaidAmt += n(r.buyUnitPrice) * n(r.qty);
+        unpaidCnt++;
+      }
+    });
+    $("kUnpaidAmt").textContent = fmt(unpaidAmt);
+    $("kUnpaidCnt").textContent = unpaidCnt + "건";
+
+    // 경고 배너
+    const banner = $("unpaidBanner");
+    if(unpaidCnt > 0){
+      banner.classList.add("visible");
+      $("unpaidBannerText").textContent = "미송금 " + unpaidCnt + "건 / 총액 " + fmt(unpaidAmt);
+    } else {
+      banner.classList.remove("visible");
+    }
+  }catch(e){ console.warn("[UNPAID PATCH] computeUnpaidKPI error:", e); }
+}
+
+// [UNPAID PATCH] 배너 클릭 → 미송금 필터 ON
+try{
+  $("unpaidBanner").onclick = function(){
+    _payFilter = "UNPAID";
+    refreshPayFilterUI();
+    currentPage = 1;
+    computeKPI();
+    render();
+  };
+}catch(e){ console.warn("[UNPAID PATCH] banner bind error:", e); }
+
+// [UNPAID PATCH] 송금 필터 버튼 이벤트
+try{
+  document.querySelectorAll("[data-payfilter]").forEach(btn => {
+    btn.onclick = function(){
+      _payFilter = this.dataset.payfilter;
+      refreshPayFilterUI();
+      currentPage = 1;
+      computeKPI();
+      render();
+    };
+  });
+}catch(e){ console.warn("[UNPAID PATCH] filter bind error:", e); }
+
+// [UNPAID PATCH] 필터 UI 활성화 표시
+function refreshPayFilterUI(){
+  try{
+    document.querySelectorAll("[data-payfilter]").forEach(btn => {
+      btn.classList.toggle("active", btn.dataset.payfilter === _payFilter);
+    });
+  }catch(e){}
+}
+
+/* [/UNPAID PATCH] */
+
 /* ── Init ── */
 refreshAC();
 refreshFilterSelects();
 computeKPI();
+try{ computeUnpaidKPI(); }catch(e){ console.warn("[UNPAID PATCH] init computeUnpaidKPI error:", e); } // [UNPAID PATCH]
 render();
 </script>
 </body>
