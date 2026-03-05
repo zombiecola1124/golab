@@ -1,0 +1,743 @@
+/**
+ * GoLab v2.0 — 품목 마스터 + 자동완성 공유 모듈
+ *
+ * 사용법: <script src="js/item-master.js"></script>
+ *         GoLabItemMaster.loadAll()
+ *         GoLabItemMaster.createAutocomplete(container, options)
+ *         GoLabItemMaster.migrateFromExisting()
+ *
+ * localStorage 키:
+ *   golab_item_master_v1  — 품목 마스터 배열
+ *   golab_item_master_audit — 감사 로그
+ */
+window.GoLabItemMaster = (function () {
+  "use strict";
+
+  const MASTER_KEY = "golab_item_master_v1";
+  const AUDIT_KEY  = "golab_item_master_audit";
+
+  /* ── 카테고리 매핑 ── */
+  const CATEGORY_MAP = {
+    general_goods:  "일반상품",
+    metal_material: "원료",
+    equipment:      "장비"
+  };
+  const CATEGORY_REVERSE = {
+    "일반상품": "general_goods",
+    "원료":     "metal_material",
+    "장비":     "equipment"
+  };
+  const CATEGORIES = ["원료", "장비", "일반상품"];
+
+  /* ══════════════════════════════════════
+     CRUD
+     ══════════════════════════════════════ */
+
+  /** 전체 품목 마스터 로드 */
+  function loadAll() {
+    try { return JSON.parse(localStorage.getItem(MASTER_KEY) || "[]"); }
+    catch { return []; }
+  }
+
+  /** 저장 */
+  function _save(arr) {
+    localStorage.setItem(MASTER_KEY, JSON.stringify(arr));
+  }
+
+  /** 단건 조회 (by item_id) */
+  function getById(itemId) {
+    if (!itemId) return null;
+    return loadAll().find(x => x.item_id === itemId) || null;
+  }
+
+  /** 이름으로 검색 (부분 매칭, 대소문자 무시) */
+  function search(query) {
+    if (!query || !query.trim()) return loadAll();
+    const q = query.trim().toLowerCase();
+    const all = loadAll();
+    // 정확한 prefix 매칭 우선 → contains 매칭 후순위
+    const prefix = [];
+    const contains = [];
+    all.forEach(item => {
+      const name = (item.item_name || "").toLowerCase();
+      const spec = (item.spec || "").toLowerCase();
+      const supplier = (item.supplier || "").toLowerCase();
+      const combined = name + " " + spec + " " + supplier;
+      if (name.startsWith(q)) prefix.push(item);
+      else if (combined.includes(q)) contains.push(item);
+    });
+    return prefix.concat(contains);
+  }
+
+  /** 품목 생성 */
+  function create(fields) {
+    const item = {
+      item_id:    crypto.randomUUID(),
+      item_name:  (fields.item_name || "").trim(),
+      category:   fields.category || "일반상품",
+      spec:       (fields.spec || "").trim(),
+      supplier:   (fields.supplier || "").trim(),
+      note:       (fields.note || "").trim(),
+      created_at: new Date().toISOString()
+    };
+    if (!item.item_name) throw new Error("품목명은 필수입니다.");
+    const all = loadAll();
+    all.unshift(item);
+    _save(all);
+    emitAudit("CREATE", { item_id: item.item_id, item_name: item.item_name });
+    return item;
+  }
+
+  /** 품목 수정 */
+  function update(itemId, fields) {
+    const all = loadAll();
+    const idx = all.findIndex(x => x.item_id === itemId);
+    if (idx < 0) throw new Error("품목을 찾을 수 없습니다: " + itemId);
+    const before = { ...all[idx] };
+    if (fields.item_name !== undefined) all[idx].item_name = fields.item_name.trim();
+    if (fields.category  !== undefined) all[idx].category  = fields.category;
+    if (fields.spec      !== undefined) all[idx].spec      = fields.spec.trim();
+    if (fields.supplier  !== undefined) all[idx].supplier  = fields.supplier.trim();
+    if (fields.note      !== undefined) all[idx].note      = fields.note.trim();
+    _save(all);
+    emitAudit("UPDATE", { item_id: itemId, before, after: { ...all[idx] } });
+    return all[idx];
+  }
+
+  /** 품목 삭제 */
+  function remove(itemId) {
+    const all = loadAll();
+    const idx = all.findIndex(x => x.item_id === itemId);
+    if (idx < 0) return;
+    const removed = all.splice(idx, 1)[0];
+    _save(all);
+    emitAudit("DELETE", { item_id: itemId, item_name: removed.item_name });
+  }
+
+  /* ══════════════════════════════════════
+     감사 로그 (Audit)
+     ══════════════════════════════════════ */
+
+  function emitAudit(event, detail) {
+    try {
+      const log = JSON.parse(localStorage.getItem(AUDIT_KEY) || "[]");
+      log.push({ event, ts: new Date().toISOString(), detail: detail || {} });
+      if (log.length > 2000) log.splice(0, log.length - 2000);
+      localStorage.setItem(AUDIT_KEY, JSON.stringify(log));
+    } catch { /* silent */ }
+  }
+
+  /* ══════════════════════════════════════
+     CSS 주입 (1회)
+     ══════════════════════════════════════ */
+
+  function _injectCSS() {
+    if (document.getElementById("golab-ac-style")) return;
+    const s = document.createElement("style");
+    s.id = "golab-ac-style";
+    s.textContent = `
+      .golab-ac-wrap{position:relative;width:100%}
+      .golab-ac-input{
+        width:100%;border-radius:10px;border:1px solid var(--line,#e5e7eb);
+        background:rgba(37,99,235,0.06);color:var(--text,#0f172a);
+        padding:10px;font-size:12px;outline:none;transition:border .2s;
+        box-sizing:border-box;
+      }
+      .golab-ac-input:focus{border-color:var(--point,#2563eb)}
+      .golab-ac-input::placeholder{color:#94a3b8}
+      .golab-ac-selected{
+        display:flex;align-items:center;gap:8px;
+        padding:7px 10px;border-radius:10px;border:1px solid var(--point,#2563eb);
+        background:rgba(37,99,235,0.06);font-size:12px;min-height:38px;
+      }
+      .golab-ac-chip{font-weight:700;color:var(--point,#2563eb);flex:1}
+      .golab-ac-chip-detail{color:var(--muted,#64748b);font-size:11px}
+      .golab-ac-clear{
+        border:none;background:transparent;color:var(--muted,#64748b);
+        cursor:pointer;font-size:14px;padding:2px 6px;border-radius:6px;
+      }
+      .golab-ac-clear:hover{background:rgba(0,0,0,.06)}
+      .golab-ac-dropdown{
+        position:absolute;top:100%;left:0;right:0;
+        background:var(--card,#fff);border:1px solid var(--line,#e5e7eb);
+        border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);
+        max-height:280px;overflow:auto;z-index:200;margin-top:4px;
+      }
+      .golab-ac-item{
+        padding:10px 12px;cursor:pointer;border-bottom:1px solid var(--line,#e5e7eb);
+        font-size:12px;
+      }
+      .golab-ac-item:last-child{border-bottom:none}
+      .golab-ac-item:hover,.golab-ac-item.focused{background:rgba(37,99,235,.06)}
+      .golab-ac-item-name{font-weight:700;color:var(--text,#0f172a)}
+      .golab-ac-item-detail{color:var(--muted,#64748b);font-size:11px;margin-top:2px}
+      .golab-ac-create{color:var(--point,#2563eb);font-weight:700}
+      .golab-ac-empty{padding:12px;text-align:center;color:var(--muted,#64748b);font-size:12px}
+      /* 등록 모달 */
+      .golab-ac-modal-back{
+        position:fixed;inset:0;background:rgba(0,0,0,.35);
+        display:flex;align-items:center;justify-content:center;z-index:1000;
+      }
+      .golab-ac-modal{
+        width:min(440px,92vw);background:var(--card,#fff);
+        border:1px solid var(--line,#e5e7eb);border-radius:12px;
+        padding:20px;box-shadow:0 8px 30px rgba(0,0,0,.15);
+      }
+      .golab-ac-modal h3{margin:0 0 14px;font-size:14px;color:var(--text,#0f172a)}
+      .golab-ac-modal label{display:block;font-size:11px;color:var(--muted,#64748b);margin:10px 0 4px}
+      .golab-ac-modal label:first-of-type{margin-top:0}
+      .golab-ac-modal input,.golab-ac-modal select,.golab-ac-modal textarea{
+        width:100%;border-radius:10px;border:1px solid var(--line,#e5e7eb);
+        background:var(--chip,#f8fafc);color:var(--text,#0f172a);
+        padding:10px;font-size:12px;outline:none;box-sizing:border-box;
+      }
+      .golab-ac-modal input:focus,.golab-ac-modal select:focus{border-color:var(--point,#2563eb)}
+      .golab-ac-modal textarea{min-height:36px;resize:vertical}
+      .golab-ac-modal-btns{display:flex;gap:8px;justify-content:flex-end;margin-top:14px}
+      .golab-ac-modal-btns button{
+        border-radius:10px;padding:10px 16px;font-size:12px;font-weight:700;cursor:pointer;
+      }
+      /* Last Deal 카드 */
+      .golab-last-deal-card{
+        margin-top:8px;padding:10px 12px;border-radius:10px;
+        border:1px solid var(--line,#e5e7eb);background:var(--chip,#f8fafc);
+        font-size:12px;line-height:1.6;
+      }
+    `;
+    document.head.appendChild(s);
+  }
+
+  /* ══════════════════════════════════════
+     자동완성 위젯
+     ══════════════════════════════════════ */
+
+  /**
+   * @param {HTMLElement} container - 위젯이 삽입될 부모
+   * @param {Object} opts
+   *   - placeholder: string
+   *   - onSelect: function(item)
+   *   - onClear: function()
+   *   - required: boolean (기본 true)
+   * @returns {{ getValue, setValue, clear, getItem, destroy }}
+   */
+  function createAutocomplete(container, opts) {
+    _injectCSS();
+    opts = opts || {};
+
+    let _selectedId = null;
+    let _focusIdx = -1;
+    let _debounce = null;
+    let _items = [];
+
+    /* ── DOM 구성 ── */
+    const wrap = document.createElement("div");
+    wrap.className = "golab-ac-wrap";
+
+    // 입력 필드
+    const input = document.createElement("input");
+    input.className = "golab-ac-input";
+    input.placeholder = opts.placeholder || "품목 검색...";
+    input.autocomplete = "off";
+
+    // 선택된 상태 칩
+    const selected = document.createElement("div");
+    selected.className = "golab-ac-selected";
+    selected.style.display = "none";
+
+    const chip = document.createElement("span");
+    chip.className = "golab-ac-chip";
+    const chipDetail = document.createElement("span");
+    chipDetail.className = "golab-ac-chip-detail";
+    const clearBtn = document.createElement("button");
+    clearBtn.type = "button";
+    clearBtn.className = "golab-ac-clear";
+    clearBtn.textContent = "\u2715";
+    selected.append(chip, chipDetail, clearBtn);
+
+    // 드롭다운
+    const dropdown = document.createElement("div");
+    dropdown.className = "golab-ac-dropdown";
+    dropdown.style.display = "none";
+
+    wrap.append(input, selected, dropdown);
+    container.appendChild(wrap);
+
+    /* ── 이벤트 ── */
+
+    input.addEventListener("input", () => {
+      clearTimeout(_debounce);
+      _debounce = setTimeout(() => _renderDropdown(input.value), 150);
+    });
+
+    input.addEventListener("focus", () => {
+      if (!_selectedId) _renderDropdown(input.value);
+    });
+
+    input.addEventListener("keydown", (e) => {
+      if (dropdown.style.display === "none") return;
+      if (e.key === "ArrowDown") {
+        e.preventDefault();
+        _focusIdx = Math.min(_focusIdx + 1, dropdown.children.length - 1);
+        _highlightFocused();
+      } else if (e.key === "ArrowUp") {
+        e.preventDefault();
+        _focusIdx = Math.max(_focusIdx - 1, 0);
+        _highlightFocused();
+      } else if (e.key === "Enter") {
+        e.preventDefault();
+        if (_focusIdx >= 0 && _focusIdx < dropdown.children.length) {
+          dropdown.children[_focusIdx].click();
+        }
+      } else if (e.key === "Escape") {
+        _closeDropdown();
+      }
+    });
+
+    clearBtn.addEventListener("click", () => {
+      _selectedId = null;
+      selected.style.display = "none";
+      input.style.display = "";
+      input.value = "";
+      input.focus();
+      if (opts.onClear) opts.onClear();
+    });
+
+    // 외부 클릭 시 드롭다운 닫기
+    document.addEventListener("mousedown", (e) => {
+      if (!wrap.contains(e.target)) _closeDropdown();
+    });
+
+    /* ── 드롭다운 렌더링 ── */
+
+    function _renderDropdown(query) {
+      _items = search(query);
+      _focusIdx = -1;
+      dropdown.innerHTML = "";
+
+      const limited = _items.slice(0, 10);
+      if (limited.length === 0 && !(query || "").trim()) {
+        // 마스터가 비어있을 때
+        const empty = document.createElement("div");
+        empty.className = "golab-ac-empty";
+        empty.textContent = "등록된 품목이 없습니다. 아래에서 새 품목을 등록하세요.";
+        dropdown.appendChild(empty);
+      }
+
+      limited.forEach((item, i) => {
+        const row = document.createElement("div");
+        row.className = "golab-ac-item";
+        row.dataset.idx = i;
+        const nameEl = document.createElement("div");
+        nameEl.className = "golab-ac-item-name";
+        nameEl.textContent = item.item_name;
+        const detailEl = document.createElement("div");
+        detailEl.className = "golab-ac-item-detail";
+        const parts = [item.spec, item.supplier, item.category].filter(Boolean);
+        detailEl.textContent = parts.join(" / ");
+        row.append(nameEl, detailEl);
+        row.addEventListener("click", () => _selectItem(item));
+        dropdown.appendChild(row);
+      });
+
+      // + 새 품목 등록
+      const createRow = document.createElement("div");
+      createRow.className = "golab-ac-item golab-ac-create";
+      const q = (query || "").trim();
+      createRow.textContent = q ? `+ 새 품목 등록: "${q}"` : "+ 새 품목 등록";
+      createRow.addEventListener("click", () => _openCreateModal(q));
+      dropdown.appendChild(createRow);
+
+      dropdown.style.display = "";
+    }
+
+    function _highlightFocused() {
+      Array.from(dropdown.children).forEach((el, i) => {
+        el.classList.toggle("focused", i === _focusIdx);
+      });
+      // 스크롤 조정
+      const focused = dropdown.children[_focusIdx];
+      if (focused) focused.scrollIntoView({ block: "nearest" });
+    }
+
+    function _closeDropdown() {
+      dropdown.style.display = "none";
+      _focusIdx = -1;
+    }
+
+    function _selectItem(item) {
+      _selectedId = item.item_id;
+      chip.textContent = item.item_name;
+      const parts = [item.spec, item.supplier, item.category].filter(Boolean);
+      chipDetail.textContent = parts.length ? " (" + parts.join(" / ") + ")" : "";
+      selected.style.display = "flex";
+      input.style.display = "none";
+      input.value = "";
+      _closeDropdown();
+      if (opts.onSelect) opts.onSelect(item);
+    }
+
+    /* ── 새 품목 등록 모달 ── */
+
+    function _openCreateModal(prefill) {
+      _closeDropdown();
+
+      const back = document.createElement("div");
+      back.className = "golab-ac-modal-back";
+
+      const modal = document.createElement("div");
+      modal.className = "golab-ac-modal";
+      modal.innerHTML = `
+        <h3>새 품목 등록</h3>
+        <label>품목명 *</label>
+        <input id="_acm_name" value="${_escHtml(prefill)}" placeholder="예: Ag Powder" />
+        <label>카테고리</label>
+        <select id="_acm_cat">
+          <option value="원료">원료</option>
+          <option value="장비">장비</option>
+          <option value="일반상품" selected>일반상품</option>
+        </select>
+        <label>규격</label>
+        <input id="_acm_spec" placeholder="예: 20um / 1kg" />
+        <label>매입처</label>
+        <input id="_acm_supplier" placeholder="예: 일본/TANAKA" />
+        <label>비고</label>
+        <textarea id="_acm_note" placeholder="메모"></textarea>
+        <div class="golab-ac-modal-btns">
+          <button type="button" id="_acm_cancel" style="border:1px solid var(--line);background:var(--card);color:var(--text)">취소</button>
+          <button type="button" id="_acm_save" style="background:var(--point);border:none;color:#fff">등록</button>
+        </div>
+      `;
+
+      back.appendChild(modal);
+      document.body.appendChild(back);
+
+      // 포커스
+      const nameInput = modal.querySelector("#_acm_name");
+      setTimeout(() => nameInput.focus(), 50);
+
+      // 취소
+      const cancel = () => { document.body.removeChild(back); };
+      modal.querySelector("#_acm_cancel").addEventListener("click", cancel);
+      back.addEventListener("click", (e) => { if (e.target === back) cancel(); });
+
+      // 저장
+      modal.querySelector("#_acm_save").addEventListener("click", () => {
+        const name = nameInput.value.trim();
+        if (!name) { alert("품목명을 입력해주세요."); nameInput.focus(); return; }
+        try {
+          const newItem = create({
+            item_name: name,
+            category:  modal.querySelector("#_acm_cat").value,
+            spec:      modal.querySelector("#_acm_spec").value,
+            supplier:  modal.querySelector("#_acm_supplier").value,
+            note:      modal.querySelector("#_acm_note").value
+          });
+          document.body.removeChild(back);
+          _selectItem(newItem);
+        } catch (err) {
+          alert("등록 실패: " + err.message);
+        }
+      });
+
+      // Enter → 저장
+      modal.addEventListener("keydown", (e) => {
+        if (e.key === "Enter" && e.target.tagName !== "TEXTAREA") {
+          e.preventDefault();
+          modal.querySelector("#_acm_save").click();
+        }
+        if (e.key === "Escape") cancel();
+      });
+    }
+
+    function _escHtml(s) {
+      return (s || "").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;").replace(/"/g,"&quot;");
+    }
+
+    /* ── 외부 API ── */
+
+    return {
+      /** 현재 선택된 item_id 반환 (없으면 null) */
+      getValue() { return _selectedId; },
+
+      /** item_id로 선택 상태 설정 */
+      setValue(itemId) {
+        const item = getById(itemId);
+        if (item) _selectItem(item);
+      },
+
+      /** 선택된 품목 객체 반환 */
+      getItem() { return _selectedId ? getById(_selectedId) : null; },
+
+      /** 선택 해제 */
+      clear() {
+        _selectedId = null;
+        selected.style.display = "none";
+        input.style.display = "";
+        input.value = "";
+        _closeDropdown();
+      },
+
+      /** 위젯 제거 */
+      destroy() {
+        wrap.remove();
+      }
+    };
+  }
+
+  /* ══════════════════════════════════════
+     Last Deal — 최근 거래 조회 + 카드 렌더링
+     ══════════════════════════════════════ */
+
+  /**
+   * 품목 item_id로 최신 매출/매입 조회
+   * @param {string} itemId - 품목 마스터 item_id
+   * @returns {{ lastSale: object|null, lastPurchase: object|null }}
+   */
+  function lookupLastDeals(itemId) {
+    if (!itemId) return { lastSale: null, lastPurchase: null };
+
+    let lastSale = null;
+    let lastPurchase = null;
+
+    // 매출: golab_sales_v1 — item_id 매칭 → salesDate 내림차순 최신 1건
+    try {
+      const sales = JSON.parse(localStorage.getItem("golab_sales_v1") || "[]");
+      const matched = sales.filter(s => s.item_id === itemId);
+      matched.sort((a, b) => (b.salesDate || "").localeCompare(a.salesDate || ""));
+      if (matched.length > 0) {
+        const s = matched[0];
+        lastSale = {
+          date: s.salesDate || "",
+          qty: s.qty,
+          unitPrice: s.sellUnitPrice || s.sellPrice || 0,
+          client: s.client || s.clientName || ""
+        };
+      }
+    } catch { /* silent */ }
+
+    // 매입: golab_price_history_v1 — item_id 매칭 → date 내림차순 최신 1건
+    try {
+      const ph = JSON.parse(localStorage.getItem("golab_price_history_v1") || "[]");
+      const matched = ph.filter(p => p.item_id === itemId);
+      matched.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
+      if (matched.length > 0) {
+        const p = matched[0];
+        lastPurchase = {
+          date: p.date || "",
+          unitPrice: p.price || 0,
+          currency: p.currency || "",
+          vendor: p.vendor || ""
+        };
+      }
+    } catch { /* silent */ }
+
+    return { lastSale, lastPurchase };
+  }
+
+  /**
+   * Last Deal 카드 렌더링
+   * @param {HTMLElement} container - 카드가 삽입될 부모
+   * @param {{ lastSale, lastPurchase }} deals
+   */
+  function renderLastDealCard(container, deals) {
+    // 기존 카드 제거
+    const existing = container.querySelector(".golab-last-deal-card");
+    if (existing) existing.remove();
+
+    if (!deals || (!deals.lastSale && !deals.lastPurchase)) return;
+
+    const card = document.createElement("div");
+    card.className = "golab-last-deal-card";
+
+    const _fmt = v => Number(v || 0).toLocaleString();
+    const _esc = s => (s || "").replace(/</g, "&lt;").replace(/>/g, "&gt;");
+
+    let html = '<div style="font-size:11px;font-weight:700;color:var(--muted,#64748b);margin-bottom:4px">📋 최근 거래</div>';
+
+    if (deals.lastSale) {
+      const s = deals.lastSale;
+      html += `<div style="font-size:12px;line-height:1.8">
+        <span style="color:var(--sales,#d97706);font-weight:700">매출</span>
+        ${_esc(s.date)} · ${_esc(s.client)} · ${_fmt(s.qty)} × ₩${_fmt(s.unitPrice)}
+      </div>`;
+    }
+    if (deals.lastPurchase) {
+      const p = deals.lastPurchase;
+      html += `<div style="font-size:12px;line-height:1.8">
+        <span style="color:var(--point,#2563eb);font-weight:700">매입</span>
+        ${_esc(p.date)} · ${_esc(p.vendor)} · ${_fmt(p.unitPrice)} ${_esc(p.currency)}
+      </div>`;
+    }
+
+    card.innerHTML = html;
+    container.appendChild(card);
+  }
+
+  /* ══════════════════════════════════════
+     마이그레이션 (기존 데이터 → 품목 마스터)
+     ══════════════════════════════════════ */
+
+  function migrateFromExisting() {
+    const master = loadAll();
+    const masterById   = new Map(master.map(m => [m.item_id, m]));
+    const masterByName = new Map(master.map(m => [(m.item_name || "").trim().toLowerCase(), m]));
+
+    let created = 0;
+    const existing = master.length;
+
+    /* Phase 1: 재고(inventory) → 마스터 */
+    const INV_KEY = "golab_inventory_v01";
+    let inv = [];
+    try { inv = JSON.parse(localStorage.getItem(INV_KEY) || "[]"); } catch {}
+
+    inv.forEach(it => {
+      const nameKey = (it.name || "").trim().toLowerCase();
+      if (!nameKey) return;
+      if (masterById.has(it.id) || masterByName.has(nameKey)) return;
+      const m = {
+        item_id:    it.id, // 기존 UUID 재사용!
+        item_name:  (it.name || "").trim(),
+        category:   CATEGORY_MAP[it.type] || "일반상품",
+        spec:       (it.spec || "").trim(),
+        supplier:   (it.vendor || "").trim(),
+        note:       "",
+        created_at: new Date().toISOString()
+      };
+      master.push(m);
+      masterById.set(m.item_id, m);
+      masterByName.set(nameKey, m);
+      created++;
+    });
+
+    /* Phase 2: 매입(purchases) → 마스터에 없는 품목 */
+    const PUR_KEY = "golab_purchases_v2";
+    let batches = [];
+    try { batches = JSON.parse(localStorage.getItem(PUR_KEY) || "[]"); } catch {}
+
+    batches.forEach(batch => {
+      (batch.items || []).forEach(item => {
+        const name = (item.pName || "").trim();
+        const nameKey = name.toLowerCase();
+        if (!nameKey) return;
+        if (item.inventoryItemId && masterById.has(item.inventoryItemId)) return;
+        if (masterByName.has(nameKey)) return;
+        const m = {
+          item_id:    crypto.randomUUID(),
+          item_name:  name,
+          category:   "일반상품",
+          spec:       (item.unit || "").trim(),
+          supplier:   "",
+          note:       "매입원장에서 마이그레이션",
+          created_at: new Date().toISOString()
+        };
+        master.push(m);
+        masterById.set(m.item_id, m);
+        masterByName.set(nameKey, m);
+        created++;
+      });
+    });
+
+    /* Phase 3: 매출(sales) → 마스터에 없는 품목 */
+    const SALES_KEY = "golab_sales_v1";
+    let sales = [];
+    try { sales = JSON.parse(localStorage.getItem(SALES_KEY) || "[]"); } catch {}
+
+    sales.forEach(rec => {
+      const name = (rec.itemName || "").trim();
+      const nameKey = name.toLowerCase();
+      if (!nameKey) return;
+      if (masterByName.has(nameKey)) return;
+      const m = {
+        item_id:    crypto.randomUUID(),
+        item_name:  name,
+        category:   "일반상품",
+        spec:       "",
+        supplier:   (rec.client || "").trim(),
+        note:       "매출에서 마이그레이션",
+        created_at: new Date().toISOString()
+      };
+      master.push(m);
+      masterById.set(m.item_id, m);
+      masterByName.set(nameKey, m);
+      created++;
+    });
+
+    /* Phase 4: 기존 레코드에 item_id backfill */
+    let bfPurchases = 0, bfSales = 0, bfPH = 0;
+    let purChanged = false, salesChanged = false, phChanged = false;
+
+    // 매입 backfill
+    batches.forEach(batch => {
+      (batch.items || []).forEach(item => {
+        if (item.item_id) return;
+        const nameKey = (item.pName || "").trim().toLowerCase();
+        const m = masterByName.get(nameKey);
+        if (m) { item.item_id = m.item_id; bfPurchases++; purChanged = true; }
+      });
+    });
+    if (purChanged) localStorage.setItem(PUR_KEY, JSON.stringify(batches));
+
+    // 매출 backfill
+    sales.forEach(rec => {
+      if (rec.item_id) return;
+      const nameKey = (rec.itemName || "").trim().toLowerCase();
+      const m = masterByName.get(nameKey);
+      if (m) { rec.item_id = m.item_id; bfSales++; salesChanged = true; }
+    });
+    if (salesChanged) localStorage.setItem(SALES_KEY, JSON.stringify(sales));
+
+    // 가격 기록 backfill
+    const PH_KEY = "golab_price_history_v1";
+    let ph = [];
+    try { ph = JSON.parse(localStorage.getItem(PH_KEY) || "[]"); } catch {}
+    ph.forEach(rec => {
+      if (rec.item_id) return;
+      const nameKey = (rec.productName || "").trim().toLowerCase();
+      const m = masterByName.get(nameKey);
+      if (m) { rec.item_id = m.item_id; bfPH++; phChanged = true; }
+    });
+    if (phChanged) localStorage.setItem(PH_KEY, JSON.stringify(ph));
+
+    // 재고에 item_id 추가
+    let invChanged = false;
+    inv.forEach(it => {
+      if (it.item_id) return;
+      if (masterById.has(it.id)) { it.item_id = it.id; invChanged = true; }
+      else {
+        const nameKey = (it.name || "").trim().toLowerCase();
+        const m = masterByName.get(nameKey);
+        if (m) { it.item_id = m.item_id; invChanged = true; }
+      }
+    });
+    if (invChanged) localStorage.setItem(INV_KEY, JSON.stringify(inv));
+
+    /* 마스터 저장 */
+    _save(master);
+
+    const result = {
+      created,
+      existing,
+      total: master.length,
+      backfilled: { purchases: bfPurchases, sales: bfSales, priceHistory: bfPH }
+    };
+    emitAudit("MIGRATION", result);
+    return result;
+  }
+
+  /* ══════════════════════════════════════
+     Public API
+     ══════════════════════════════════════ */
+
+  return {
+    MASTER_KEY, AUDIT_KEY,
+    CATEGORY_MAP, CATEGORY_REVERSE, CATEGORIES,
+    loadAll, getById, search,
+    create, update, remove,
+    emitAudit,
+    createAutocomplete,
+    lookupLastDeals,
+    renderLastDealCard,
+    migrateFromExisting
+  };
+
+})();

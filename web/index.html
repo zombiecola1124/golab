@@ -129,6 +129,7 @@
       <a class="tab active" href="./index.html">📦 재고</a>
       <a class="tab" href="./purchases.html">📥 입고</a>
       <a class="tab" href="./deal.html">🔥 기회</a>
+      <a class="tab" href="./partner-master.html">🤝 거래처</a>
     </nav>
   </div>
 </header>
@@ -143,6 +144,7 @@
           <button id="btnExport" class="secondary">내보내기(JSON)</button>
           <button id="btnImport" class="secondary">가져오기(JSON)</button>
           <input id="fileIn" type="file" accept="application/json" />
+          <button id="btnMigrate" class="secondary">품목 마스터 마이그레이션</button>
           <button id="btnReset" class="danger">초기화</button>
         </div>
       </h2>
@@ -170,7 +172,7 @@
     <div class="card">
       <h2>품목 추가/수정</h2>
       <div class="form">
-        <input id="inName" class="field-required" placeholder="품목명 (예: AG Powder)" />
+        <div id="acNameWrap" style="grid-column:1/3"></div>
         <input id="inSpec" placeholder="규격 (예: 1kg / 1ea)" />
         <input id="inVendor" placeholder="매입처 (예: 일본/국내)" />
         <select id="inType" style="padding:10px;font-size:12px">
@@ -285,12 +287,16 @@
     <div class="mini">※ 이 기록은 재고 수량/단가가 자동 변경된 "증빙 로그" 역할입니다.</div>
   </div>
 </div>
+<script src="js/item-master.js"></script>
 <script>
   const INV_KEY = "golab_inventory_v01";
   const HIST_KEY = "golab_inventory_inbound_history_v01";
   const $ = (id) => document.getElementById(id);
   let isEventBound = false;
   let selectedItemId = null;
+
+  /* ── 품목 자동완성 위젯 ── */
+  let acName = null; // DOMContentLoaded 후 초기화
   function loadInv(){
     try { return JSON.parse(localStorage.getItem(INV_KEY) || "[]"); }
     catch { return []; }
@@ -341,7 +347,16 @@
     });
   }
   function enterEditMode(it){
-    $("inName").value = it.name || "";
+    /* 품목 마스터 자동완성 설정 */
+    if (acName) {
+      if (it.item_id) {
+        acName.setValue(it.item_id);
+      } else {
+        // 레거시: 이름으로 마스터 검색
+        const results = GoLabItemMaster.search(it.name);
+        if (results.length > 0) acName.setValue(results[0].item_id);
+      }
+    }
     $("inSpec").value = it.spec || "";
     $("inVendor").value = it.vendor || "";
     $("inPrice").value = n(it.buyPrice);
@@ -481,14 +496,18 @@
     updateRowSelection();
   }
   function upsert(){
-    const name = $("inName").value.trim();
-    if(!name){ alert("품목명을 입력하세요."); return; }
-    /* [A] type 필드: 기존 값 보존, 없으면 폼 값 사용 */
+    /* 품목 마스터에서 선택 필수 */
+    const masterItemId = acName ? acName.getValue() : null;
+    if (!masterItemId) { alert("품목을 마스터에서 선택해주세요. (자유 텍스트 입력 불가)"); return; }
+    const masterItem = GoLabItemMaster.getById(masterItemId);
+    if (!masterItem) { alert("선택된 품목이 마스터에 없습니다."); return; }
+
     const _editing = $("btnAdd").dataset.editing;
     const _existing = _editing ? loadInv().find(x=>x.id===_editing) : null;
     const item = {
       id: _editing || crypto.randomUUID(),
-      name,
+      item_id: masterItem.item_id,       // 품목 마스터 참조 (핵심!)
+      name: masterItem.item_name,        // 비정규화 (표시용)
       spec: $("inSpec").value.trim(),
       vendor: $("inVendor").value.trim(),
       type: $("inType").value || "general_goods",
@@ -505,7 +524,8 @@
     if(idx >= 0) inv[idx] = item;
     else inv.unshift(item);
     saveInv(inv);
-    $("inName").value=""; $("inSpec").value=""; $("inVendor").value="";
+    if(acName) acName.clear();
+    $("inSpec").value=""; $("inVendor").value="";
     $("inPrice").value=""; $("inQty").value=""; $("inMin").value=""; $("inNote").value="";
     try{ $("inType").value="general_goods"; }catch(_e){}
     $("btnAdd").textContent="추가";
@@ -565,14 +585,13 @@
     $("modalBack").style.display = "none";
   }
   function computeSaveButtonState(){
-    const name = ($("inName")?.value || "").trim();
+    const hasName = acName ? !!acName.getValue() : false;
     const priceRaw = $("inPrice")?.value || "";
     const qtyRaw = $("inQty")?.value || "";
     const minRaw = $("inMin")?.value || "";
     const price = n(priceRaw);
     const qty = n(qtyRaw);
     const min = n(minRaw);
-    const hasName = !!name;
     const hasPrice = priceRaw !== "" && price > 0;
     const hasQty = qtyRaw !== "" && qty >= 0;
     const hasMin = minRaw !== "";
@@ -658,10 +677,18 @@
     $("modalBack").addEventListener("click", (e)=>{
       if(e.target.id === "modalBack") closeHistory();
     });
-    $("inName").addEventListener("input", validateForm);
     $("inPrice").addEventListener("input", validateForm);
     $("inQty").addEventListener("input", validateForm);
     $("inMin").addEventListener("input", validateForm);
+    /* 품목 마스터 마이그레이션 */
+    $("btnMigrate").onclick = () => {
+      const master = GoLabItemMaster.loadAll();
+      if (master.length > 0 && !confirm("이미 품목 마스터가 " + master.length + "건 있습니다. 추가 마이그레이션을 실행하시겠습니까?")) return;
+      if (master.length === 0 && !confirm("기존 데이터에서 품목 마스터를 생성합니다. 계속하시겠습니까?")) return;
+      const r = GoLabItemMaster.migrateFromExisting();
+      alert("마이그레이션 완료!\n생성: " + r.created + "건 / 기존: " + r.existing + "건 / 합계: " + r.total + "건\n매입 backfill: " + r.backfilled.purchases + "건\n매출 backfill: " + r.backfilled.sales + "건\n가격기록 backfill: " + r.backfilled.priceHistory + "건");
+      render(); compute();
+    };
   }
   /* ═══════════════════════════════════════════════
      [CSV PATCH] 엑셀(CSV) 저장 + 저장 상태 표시
@@ -718,6 +745,21 @@
   };
 
   document.addEventListener("DOMContentLoaded", () => {
+    /* 품목 자동완성 위젯 초기화 */
+    acName = GoLabItemMaster.createAutocomplete(
+      $("acNameWrap"),
+      {
+        placeholder: "품목 검색 또는 새 등록...",
+        onSelect: function(item) {
+          $("inSpec").value = item.spec || "";
+          $("inVendor").value = item.supplier || "";
+          const rev = GoLabItemMaster.CATEGORY_REVERSE[item.category];
+          if (rev) try{ $("inType").value = rev; }catch(_e){}
+          validateForm();
+        },
+        onClear: function() { validateForm(); }
+      }
+    );
     render(); compute();
     bindEvents();
     validateForm();

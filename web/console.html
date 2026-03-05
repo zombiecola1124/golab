@@ -242,6 +242,34 @@
     .rp-btns .btn-commit:hover{background:#b91c1c}
     .rp-btns .btn-commit:disabled{background:#94a3b8;cursor:not-allowed}
 
+    /* ─ Unregistered Vendor Card & Panel ─ */
+    .unreg-card{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:10px;border:1px solid var(--orange);background:rgba(217,119,6,.06);cursor:pointer;transition:all .15s;margin-bottom:0}
+    .unreg-card:hover{background:rgba(217,119,6,.12);border-color:var(--orange)}
+    .unreg-card .uc-icon{font-size:18px}
+    .unreg-card .uc-label{font-size:12px;font-weight:700;color:var(--text);flex:1}
+    .unreg-card .uc-count{font-size:11px;font-weight:800;color:#fff;background:var(--orange);padding:2px 10px;border-radius:12px}
+    .unreg-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:110;align-items:flex-start;justify-content:center;padding-top:80px}
+    .unreg-overlay.open{display:flex}
+    .unreg-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;width:520px;max-width:92vw;max-height:75vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,.15)}
+    .unreg-panel-header{padding:16px 20px;border-bottom:1px solid var(--border);display:flex;align-items:center;gap:8px}
+    .unreg-panel-header h3{font-size:14px;font-weight:800;color:var(--text);margin:0;flex:1}
+    .unreg-panel-close{background:none;border:none;color:var(--muted);font-size:18px;cursor:pointer;padding:4px 8px}
+    .unreg-panel-close:hover{color:var(--warn)}
+    .unreg-list{overflow-y:auto;flex:1;padding:8px 0}
+    .unreg-item{display:flex;align-items:center;gap:10px;padding:10px 20px;border-bottom:1px solid var(--border);font-size:12px}
+    .unreg-item:last-child{border-bottom:none}
+    .unreg-item .ui-name{flex:1;font-weight:600;color:var(--text)}
+    .unreg-item .ui-src{font-size:10px;color:var(--muted)}
+    .unreg-item .ui-btn{background:var(--primary);border:none;color:#fff;border-radius:6px;padding:4px 12px;font-size:11px;font-weight:700;cursor:pointer}
+    .unreg-item .ui-btn:hover{background:#1d4ed8}
+    .unreg-item .ui-done{color:var(--accent);font-size:11px;font-weight:700}
+    .unreg-panel-footer{padding:12px 20px;border-top:1px solid var(--border);display:flex;gap:8px;justify-content:flex-end;align-items:center}
+    .unreg-panel-footer .uf-info{flex:1;font-size:11px;color:var(--muted)}
+    .unreg-panel-footer .uf-btn{border-radius:8px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer;border:none}
+    .unreg-panel-footer .uf-all{background:var(--orange);color:#fff}
+    .unreg-panel-footer .uf-all:hover{background:#b45309}
+    .unreg-panel-footer .uf-all:disabled{background:#94a3b8;cursor:not-allowed}
+
     /* ─ Responsive ─ */
     @media(max-width:1280px){
       .bento{grid-template-columns:1fr 280px}
@@ -265,6 +293,7 @@
     <a class="tab" href="./index.html">📦 재고</a>
     <a class="tab" href="./purchases.html">📥 입고</a>
     <a class="tab" href="./deal.html">🔥 기회</a>
+      <a class="tab" href="./partner-master.html">🤝 거래처</a>
   </nav>
 </header>
 
@@ -327,6 +356,13 @@
         <div class="sub">새 Action을 추가하거나 Initiative에서 전환하세요</div>
       </div>
       <div class="more-btn" id="todayMore" style="display:none"></div>
+    </div>
+
+    <!-- ═══ 미등록 거래처 카드 ═══ -->
+    <div class="unreg-card" id="unregCard" style="display:none" onclick="openUnregPanel()">
+      <span class="uc-icon">⚠️</span>
+      <span class="uc-label">미등록 거래처</span>
+      <span class="uc-count" id="unregCount">0</span>
     </div>
 
     <!-- ═══ THIS WEEK / OVERDUE ═══ -->
@@ -420,8 +456,7 @@
       <option value="LOW">낮음</option>
     </select>
     <label>거래처 (선택)</label>
-    <input id="actVendor" list="dlVendors" placeholder="업체명" />
-    <datalist id="dlVendors"></datalist>
+    <div id="acActVendorWrap"></div>
     <div class="modal-btns">
       <button id="actDelete" class="btn-danger" style="display:none">삭제</button>
       <span style="flex:1"></span>
@@ -494,6 +529,22 @@
   </div>
 </div>
 
+<!-- ═══ 미등록 거래처 일괄 등록 패널 ═══ -->
+<div class="unreg-overlay" id="unregOverlay">
+  <div class="unreg-panel">
+    <div class="unreg-panel-header">
+      <h3>⚠️ 미등록 거래처 일괄 등록</h3>
+      <button class="unreg-panel-close" id="unregClose">✕</button>
+    </div>
+    <div class="unreg-list" id="unregList"></div>
+    <div class="unreg-panel-footer">
+      <span class="uf-info" id="unregInfo"></span>
+      <button class="uf-btn uf-all" id="unregAll">모두 등록</button>
+    </div>
+  </div>
+</div>
+
+<script src="js/partner-master.js"></script>
 <script>
 /* ══════════════════════════════════════════
    GoLab Console v1.6 — Today Execution Center
@@ -506,6 +557,7 @@ const $ = id => document.getElementById(id);
 const ACTION_KEY = "golab_actions_v15";   // ★ Single Source of Truth (shared with Calendar)
 const INIT_KEY = "golab_initiatives_v15"; // Initiatives (read for drawer context)
 const TRADE_KEY = "golab_trade_v1";
+const PURCHASE_KEY = "golab_purchases_v2"; // 모던 배치 입고 시스템
 const SALES_KEY = "golab_sales_v1";
 const TRADE_AUDIT = "golab_trade_audit";
 const SALES_AUDIT = "golab_sales_audit";
@@ -535,6 +587,22 @@ function extractHashtags(text){
   if(!text) return [];
   const m=text.match(/#[^\s#]+/g);
   return m?[...new Set(m)]:[];
+}
+
+/* ── Partner 해석 헬퍼 (partner_id ↔ 이름 양방향) ── */
+function resolvePartnerId(nameOrId){
+  if(!nameOrId) return null;
+  const byId = GoLabPartnerMaster.getById(nameOrId);
+  if(byId) return byId.partner_id;
+  const byName = GoLabPartnerMaster.findByName(nameOrId);
+  return byName ? byName.partner_id : null;
+}
+function resolvePartnerName(nameOrId){
+  if(!nameOrId) return "";
+  const byId = GoLabPartnerMaster.getById(nameOrId);
+  if(byId) return byId.name;
+  const byName = GoLabPartnerMaster.findByName(nameOrId);
+  return byName ? byName.name : nameOrId;
 }
 
 /* ── Date Helpers ── */
@@ -814,7 +882,6 @@ function quickAdd(){
 let editingActionId = null;
 
 function openActionModal(id){
-  refreshVendorList();
   if(id){
     editingActionId = id;
     const a = loadActions().find(x => x.id === id);
@@ -823,7 +890,9 @@ function openActionModal(id){
     $("actTitle").value = a.title;
     $("actDate").value = a.dueDate;
     $("actPriority").value = a.priority || "NORMAL";
-    $("actVendor").value = a.vendorId || "";
+    // partner_id 또는 레거시 텍스트 → autocomplete 세팅
+    if(a.vendorId) acActVendor.setValue(a.vendorId);
+    else acActVendor.clear();
     $("actDelete").style.display = "inline-block";
   } else {
     editingActionId = null;
@@ -831,7 +900,7 @@ function openActionModal(id){
     $("actTitle").value = "";
     $("actDate").value = todayStr();
     $("actPriority").value = "NORMAL";
-    $("actVendor").value = "";
+    acActVendor.clear();
     $("actDelete").style.display = "none";
   }
   $("actionModal").classList.add("open");
@@ -841,23 +910,26 @@ function openActionModal(id){
 function saveActionModal(){
   const title = $("actTitle").value.trim();
   if(!title){ $("actTitle").focus(); return; }
+  const vendorPid = acActVendor.getValue(); // partner_id 또는 null
+  const vendorDisplay = resolvePartnerName(vendorPid); // audit용 표시 이름
   const actions = loadActions();
   if(editingActionId){
     const a = actions.find(x => x.id === editingActionId);
     if(a){
       a.title = title; a.dueDate = $("actDate").value;
-      a.priority = $("actPriority").value; a.vendorId = $("actVendor").value.trim();
+      a.priority = $("actPriority").value;
+      a.vendorId = vendorPid || "";
       a.updatedAt = new Date().toISOString();
     }
   } else {
     const a = {
       id: uid(), title, dueDate: $("actDate").value || todayStr(),
       type: "ACTION", status: "OPEN", priority: $("actPriority").value || "NORMAL",
-      vendorId: $("actVendor").value.trim(), createdAt: new Date().toISOString(),
+      vendorId: vendorPid || "", createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
     actions.push(a);
-    emitWorkAudit("CREATE", {id:a.id, text:title, vendor:a.vendorId});
+    emitWorkAudit("CREATE", {id:a.id, text:title, vendor:vendorDisplay});
   }
   saveActions(actions);
   closeActionModal();
@@ -958,11 +1030,28 @@ function renderTimeline(){
 function computeKPI(){
   const mp = monthPrefix();
   let sT=0, pT=0; const allV=new Set();
+  // 매출 집계
   try{JSON.parse(localStorage.getItem(SALES_KEY)||"[]").forEach(r=>{
-    if((r.salesDate||"").startsWith(mp)){sT+=n(r.sellUnitPrice)*n(r.qty); if(r.client) allV.add(r.client);}
+    if((r.salesDate||"").startsWith(mp)){
+      sT+=n(r.sellUnitPrice)*n(r.qty);
+      // partner_id 기반 거래처 카운팅 (중복 표기 통합)
+      if(r.partner_id) allV.add(r.partner_id);
+      else if(r.client){ const pid=resolvePartnerId(r.client); allV.add(pid||r.client); }
+    }
   });}catch{}
+  // 매입(레거시) — golab_trade_v1
   try{JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").forEach(r=>{
-    if((r.purchaseDate||"").startsWith(mp)){pT+=n(r.buyUnitPrice)*n(r.qty); if(r.vendor) allV.add(r.vendor);}
+    if((r.purchaseDate||"").startsWith(mp)){
+      pT+=n(r.buyUnitPrice)*n(r.qty);
+      if(r.vendor){ const pid=resolvePartnerId(r.vendor); allV.add(pid||r.vendor); }
+    }
+  });}catch{}
+  // 매입(모던) — golab_purchases_v2 배치 입고
+  try{JSON.parse(localStorage.getItem(PURCHASE_KEY)||"[]").forEach(b=>{
+    if(!(b.date||"").startsWith(mp)) return;
+    const fx = n(b.exchangeRate, 1);
+    (b.items||[]).forEach(item=>{ pT += n(item.price) * n(item.qty) * fx; });
+    pT += n(b.totalLogisticsKrw);
   });}catch{}
   const margin = sT - pT;
   $("kSales").textContent = fmt(sT);
@@ -1026,17 +1115,41 @@ function renderMiniCal(){
 /* ══════════════════════════════════════════
    VENDOR DRAWER (uses Action data)
    ══════════════════════════════════════════ */
-function openDrawer(vendor){
-  if(!vendor) return;
+/* partner_id / 텍스트 이름 양쪽 지원 — 정규화 매칭으로 표기 차이 통합 */
+function openDrawer(nameOrId){
+  if(!nameOrId) return;
   $("drawer").classList.add("open"); $("drawerOverlay").classList.add("open");
-  $("vpName").textContent = vendor;
+
+  // partner 해석
+  const partnerId = resolvePartnerId(nameOrId);
+  const partner = partnerId ? GoLabPartnerMaster.getById(partnerId) : null;
+  const displayName = partner ? partner.name : nameOrId;
+  $("vpName").textContent = displayName;
+
+  // 매칭 헬퍼 — partner_id/이름/정규화 3단 비교
+  function matchVendor(text){
+    if(!text) return false;
+    if(text === displayName) return true;
+    if(partner){
+      const f = GoLabPartnerMaster.findByName(text);
+      return f && f.partner_id === partnerId;
+    }
+    return false;
+  }
 
   let trades=[], sales=[];
-  try{trades=JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").filter(r=>r.vendor===vendor);}catch{}
-  try{sales=JSON.parse(localStorage.getItem(SALES_KEY)||"[]").filter(r=>r.client===vendor);}catch{}
+  try{trades=JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").filter(r=>matchVendor(r.vendor));}catch{}
+  try{sales=JSON.parse(localStorage.getItem(SALES_KEY)||"[]").filter(r=>{
+    if(partnerId && r.partner_id === partnerId) return true;
+    return matchVendor(r.client);
+  });}catch{}
 
-  // Actions for this vendor (Single Source of Truth)
-  const vendorActions = loadActions().filter(a => a.vendorId === vendor && a.status !== "DONE");
+  // Actions (vendorId = partner_id 또는 레거시 텍스트)
+  const vendorActions = loadActions().filter(a=>{
+    if(!a.vendorId) return false;
+    if(partnerId && a.vendorId === partnerId) return true;
+    return matchVendor(a.vendorId);
+  }).filter(a=>a.status!=="DONE");
 
   const tTotal=trades.reduce((s,r)=>s+n(r.buyUnitPrice)*n(r.qty),0);
   const sTotal=sales.reduce((s,r)=>s+n(r.sellUnitPrice)*n(r.qty),0);
@@ -1052,8 +1165,8 @@ function openDrawer(vendor){
   allMemos.forEach(m=>extractHashtags(m).forEach(h=>tags.add(h)));
   $("vpTags").innerHTML=[...tags].map(t=>`<span class="htag">${esc(t)}</span>`).join("");
 
-  // Timeline
-  const items=buildTimeline().filter(x=>x.vendor===vendor).slice(0,30);
+  // Timeline — 정규화 매칭으로 필터
+  const items=buildTimeline().filter(x=>matchVendor(x.vendor)).slice(0,30);
   const ul=$("vpTimeline"); ul.innerHTML="";
   if(!items.length){
     ul.innerHTML='<li class="tl-item"><div class="tl-body"><div class="tl-text" style="color:var(--muted)">이력 없음</div></div></li>';
@@ -1065,7 +1178,7 @@ function openDrawer(vendor){
     });
   }
 
-  // Footer: pending actions (from Single Source)
+  // Footer: pending actions
   const todoDiv=$("vpTodos"); todoDiv.innerHTML="";
   if(!vendorActions.length){
     todoDiv.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">미완료 Action 없음</div>';
@@ -1083,16 +1196,33 @@ function closeDrawer(){ $("drawer").classList.remove("open"); $("drawerOverlay")
 /* ══════════════════════════════════════════
    VENDOR SEARCH
    ══════════════════════════════════════════ */
+/* partner_master 기반 거래처 목록 + 미등록 거래처 하위 호환 */
 function getAllVendors(){
-  const v=new Set();
-  try{JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").forEach(r=>{if(r.vendor)v.add(r.vendor);});}catch{}
-  try{JSON.parse(localStorage.getItem(SALES_KEY)||"[]").forEach(r=>{if(r.client)v.add(r.client);});}catch{}
-  loadActions().forEach(a=>{if(a.vendorId)v.add(a.vendorId);});
-  return[...v].sort();
-}
-function refreshVendorList(){
-  const dl=$("dlVendors"); dl.innerHTML="";
-  getAllVendors().forEach(v=>{const o=document.createElement("option"); o.value=v; dl.appendChild(o);});
+  const partners = GoLabPartnerMaster.loadAll();
+  const result = partners.map(p=>({partner_id:p.partner_id, name:p.name, type:p.type}));
+  const knownIds = new Set(partners.map(p=>p.partner_id));
+  const knownNames = new Set(partners.map(p=>p.name));
+  // 미등록 거래처 수집 (partner_master에 없는 텍스트)
+  const unregistered = new Set();
+  try{JSON.parse(localStorage.getItem(TRADE_KEY)||"[]")
+    .forEach(r=>{if(r.vendor && !knownNames.has(r.vendor)){
+      const f=GoLabPartnerMaster.findByName(r.vendor); if(!f) unregistered.add(r.vendor);
+    }});}catch{}
+  try{JSON.parse(localStorage.getItem(SALES_KEY)||"[]")
+    .forEach(r=>{
+      if(r.partner_id && knownIds.has(r.partner_id)) return;
+      if(r.client && !knownNames.has(r.client)){
+        const f=GoLabPartnerMaster.findByName(r.client); if(!f) unregistered.add(r.client);
+      }
+    });}catch{}
+  loadActions().forEach(a=>{
+    if(!a.vendorId) return;
+    if(knownIds.has(a.vendorId)||knownNames.has(a.vendorId)) return;
+    const f=GoLabPartnerMaster.findByName(a.vendorId); if(!f) unregistered.add(a.vendorId);
+  });
+  unregistered.forEach(name=>result.push({partner_id:null, name, type:"미등록"}));
+  result.sort((a,b)=>a.name.localeCompare(b.name));
+  return result;
 }
 function openSearch(){
   $("searchOverlay").classList.add("open");
@@ -1102,16 +1232,145 @@ function openSearch(){
 function closeSearch(){ $("searchOverlay").classList.remove("open"); }
 function renderSearchResults(q){
   const all=getAllVendors();
-  const filtered=q?all.filter(v=>v.toLowerCase().includes(q.toLowerCase())):all;
+  const filtered=q?all.filter(v=>v.name.toLowerCase().includes(q.toLowerCase())):all;
   const ul=$("searchResults"); ul.innerHTML="";
   filtered.slice(0,20).forEach(v=>{
     const li=document.createElement("li");
-    li.textContent=v;
-    li.onclick=()=>{closeSearch();openDrawer(v);};
+    const typeLabel = v.type==="미등록"
+      ? ' <span style="font-size:10px;color:var(--warn)">미등록</span>'
+      : ` <span style="font-size:10px;color:var(--muted)">${esc(v.type)}</span>`;
+    li.innerHTML = esc(v.name) + typeLabel;
+    li.onclick=()=>{closeSearch();openDrawer(v.partner_id||v.name);};
     ul.appendChild(li);
   });
   if(!filtered.length) ul.innerHTML='<li style="padding:10px;color:var(--muted);font-size:12px">검색 결과 없음</li>';
 }
+
+/* ══════════════════════════════════════════
+   미등록 거래처 수집 + 일괄 등록
+   ══════════════════════════════════════════ */
+/** 미등록 거래처 수집 — sales.client + trade.vendor 기반, _normalize dedupe */
+function collectUnregistered(){
+  const partners = GoLabPartnerMaster.loadAll();
+  const normSet = new Set(partners.map(p => GoLabPartnerMaster.normalize(p.name)));
+  const nameIds = new Set(partners.map(p => p.partner_id));
+  // Map: normalizedName → {name, sources}
+  const unregMap = new Map();
+  function addName(rawName, source){
+    if(!rawName) return;
+    const norm = GoLabPartnerMaster.normalize(rawName);
+    if(!norm) return;
+    if(normSet.has(norm)) return; // 이미 등록됨
+    if(!unregMap.has(norm)){
+      unregMap.set(norm, {name:rawName, sources:new Set()});
+    }
+    unregMap.get(norm).sources.add(source);
+  }
+  try{JSON.parse(localStorage.getItem(SALES_KEY)||"[]").forEach(r=>{
+    if(r.partner_id && nameIds.has(r.partner_id)) return; // 이미 partner_id 있음
+    addName(r.client, "매출");
+  });}catch{}
+  try{JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").forEach(r=>{
+    addName(r.vendor, "매입");
+  });}catch{}
+  // Action의 레거시 텍스트 vendorId
+  loadActions().forEach(a=>{
+    if(!a.vendorId) return;
+    if(nameIds.has(a.vendorId)) return;
+    addName(a.vendorId, "Action");
+  });
+  return [...unregMap.values()].sort((a,b)=>a.name.localeCompare(b.name));
+}
+
+/** 미등록 거래처 카드 렌더 */
+function renderUnregCard(){
+  const unregs = collectUnregistered();
+  const card = $("unregCard");
+  if(unregs.length===0){ card.style.display="none"; return; }
+  card.style.display="flex";
+  $("unregCount").textContent = unregs.length;
+}
+
+/** 미등록 거래처 패널 열기 */
+function openUnregPanel(){
+  const unregs = collectUnregistered();
+  if(!unregs.length){ alert("미등록 거래처가 없습니다."); return; }
+  const list = $("unregList");
+  list.innerHTML="";
+  unregs.forEach((item,i)=>{
+    const div = document.createElement("div");
+    div.className="unreg-item";
+    div.dataset.idx = i;
+    div.dataset.name = item.name;
+    const srcText = [...item.sources].join("/");
+    div.innerHTML=`
+      <span class="ui-name">${esc(item.name)}</span>
+      <span class="ui-src">${esc(srcText)}</span>
+      <button class="ui-btn" data-reg="${i}">등록</button>`;
+    list.appendChild(div);
+  });
+  // 개별 등록 버튼
+  list.querySelectorAll("[data-reg]").forEach(btn=>{
+    btn.onclick=(e)=>{
+      e.stopPropagation();
+      const row = btn.closest(".unreg-item");
+      const name = row.dataset.name;
+      try{
+        GoLabPartnerMaster.create({name, type:"미분류", note:"미등록→개별 등록"});
+        row.querySelector(".ui-btn").replaceWith(
+          Object.assign(document.createElement("span"),{className:"ui-done",textContent:"✓ 등록완료"})
+        );
+        _updateUnregInfo();
+        renderUnregCard();
+        renderAll();
+      }catch(err){ alert("등록 실패: "+err.message); }
+    };
+  });
+  _updateUnregInfo();
+  $("unregAll").disabled = false;
+  $("unregOverlay").classList.add("open");
+}
+
+function _updateUnregInfo(){
+  const remaining = $("unregList").querySelectorAll(".ui-btn").length;
+  const done = $("unregList").querySelectorAll(".ui-done").length;
+  $("unregInfo").textContent = `등록 대기: ${remaining}개 / 완료: ${done}개`;
+  $("unregAll").disabled = (remaining === 0);
+}
+
+/** 모두 등록 — pre-backup 후 일괄 생성 */
+function registerAllUnreg(){
+  const remaining = $("unregList").querySelectorAll(".ui-btn");
+  if(!remaining.length){ alert("등록할 거래처가 없습니다."); return; }
+  if(!confirm(`미등록 거래처 ${remaining.length}개를 모두 등록합니다.\n(거래처 마스터 pre-backup 자동 수행)\n계속하시겠습니까?`)) return;
+  // pre-backup: 현재 partner_master 스냅샷 저장
+  const currentMaster = localStorage.getItem(GoLabPartnerMaster.MASTER_KEY) || "[]";
+  localStorage.setItem("golab_partner_master_pre_batch_backup", currentMaster);
+  GoLabPartnerMaster.emitAudit("PRE_BATCH_BACKUP", {count: JSON.parse(currentMaster).length});
+  // 이름 수집
+  const names = [];
+  remaining.forEach(btn=>{
+    const row = btn.closest(".unreg-item");
+    names.push(row.dataset.name);
+  });
+  // 일괄 등록
+  const result = GoLabPartnerMaster.batchCreate(names, "미분류");
+  // UI 갱신
+  remaining.forEach(btn=>{
+    btn.replaceWith(
+      Object.assign(document.createElement("span"),{className:"ui-done",textContent:"✓ 등록완료"})
+    );
+  });
+  _updateUnregInfo();
+  renderUnregCard();
+  renderAll();
+  alert(`일괄 등록 완료!\n등록: ${result.created}개, 중복 건너뜀: ${result.skipped}개`);
+}
+
+function closeUnregPanel(){ $("unregOverlay").classList.remove("open"); }
+$("unregClose").onclick = closeUnregPanel;
+$("unregAll").onclick = registerAllUnreg;
+$("unregOverlay").onclick = e=>{ if(e.target===$("unregOverlay")) closeUnregPanel(); };
 
 /* ══════════════════════════════════════════
    RENDER ALL
@@ -1122,6 +1381,7 @@ function renderAll(){
   renderTimeline();
   computeKPI();
   renderMiniCal();
+  renderUnregCard();
 }
 
 /* ── Event Bindings ── */
@@ -1142,7 +1402,7 @@ $("calPrev").onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}rende
 $("calNext").onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderMiniCal();};
 
 document.addEventListener("keydown",e=>{
-  if(e.key==="Escape"){ closeActionModal(); closeDrawer(); closeSearch(); closeRestorePanel(); }
+  if(e.key==="Escape"){ closeActionModal(); closeDrawer(); closeSearch(); closeRestorePanel(); closeUnregPanel(); }
 });
 
 /* ── 크로스탭 동기화: 다른 탭(calendar)에서 ACTION 변경 시 자동 반영 ── */
@@ -1505,6 +1765,11 @@ function closeRestorePanel(){
 }
 $("rpCancel").onclick = closeRestorePanel;
 $("restoreOverlay").onclick = e => { if(e.target===$("restoreOverlay")) closeRestorePanel(); };
+
+/* ── Action Modal 거래처 autocomplete 초기화 ── */
+const acActVendor = GoLabPartnerMaster.createAutocomplete($("acActVendorWrap"), {
+  placeholder: "거래처 검색..."
+});
 
 /* ── Init ── */
 renderAll();

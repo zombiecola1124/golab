@@ -35,6 +35,7 @@
     .r3{grid-template-columns:1fr 1fr 1fr}
     .r4{grid-template-columns:1fr 1fr 1fr 1fr}
     .r5{grid-template-columns:1fr 1fr 1fr 1fr 1fr}
+    .r6{grid-template-columns:1fr 1fr 1fr 1fr 1fr 1fr}
     label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:700}
     label .opt{font-weight:400;color:#94a3b8}
     input,select{width:100%;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--text);padding:9px 10px;font-size:12px;outline:none;transition:border .2s}
@@ -71,10 +72,34 @@
     .pagination .current{color:var(--sales);font-weight:900;font-size:12px}
     input[type="file"]{display:none}
     .note-box{padding:12px;background:rgba(217,119,6,.04);border-left:3px solid var(--sales);font-size:12px;color:var(--muted);line-height:1.6;border-radius:10px}
+    /* ─ Last Deal Stats Card ─ */
+    .ld-stats-card{margin-top:8px;padding:12px;border-radius:10px;border:1px solid var(--line);background:rgba(217,119,6,.04)}
+    .ld-stats-title{font-size:11px;font-weight:700;color:var(--muted);margin-bottom:6px;display:flex;align-items:center;gap:6px}
+    .ld-stats-grid{display:grid;grid-template-columns:1fr 1fr 1fr 1fr;gap:6px}
+    .ld-stat{text-align:center;padding:6px 4px;border-radius:6px;background:var(--card);border:1px solid var(--line)}
+    .ld-stat .ls-label{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase}
+    .ld-stat .ls-value{font-size:13px;font-weight:800;margin-top:2px}
+    .ld-stat .ls-value.last{color:var(--text)}
+    .ld-stat .ls-value.high{color:var(--bad)}
+    .ld-stat .ls-value.low{color:var(--point)}
+    .ld-stat .ls-value.avg{color:var(--sales)}
+    .ld-empty{font-size:11px;color:var(--muted);padding:4px 0}
+    /* ─ Margin Warning Modal ─ */
+    .margin-modal-back{position:fixed;inset:0;background:rgba(0,0,0,.35);display:flex;align-items:center;justify-content:center;z-index:1000}
+    .margin-modal{width:min(420px,92vw);background:var(--card);border:1px solid var(--line);border-radius:12px;padding:20px;box-shadow:0 8px 30px rgba(0,0,0,.15)}
+    .margin-modal h3{margin:0 0 12px;font-size:14px;display:flex;align-items:center;gap:8px}
+    .margin-modal .mm-detail{font-size:12px;line-height:1.8;color:var(--text);margin-bottom:14px}
+    .margin-modal .mm-btns{display:flex;gap:8px;justify-content:flex-end}
+    .margin-modal .mm-btns button{border-radius:8px;padding:8px 18px;font-size:12px;font-weight:700;cursor:pointer}
+    .margin-modal .mm-cancel{border:1px solid var(--line);background:var(--card);color:var(--text)}
+    .margin-modal .mm-force{border:none;color:#fff}
+    .margin-modal .mm-force.red{background:var(--bad)}
+    .margin-modal .mm-force.orange{background:var(--warn)}
     @media(max-width:900px){
       .kpi-grid{grid-template-columns:1fr 1fr}
-      .r4,.r5{grid-template-columns:1fr 1fr}
+      .r4,.r5,.r6{grid-template-columns:1fr 1fr}
       .filter-bar{flex-direction:column}
+      .ld-stats-grid{grid-template-columns:1fr 1fr}
     }
   </style>
 </head>
@@ -90,6 +115,7 @@
       <a class="tab" href="./index.html">📦 재고</a>
       <a class="tab" href="./purchases.html">📥 입고</a>
       <a class="tab" href="./deal.html">🔥 기회</a>
+      <a class="tab" href="./partner-master.html">🤝 거래처</a>
     </nav>
   </div>
 </header>
@@ -132,8 +158,7 @@
       </div>
       <div>
         <label>판매처(거래처)</label>
-        <input id="inClient" list="dlClient" placeholder="예: 대성금속" />
-        <datalist id="dlClient"></datalist>
+        <div id="acClientWrap"></div>
       </div>
       <div>
         <label>문서번호 <span class="opt">(선택)</span></label>
@@ -145,11 +170,10 @@
         <datalist id="dlPartNo"></datalist>
       </div>
     </div>
-    <div class="row r5">
+    <div class="row r6">
       <div>
         <label>상품명</label>
-        <input id="inItem" list="dlItem" placeholder="예: Silver Powder 1kg" />
-        <datalist id="dlItem"></datalist>
+        <div id="acItemWrap"></div>
       </div>
       <div>
         <label>수량</label>
@@ -170,6 +194,10 @@
       <div>
         <label>판매 단가 (KRW)</label>
         <input id="inPrice" type="number" step="1" placeholder="₩ 단가" />
+      </div>
+      <div>
+        <label>원가 수동 <span class="opt">(선택)</span></label>
+        <input id="inCostOverride" type="number" step="1" placeholder="비우면 자동 조회" />
       </div>
       <div>
         <label>비고 <span class="opt">(선택)</span></label>
@@ -265,6 +293,8 @@
   </div>
 </div>
 
+<script src="js/item-master.js"></script>
+<script src="js/partner-master.js"></script>
 <script src="js/costing.js"></script>
 <script>
 /* ── Constants ── */
@@ -293,6 +323,91 @@ function emitAudit(event, detail){
     if(log.length>2000) log.splice(0, log.length-2000);
     localStorage.setItem(AUDIT_KEY, JSON.stringify(log));
   }catch(e){ /* silent */ }
+}
+
+/* ── 품목 자동완성 위젯 ── */
+const acItem = GoLabItemMaster.createAutocomplete(
+  $("acItemWrap"),
+  {
+    placeholder: "품목 검색 또는 새 등록...",
+    onSelect: function(item) {
+      updateFormCalc();
+      // 기존 Last Deal 카드 + 통계 카드 갱신
+      if (typeof GoLabItemMaster.lookupLastDeals === "function") {
+        const deals = GoLabItemMaster.lookupLastDeals(item.item_id);
+        GoLabItemMaster.renderLastDealCard($("acItemWrap").parentElement, deals);
+      }
+      renderLastDealStats();
+    },
+    onClear: function() {
+      updateFormCalc();
+      const ldCard = document.querySelector(".golab-last-deal-card");
+      if (ldCard) ldCard.remove();
+      removeLastDealStats();
+    }
+  }
+);
+
+/* ── 거래처 자동완성 위젯 ── */
+const acClient = GoLabPartnerMaster.createAutocomplete(
+  $("acClientWrap"),
+  {
+    placeholder: "거래처 검색 또는 새 등록...",
+    onSelect: function() { updateFormCalc(); renderLastDealStats(); },
+    onClear: function() { updateFormCalc(); renderLastDealStats(); }
+  }
+);
+
+/* ══════════════════════════════════════════
+   Last Deal 통계 카드 (거래처+품목 기준, 최근 12개월)
+   ══════════════════════════════════════════ */
+const MIN_MARGIN_RATE = 5; // 최소 마진율 % (저마진 경고 기준)
+
+function renderLastDealStats(){
+  removeLastDealStats();
+  const partnerId = acClient.getValue();
+  const itemId = acItem.getValue();
+  if(!partnerId || !itemId) return; // 둘 다 선택되어야 표시
+  const sales = load();
+  const now = new Date();
+  const cutoff = new Date(now.getFullYear()-1, now.getMonth(), now.getDate())
+    .toISOString().substring(0,10);
+  // partner_id + item_id로 필터 + 최근 12개월
+  const matched = sales.filter(r=>
+    r.partner_id === partnerId &&
+    r.item_id === itemId &&
+    (r.salesDate||"") >= cutoff
+  );
+  const container = $("acClientWrap").parentElement;
+  const card = document.createElement("div");
+  card.className = "ld-stats-card";
+  card.id = "ldStatsCard";
+  if(!matched.length){
+    card.innerHTML='<div class="ld-stats-title">📊 거래처+품목 단가 통계</div><div class="ld-empty">최근 12개월 거래 데이터 없음</div>';
+    container.appendChild(card);
+    return;
+  }
+  // 정렬: salesDate 내림차순
+  matched.sort((a,b)=>(b.salesDate||"").localeCompare(a.salesDate||""));
+  const prices = matched.map(r=>n(r.sellUnitPrice));
+  const lastPrice = prices[0];
+  const highPrice = Math.max(...prices);
+  const lowPrice = Math.min(...prices);
+  const avgPrice = Math.round(prices.reduce((s,v)=>s+v,0)/prices.length);
+  const _fmt = v=>"₩"+Math.round(v).toLocaleString();
+  card.innerHTML=`
+    <div class="ld-stats-title">📊 거래처+품목 단가 통계 <span style="font-size:9px;color:var(--muted);font-weight:400">(최근 12개월, ${matched.length}건)</span></div>
+    <div class="ld-stats-grid">
+      <div class="ld-stat"><div class="ls-label">마지막가</div><div class="ls-value last">${_fmt(lastPrice)}</div></div>
+      <div class="ld-stat"><div class="ls-label">최고가</div><div class="ls-value high">${_fmt(highPrice)}</div></div>
+      <div class="ld-stat"><div class="ls-label">최저가</div><div class="ls-value low">${_fmt(lowPrice)}</div></div>
+      <div class="ld-stat"><div class="ls-label">평균가</div><div class="ls-value avg">${_fmt(avgPrice)}</div></div>
+    </div>`;
+  container.appendChild(card);
+}
+function removeLastDealStats(){
+  const el = document.getElementById("ldStatsCard");
+  if(el) el.remove();
 }
 
 /* ── State ── */
@@ -355,8 +470,13 @@ function normalizeRecord(r){
   const client = normStr(r.client || r.vendor || "");
   const partNo = normUpper(r.partNo);
   const itemName = normStr(r.itemName || r.product || "");
+  // costOverride: null=미설정(자동조회), 0=무상, 양수=수동원가
+  const rawCO = r.costOverrideUnitPriceKrw;
+  const costOverride = (rawCO != null && rawCO !== "") ? normNum(rawCO) : null;
   return {
     id: r.id || crypto.randomUUID(),
+    item_id: r.item_id || null,       // 품목 마스터 참조
+    partner_id: r.partner_id || null,  // 거래처 마스터 참조
     salesDate: normDate(r.salesDate || r.date || ""),
     client,
     docNo: normStr(r.docNo),
@@ -365,6 +485,7 @@ function normalizeRecord(r){
     qty: normNum(r.qty),
     unit: normStr(r.unit) || "ea",
     sellUnitPrice: normNum(r.sellUnitPrice || r.sellPrice || r.unitPrice || 0),
+    costOverrideUnitPriceKrw: costOverride,
     memo: normStr(r.memo || r.note || ""),
     createdAt: r.createdAt || new Date().toISOString(),
     updatedAt: new Date().toISOString()
@@ -377,12 +498,12 @@ function uniqueVals(key){
 }
 function refreshAC(){
   const fill=(dlId,key)=>{
-    const dl=$(dlId); dl.innerHTML="";
+    const dl=$(dlId); if(!dl) return; dl.innerHTML="";
     uniqueVals(key).forEach(v=>{ const o=document.createElement("option"); o.value=v; dl.appendChild(o); });
   };
-  fill("dlClient","client");
+  // dlClient 제거됨 — 거래처 마스터 자동완성 사용
   fill("dlPartNo","partNo");
-  fill("dlItem","itemName");
+  // dlItem 제거됨 — 품목 마스터 자동완성 사용
 }
 
 /* ── Filters ── */
@@ -502,7 +623,7 @@ function render(){
       <td class="muted">${esc(r.unit)}</td>
       <td class="num">${fmt(n(r.sellUnitPrice))}</td>
       <td class="num highlight">${fmt(salesTotal)}</td>
-      <td class="muted">${esc(r.memo)}</td>
+      <td class="muted">${r.costOverrideUnitPriceKrw!=null ? '<span title="수동원가: '+fmt(n(r.costOverrideUnitPriceKrw))+'" style="color:var(--point);cursor:help">🔧</span> ' : ''}${esc(r.memo)}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="secondary" style="padding:5px 8px;font-size:11px" data-edit="${r.id}">수정</button>
         <button class="danger" style="padding:5px 8px;font-size:11px" data-del="${r.id}">삭제</button>
@@ -539,31 +660,126 @@ function render(){
 /* ── CRUD ── */
 function clearForm(){
   $("inDate").value=new Date().toISOString().substring(0,10);
-  $("inClient").value=""; $("inDocNo").value=""; $("inPartNo").value="";
-  $("inItem").value=""; $("inQty").value=""; $("inUnit").value="ea";
-  $("inPrice").value=""; $("inMemo").value="";
+  acClient.clear(); $("inDocNo").value=""; $("inPartNo").value="";
+  acItem.clear(); $("inQty").value=""; $("inUnit").value="ea";
+  $("inPrice").value=""; $("inCostOverride").value=""; $("inMemo").value="";
+  // Last Deal 카드 + 통계 카드 제거
+  const ldCard = document.querySelector(".golab-last-deal-card");
+  if (ldCard) ldCard.remove();
+  removeLastDealStats();
   editingId=null;
   $("btnAdd").textContent="등록";
   $("btnCancel").style.display="none";
   $("formCalc").textContent="";
 }
 
-function addOrUpdate(){
-  const client=normStr($("inClient").value);
-  const itemName=normStr($("inItem").value);
-  if(!client && !itemName){ alert("거래처 또는 상품명을 입력해주세요."); return; }
+/* ══════════════════════════════════════════
+   역마진/저마진 경고 시스템
+   ══════════════════════════════════════════ */
+/** 원가 조회 — costOverride → 재고 avgCost → null */
+function _lookupUnitCost(itemId, costOverrideVal){
+  // 1순위: 수동 원가 override
+  if(costOverrideVal != null && costOverrideVal !== ""){
+    const co = n(costOverrideVal);
+    if(co >= 0) return {cost:co, source:"수동입력"};
+  }
+  // 2순위: 재고 마스터의 이동평균 단가
+  if(itemId){
+    try{
+      const inv = JSON.parse(localStorage.getItem(INV_KEY)||"[]");
+      const match = inv.find(i=>i.item_id===itemId);
+      if(match && n(match.avgCost)>0) return {cost:n(match.avgCost), source:"재고 평균"};
+    }catch{}
+  }
+  return {cost:null, source:"없음"};
+}
+
+/** 마진 경고 모달 표시 → Promise<boolean> (true=강행, false=취소) */
+function showMarginWarning(marginRate, revenue, costTotal, isNegative){
+  return new Promise(resolve=>{
+    const back = document.createElement("div");
+    back.className = "margin-modal-back";
+    const color = isNegative ? "red" : "orange";
+    const icon = isNegative ? "🔴" : "⚠️";
+    const title = isNegative ? "역마진 경고" : "저마진 경고";
+    const modal = document.createElement("div");
+    modal.className = "margin-modal";
+    modal.innerHTML=`
+      <h3>${icon} ${title}</h3>
+      <div class="mm-detail">
+        <b>마진율: ${marginRate.toFixed(1)}%</b> ${isNegative?"(역마진)":"(최소 "+MIN_MARGIN_RATE+"% 미만)"}<br>
+        매출액: ${fmt(revenue)}<br>
+        추정 원가: ${fmt(costTotal)}<br>
+        마진: ${fmt(revenue-costTotal)}
+      </div>
+      <div class="mm-btns">
+        <button class="mm-cancel" id="_mmCancel">취소</button>
+        <button class="mm-force ${color}" id="_mmForce">강행 저장</button>
+      </div>`;
+    back.appendChild(modal);
+    document.body.appendChild(back);
+    const close=(val)=>{ document.body.removeChild(back); resolve(val); };
+    modal.querySelector("#_mmCancel").onclick=()=>close(false);
+    modal.querySelector("#_mmForce").onclick=()=>close(true);
+    back.onclick=e=>{ if(e.target===back) close(false); };
+    modal.addEventListener("keydown",e=>{ if(e.key==="Escape") close(false); });
+    modal.querySelector("#_mmCancel").focus();
+  });
+}
+
+async function addOrUpdate(){
+  const selectedPartnerId = acClient.getValue();
+  if (!selectedPartnerId) { alert("거래처를 마스터에서 선택해주세요."); return; }
+  const partnerItem = GoLabPartnerMaster.getById(selectedPartnerId);
+  const client = partnerItem.name; // 비정규화 (하위 호환)
+
+  const selectedItemId = acItem.getValue();
+  if (!selectedItemId) { alert("품목을 마스터에서 선택해주세요."); return; }
+  const masterItem = GoLabItemMaster.getById(selectedItemId);
+  const itemName = masterItem.item_name;
+
+  const qty = n($("inQty").value);
+  const sellPrice = n($("inPrice").value);
+  const costOverrideRaw = $("inCostOverride").value || null;
+  let memoVal = $("inMemo").value;
+
+  // ─ 역마진/저마진 경고 체크 ─
+  if(qty > 0 && sellPrice > 0){
+    const costInfo = _lookupUnitCost(selectedItemId, costOverrideRaw);
+    if(costInfo.cost !== null && costInfo.cost >= 0){
+      const revenue = sellPrice * qty;
+      const costTotal = costInfo.cost * qty;
+      const margin = revenue - costTotal;
+      const marginRate = revenue > 0 ? (margin / revenue) * 100 : 0;
+      if(margin < 0){
+        // 역마진 (RED)
+        const proceed = await showMarginWarning(marginRate, revenue, costTotal, true);
+        if(!proceed) return;
+        // 강행 시 memo에 태그 추가
+        if(!memoVal.includes("[LOW_MARGIN_OVERRIDE]")) memoVal += " [LOW_MARGIN_OVERRIDE]";
+      } else if(marginRate < MIN_MARGIN_RATE){
+        // 저마진 (ORANGE)
+        const proceed = await showMarginWarning(marginRate, revenue, costTotal, false);
+        if(!proceed) return;
+        if(!memoVal.includes("[LOW_MARGIN_OVERRIDE]")) memoVal += " [LOW_MARGIN_OVERRIDE]";
+      }
+    }
+  }
 
   const rec=normalizeRecord({
     id: editingId||undefined,
+    item_id: selectedItemId,      // 품목 마스터 참조
+    partner_id: selectedPartnerId, // 거래처 마스터 참조
     salesDate: $("inDate").value,
     client,
     docNo: $("inDocNo").value,
     partNo: $("inPartNo").value,
-    itemName,
+    itemName,                      // 비정규화 (표시용)
     qty: $("inQty").value,
     unit: $("inUnit").value,
     sellUnitPrice: $("inPrice").value,
-    memo: $("inMemo").value,
+    costOverrideUnitPriceKrw: costOverrideRaw,
+    memo: memoVal.trim(),
     createdAt: editingId ? (load().find(x=>x.id===editingId)||{}).createdAt : undefined
   });
 
@@ -589,13 +805,28 @@ function startEdit(id){
   if(!r) return;
   editingId=r.id;
   $("inDate").value=r.salesDate||"";
-  $("inClient").value=r.client||"";
+  /* 거래처 마스터 자동완성 설정 */
+  if (r.partner_id) {
+    acClient.setValue(r.partner_id);
+  } else if (r.client) {
+    // 레거시: 이름으로 마스터 검색
+    const pResults = GoLabPartnerMaster.search(r.client);
+    if (pResults.length > 0) acClient.setValue(pResults[0].partner_id);
+  }
   $("inDocNo").value=r.docNo||"";
   $("inPartNo").value=r.partNo||"";
-  $("inItem").value=r.itemName||"";
+  /* 품목 마스터 자동완성 설정 */
+  if (r.item_id) {
+    acItem.setValue(r.item_id);
+  } else if (r.itemName) {
+    // 레거시: 이름으로 마스터 검색
+    const results = GoLabItemMaster.search(r.itemName);
+    if (results.length > 0) acItem.setValue(results[0].item_id);
+  }
   $("inQty").value=n(r.qty)||"";
   $("inUnit").value=r.unit||"ea";
   $("inPrice").value=n(r.sellUnitPrice)||"";
+  $("inCostOverride").value=r.costOverrideUnitPriceKrw!=null ? r.costOverrideUnitPriceKrw : "";
   $("inMemo").value=r.memo||"";
   $("btnAdd").textContent="저장";
   $("btnCancel").style.display="block";

@@ -139,6 +139,7 @@
       <a class="tab" href="./index.html">📦 재고</a>
       <a class="tab active" href="./purchases.html">📥 입고</a>
       <a class="tab" href="./deal.html">🔥 기회</a>
+      <a class="tab" href="./partner-master.html">🤝 거래처</a>
     </nav>
   </div>
 </header>
@@ -218,9 +219,8 @@
         <div class="row" style="grid-template-columns: 2fr 1fr 1fr">
           <div>
             <label>품명 / Part No.</label>
-            <input id="pName" class="field-required" list="itemList" placeholder="예: Ag Powder A (AGC-123)" />
-            <datalist id="itemList"></datalist>
-            <div class="mini">※ 재고에 등록된 품목을 자동완성으로 선택 가능</div>
+            <div id="acPNameWrap"></div>
+            <div class="mini">※ 품목 마스터에서 선택 (자유 입력 불가)</div>
           </div>
           <div>
             <label>수량</label>
@@ -318,7 +318,7 @@
     <div class="ph-form">
       <div>
         <label>제품명</label>
-        <input id="phName" list="itemList" placeholder="품목 선택/입력" />
+        <div id="acPhNameWrap"></div>
       </div>
       <div>
         <label>공급사 (옵션)</label>
@@ -371,6 +371,7 @@
     </div>
   </div>
 </div>
+<script src="js/item-master.js"></script>
 <script>
   const PUR_KEY = "golab_purchases_v2";
   const INV_KEY  = "golab_inventory_v01";
@@ -378,6 +379,27 @@
   const $ = (id) => document.getElementById(id);
   let draftLines = [];
   let isEventBound = false;
+
+  /* ── 품목 자동완성 위젯 ── */
+  const acPName = GoLabItemMaster.createAutocomplete(
+    $("acPNameWrap"),
+    {
+      placeholder: "품목 검색 또는 새 등록...",
+      onSelect: function(item) {
+        validateForm();
+        // Last Deal 카드 표시
+        if (typeof GoLabItemMaster.lookupLastDeals === "function") {
+          const deals = GoLabItemMaster.lookupLastDeals(item.item_id);
+          GoLabItemMaster.renderLastDealCard($("acPNameWrap").parentElement, deals);
+        }
+      },
+      onClear: function() {
+        validateForm();
+        const ldCard = document.querySelector(".golab-last-deal-card");
+        if (ldCard) ldCard.remove();
+      }
+    }
+  );
   $("bDate").value = new Date().toISOString().substring(0, 10);
   function n(v, fallback=0){
     const x = Number(v);
@@ -404,34 +426,30 @@
   function saveHist(list){
     localStorage.setItem(HIST_KEY, JSON.stringify(list));
   }
-  function refreshAutocomplete(){
-    const dl = $("itemList");
-    dl.innerHTML = "";
-    const inv = loadInv();
-    const names = [...new Set(inv.map(x => (x.name||"").trim()).filter(Boolean))].sort();
-    names.forEach(name=>{
-      const opt = document.createElement("option");
-      opt.value = name;
-      dl.appendChild(opt);
-    });
-  }
   function addLine() {
-    const pName = $("pName").value.trim();
+    const selectedItemId = acPName.getValue();
+    if (!selectedItemId) {
+      alert("품목을 마스터에서 선택해주세요.");
+      return;
+    }
+    const masterItem = GoLabItemMaster.getById(selectedItemId);
+    const pName = masterItem.item_name;
     const qty   = n($("pQty").value);
     const price = n($("pPrice").value);
-    if(!pName || qty <= 0 || price <= 0) {
-      alert("품명, 수량, 단가를 정확히 입력해주세요.");
+    if(qty <= 0 || price <= 0) {
+      alert("수량, 단가를 정확히 입력해주세요.");
       return;
     }
     draftLines.push({
       id: crypto.randomUUID(),
-      pName,
+      item_id: selectedItemId,     // 품목 마스터 참조
+      pName,                       // 비정규화 (표시용, 하위 호환)
       qty,
       unit: $("pUnit").value,
       price,
       memo: $("pMemo").value.trim()
     });
-    $("pName").value = "";
+    acPName.clear();
     $("pQty").value = "";
     $("pPrice").value = "";
     $("pMemo").value = "";
@@ -451,11 +469,13 @@
         : 0;
       const realTotalKrw = itemKrwPure + allocatedLogi;
       const unitPriceKrw = (n(item.qty) > 0) ? (realTotalKrw / n(item.qty)) : 0;
-      let target = inv.find(x => x.id === item.inventoryItemId)
+      let target = (item.item_id && inv.find(x => x.item_id === item.item_id))
+        || inv.find(x => x.id === item.inventoryItemId)
         || inv.find(x => (x.name||"").trim() === (item.pName||"").trim());
       if(!target){
         target = {
           id: crypto.randomUUID(),
+          item_id: item.item_id || null,  // 품목 마스터 참조
           name: item.pName,
           spec: item.unit,
           vendor: "입고원장 전송",
@@ -531,7 +551,6 @@
     $("bName").value = "";
     $("bLogi").value = "";
     if(bCur !== "KRW") $("bEx").value = "";
-    refreshAutocomplete();
     render();
     validateForm();
     alert($("chkToInventory").checked
@@ -617,12 +636,11 @@
     });
   }
   function computeAddLineState(){
-    const name = ($("pName")?.value || "").trim();
+    const hasName  = !!acPName.getValue();
     const qty  = n($("pQty")?.value);
     const unit = $("pUnit")?.value || "";
     const price = n($("pPrice")?.value);
     const memo = ($("pMemo")?.value || "").trim();
-    const hasName  = !!name;
     const hasQty   = qty > 0;
     const hasUnit  = !!unit;
     const hasPrice = price > 0;
@@ -721,7 +739,6 @@
       updateMemoHighlight();
       validateForm();
     });
-    $("pName").addEventListener("input", validateForm);
     $("pQty").addEventListener("input", validateForm);
     $("pPrice").addEventListener("input", validateForm);
     $("pMemo").addEventListener("input", validateForm);
@@ -739,7 +756,6 @@
     }
   }
   updateMemoHighlight();
-  refreshAutocomplete();
   render();
   bindEvents();
   validateForm();
@@ -833,13 +849,26 @@
     }catch(_e){}
   }
 
+  /* 가격 기록 자동완성 위젯 */
+  const acPhName = GoLabItemMaster.createAutocomplete(
+    $("acPhNameWrap"),
+    {
+      placeholder: "품목 검색...",
+      onSelect: function() {},
+      onClear: function() {}
+    }
+  );
+
   /* 가격 기록 추가 */
   function addPriceRecord(){
     try{
-      const name = ($("phName").value||"").trim();
+      const selectedItemId = acPhName.getValue();
+      if (!selectedItemId) { alert("품목을 마스터에서 선택해주세요."); return; }
+      const masterItem = GoLabItemMaster.getById(selectedItemId);
+      const name = masterItem.item_name;
       const price = parseFloat($("phPrice").value);
-      if(!name || !Number.isFinite(price) || price <= 0){
-        alert("제품명과 단가를 입력해주세요.");
+      if(!Number.isFinite(price) || price <= 0){
+        alert("단가를 입력해주세요.");
         return;
       }
       const cur = $("phCur").value;
@@ -851,7 +880,8 @@
 
       const rec = {
         id: crypto.randomUUID(),
-        productName: name,
+        item_id: selectedItemId,    // 품목 마스터 참조
+        productName: name,          // 하위 호환
         vendor: ($("phVendor").value||"").trim(),
         currency: cur,
         price: price, /* 소수점 4자리 보존 */
@@ -864,7 +894,7 @@
       all.unshift(rec);
       savePH(all);
       /* 폼 초기화 */
-      $("phName").value = "";
+      acPhName.clear();
       $("phVendor").value = "";
       $("phPrice").value = "";
       $("phMemo").value = "";

@@ -34,6 +34,9 @@
     .warn-card.red{background:#fef2f2;border-color:#fca5a5;color:#991b1b}
     .warn-card .wi{font-size:16px}
     .warn-card .wv{font-weight:800;margin-left:4px}
+    .warn-card.clickable{cursor:pointer;transition:transform .15s,box-shadow .15s}
+    .warn-card.clickable:hover{transform:translateY(-1px);box-shadow:0 2px 8px rgba(0,0,0,.1)}
+    .warn-card.clickable.active{outline:2px solid var(--point,#2563eb);outline-offset:1px}
 
     /* ─ 기간 필터 ─ */
     .filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap}
@@ -103,6 +106,28 @@
     .reverse-card .rv{font-weight:800;margin-left:4px}
     .reverse-card .rdetail{margin-left:auto;font-size:11px;font-weight:700}
 
+    /* ─ 프리셋 필터 바 ─ */
+    .preset-bar{display:flex;gap:8px;margin-bottom:14px;flex-wrap:wrap;align-items:center}
+    .preset-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .preset-btn:hover{border-color:#94a3b8;background:#f8fafc}
+    .preset-btn.active{outline:2px solid var(--primary);outline-offset:1px;background:rgba(37,99,235,.06)}
+    .preset-btn .picon{font-size:14px}
+    .preset-btn .pcount{font-size:10px;font-weight:800;background:var(--primary);color:#fff;padding:1px 6px;border-radius:6px;margin-left:2px}
+    .preset-btn.danger .pcount{background:var(--warn)}
+    .preset-btn.warn .pcount{background:var(--orange)}
+    .client-dropdown{position:relative;display:inline-block}
+    .client-dropdown-btn{display:inline-flex;align-items:center;gap:6px;padding:8px 14px;border-radius:10px;border:1.5px solid var(--border);background:var(--card);color:var(--text);font-size:12px;font-weight:700;cursor:pointer;transition:all .15s;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .client-dropdown-btn:hover{border-color:#94a3b8;background:#f8fafc}
+    .client-dropdown-btn.active{outline:2px solid var(--primary);outline-offset:1px;background:rgba(37,99,235,.06)}
+    .client-dropdown-menu{position:absolute;top:100%;left:0;margin-top:4px;min-width:220px;max-height:280px;overflow-y:auto;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 4px 16px rgba(0,0,0,.12);z-index:30;display:none;padding:4px 0}
+    .client-dropdown-menu.open{display:block}
+    .client-dropdown-menu .cd-search{width:calc(100% - 12px);margin:4px 6px 6px;padding:7px 10px;border-radius:8px;border:1px solid var(--border);font-size:11px;outline:none;box-sizing:border-box}
+    .client-dropdown-menu .cd-search:focus{border-color:var(--primary)}
+    .client-dropdown-menu .cd-item{padding:7px 12px;font-size:11px;cursor:pointer;display:flex;align-items:center;gap:6px;color:var(--text)}
+    .client-dropdown-menu .cd-item:hover{background:rgba(37,99,235,.06)}
+    .client-dropdown-menu .cd-item.selected{background:rgba(37,99,235,.1);font-weight:700;color:var(--primary)}
+    .client-dropdown-menu .cd-item .cd-rev{margin-left:auto;font-size:10px;color:var(--muted);font-variant-numeric:tabular-nums}
+
     /* ─ Responsive ─ */
     @media(max-width:900px){
       .kpi-row{grid-template-columns:repeat(2,1fr)}
@@ -129,6 +154,7 @@
     <a class="tab" href="./index.html">📦 재고</a>
     <a class="tab" href="./purchases.html">📥 입고</a>
     <a class="tab" href="./deal.html">🔥 기회</a>
+      <a class="tab" href="./partner-master.html">🤝 거래처</a>
   </nav>
 </header>
 
@@ -136,6 +162,25 @@
 
   <!-- ═══ 경고 바 ═══ -->
   <div class="warn-bar" id="warnBar"></div>
+
+  <!-- ═══ 프리셋 필터 ═══ -->
+  <div class="preset-bar" id="presetBar">
+    <button class="preset-btn danger" id="presetNoCost">
+      <span class="picon">🔴</span>원가입력 필요<span class="pcount" id="presetNoCostN">0</span>
+    </button>
+    <button class="preset-btn warn" id="presetReverse">
+      <span class="picon">⚠️</span>역마진 주의<span class="pcount" id="presetReverseN">0</span>
+    </button>
+    <div class="client-dropdown" id="clientDropdown">
+      <button class="client-dropdown-btn" id="presetClient">
+        <span class="picon">📊</span>거래처 빠른필터<span style="font-size:10px;color:var(--muted)">▼</span>
+      </button>
+      <div class="client-dropdown-menu" id="clientDropdownMenu">
+        <input class="cd-search" id="cdSearch" placeholder="거래처 검색..." />
+        <div id="cdList"></div>
+      </div>
+    </div>
+  </div>
 
   <!-- ═══ 기간 필터 ═══ -->
   <div class="filter-bar">
@@ -228,6 +273,7 @@
             <th class="right">원가</th>
             <th class="right">마진</th>
             <th class="right">마진율</th>
+            <th>문서번호</th>
           </tr>
         </thead>
         <tbody id="clientTable"></tbody>
@@ -247,6 +293,7 @@
             <th class="right">원가</th>
             <th class="right">마진</th>
             <th class="right">마진율</th>
+            <th>문서번호</th>
           </tr>
         </thead>
         <tbody id="itemTable"></tbody>
@@ -305,7 +352,7 @@ function extractDate(rec){
    매핑 키: partNo → itemName fallback
    ══════════════════════════════════════════ */
 function buildCostMap(){
-  const costMap = new Map(); // key → { totalCost, totalQty }
+  const costMap = new Map(); // key → { totalCost, totalQty, source }
 
   // (A) golab_trade_v1 — 구매 이력에서 품목별 가중평균 원가
   try{
@@ -315,15 +362,13 @@ function buildCostMap(){
       const qty = n(t.qty);
       if(price <= 0 || qty <= 0) return;
 
-      // partNo 우선, 없으면 itemName
       const keys = [];
       if(t.partNo) keys.push("partNo:"+t.partNo);
       if(t.itemName) keys.push("name:"+t.itemName);
-      // itemId도 시도
       if(t.itemId) keys.push("itemId:"+t.itemId);
 
       keys.forEach(k => {
-        const prev = costMap.get(k) || {totalCost:0, totalQty:0};
+        const prev = costMap.get(k) || {totalCost:0, totalQty:0, source:"TRADE"};
         prev.totalCost += price * qty;
         prev.totalQty += qty;
         costMap.set(k, prev);
@@ -337,10 +382,16 @@ function buildCostMap(){
     inv.forEach(item => {
       const price = n(item.buyPrice);
       if(price <= 0) return;
+      if(item.item_id){
+        const k = "item_id:"+item.item_id;
+        if(!costMap.has(k)){
+          costMap.set(k, {totalCost: price, totalQty: 1, source:"INVENTORY_AVG"});
+        }
+      }
       if(item.name){
         const k = "name:"+item.name;
         if(!costMap.has(k)){
-          costMap.set(k, {totalCost: price, totalQty: 1}); // 단가 직접
+          costMap.set(k, {totalCost: price, totalQty: 1, source:"INVENTORY_AVG"});
         }
       }
     });
@@ -355,18 +406,27 @@ function buildCostMap(){
       if(price <= 0 || qty <= 0) return;
       if(h.name){
         const k = "name:"+h.name;
-        const prev = costMap.get(k) || {totalCost:0, totalQty:0};
+        const prev = costMap.get(k) || {totalCost:0, totalQty:0, source:"INBOUND_AVG"};
         prev.totalCost += price * qty;
         prev.totalQty += qty;
-        costMap.set(k, prev);
+        // 기존 source가 TRADE면 유지 (우선순위 높음)
+        if(!costMap.has(k)) costMap.set(k, prev);
+        else {
+          const existing = costMap.get(k);
+          existing.totalCost += price * qty;
+          existing.totalQty += qty;
+        }
       }
     });
   }catch{}
 
-  // 가중평균 단가로 변환
+  // 가중평균 단가로 변환 — { cost, source } 반환
   const avgMap = new Map();
   costMap.forEach((v,k) => {
-    if(v.totalQty > 0) avgMap.set(k, Math.round(v.totalCost / v.totalQty));
+    if(v.totalQty > 0) avgMap.set(k, {
+      cost: Math.round(v.totalCost / v.totalQty),
+      source: v.source || "TRADE"
+    });
   });
 
   return avgMap;
@@ -437,9 +497,10 @@ function detectReverseMargins(avgMap, sales){
   const reverseItems = [];
   sellMap.forEach((v, itemName) => {
     const avgSell = v.totalSell / v.count;
-    // 원가 조회 (name 키 우선)
-    const cost = avgMap.get("name:"+itemName);
-    if(cost === undefined || cost === null) return;
+    // 원가 조회 (name 키 우선) — { cost, source } 객체
+    const entry = avgMap.get("name:"+itemName);
+    if(!entry || entry.cost === undefined || entry.cost === null) return;
+    const cost = entry.cost;
     if(cost >= avgSell){
       reverseItems.push({
         name: itemName,
@@ -454,23 +515,34 @@ function detectReverseMargins(avgMap, sales){
 }
 
 /* ── 매출 레코드에서 원가 찾기 ── */
+/* 반환: { cost: number|null, source: string, matchBy: string|null } */
 function lookupCost(rec, avgMap){
-  // 1순위: partNo (itemCode) 기준
+  // 0순위: 수동 원가 override (sales에서 설정)
+  if(rec.costOverrideUnitPriceKrw != null && rec.costOverrideUnitPriceKrw !== ""){
+    const co = n(rec.costOverrideUnitPriceKrw);
+    if(co >= 0) return { cost: co, source: "MANUAL_OVERRIDE", matchBy: "costOverride" };
+  }
+  // 1순위: item_id 직접 매칭 (품목 마스터 참조)
+  if(rec.item_id){
+    const v = avgMap.get("item_id:"+rec.item_id);
+    if(v !== undefined) return { cost: v.cost, source: v.source, matchBy: "item_id" };
+  }
+  // 2순위: partNo (itemCode) 기준
   if(rec.partNo){
     const v = avgMap.get("partNo:"+rec.partNo);
-    if(v !== undefined) return v;
+    if(v !== undefined) return { cost: v.cost, source: v.source, matchBy: "partNo" };
   }
-  // 2순위: itemId
+  // 3순위: itemId (레거시)
   if(rec.itemId){
     const v = avgMap.get("itemId:"+rec.itemId);
-    if(v !== undefined) return v;
+    if(v !== undefined) return { cost: v.cost, source: v.source, matchBy: "itemId" };
   }
-  // 3순위: itemName fallback
+  // 4순위: itemName fallback
   if(rec.itemName){
     const v = avgMap.get("name:"+rec.itemName);
-    if(v !== undefined) return v;
+    if(v !== undefined) return { cost: v.cost, source: v.source, matchBy: "itemName" };
   }
-  return null; // 매핑 실패 → 마진 계산 제외
+  return { cost: null, source: "NONE", matchBy: null }; // 매핑 실패
 }
 
 /* ══════════════════════════════════════════
@@ -479,6 +551,9 @@ function lookupCost(rec, avgMap){
 let currentRange = "month";
 let customFrom = "";
 let customTo = "";
+let activeWarnFilter = null; // 경고 배너 필터: "no-item-id"|"no-cost"|"bad-qty-price"|null
+let activePresetFilter = null; // 프리셋 필터: "need-cost"|"reverse"|null
+let activeClientFilter = null; // 거래처 빠른필터: client 이름 또는 null
 
 /* Fix-1: sales 키 자동 탐지 (golab_sales prefix 전수 스캔) */
 function detectSalesKey(){
@@ -527,9 +602,11 @@ function analyze(){
   let revenueCount = 0;     // 기간 내 전체 매출 건수
   let marginCount = 0;      // 원가 확인된 건수
   let noDateCount = 0;       // 날짜 미정 건수
-  let noCostCount = 0;       // 원가 미정 건수
+  let noCostCount = 0;       // 원가 미정 건수 (source=NONE)
   let noCostRevenue = 0;     // 원가 미정 매출액
   let marginRevenue = 0;     // 마진 계산 포함 매출액
+  let noItemIdCount = 0;     // item_id 없는 매출 건수
+  let badQtyPriceCount = 0;  // 수량·단가 이상 건수
 
   // 거래처별 / 품목별 집계
   const byClient = new Map();
@@ -547,45 +624,67 @@ function analyze(){
     // 기간 필터
     if(dt < range.from || dt > range.to) return;
 
+    // 경고 카운터
+    if(!rec.item_id) noItemIdCount++;
+    if(n(rec.qty) === 0 || n(rec.sellUnitPrice) === 0) badQtyPriceCount++;
+
+    // activeWarnFilter 적용
+    if(activeWarnFilter){
+      if(activeWarnFilter === "no-item-id" && rec.item_id) return;
+      if(activeWarnFilter === "bad-qty-price" && n(rec.qty) !== 0 && n(rec.sellUnitPrice) !== 0) return;
+    }
+
+    // 거래처 빠른필터 적용
+    if(activeClientFilter){
+      const clientName = rec.client || "(미지정)";
+      if(clientName !== activeClientFilter) return;
+    }
+
     const revenue = n(rec.sellUnitPrice) * n(rec.qty);
     totalRevenue += revenue;
     revenueCount++;
 
-    // 원가 조회
-    const unitCost = lookupCost(rec, avgMap);
+    // 원가 조회 — { cost, source, matchBy } 반환
+    const costInfo = lookupCost(rec, avgMap);
 
-    if(unitCost === null){
-      // 3️⃣ 원가 미정: 마진 계산에서 제외
+    if(costInfo.cost === null){
       noCostCount++;
       noCostRevenue += revenue;
-      // 거래처/품목 집계에는 매출만 포함 (원가=null 표시)
-      accumulateGroup(byClient, rec.client || "(미지정)", revenue, null, n(rec.qty));
-      accumulateGroup(byItem, rec.itemName || rec.partNo || "(미지정)", revenue, null, n(rec.qty));
+      accumulateGroup(byClient, rec.client || "(미지정)", revenue, null, n(rec.qty), rec.docNo);
+      accumulateGroup(byItem, rec.itemName || rec.partNo || "(미지정)", revenue, null, n(rec.qty), rec.docNo);
+      // "need-cost" 프리셋: 원가 미정 → 포함
       return;
     }
 
-    const cost = unitCost * n(rec.qty);
+    // "no-cost" 필터: 원가 있는 건은 제외 (원가 미정만 보기)
+    if(activeWarnFilter === "no-cost") return;
+
+    // "need-cost" 프리셋: 원가 확인된 건은 제외
+    if(activePresetFilter === "need-cost") return;
+
+    const cost = costInfo.cost * n(rec.qty);
     const margin = revenue - cost;
     totalCost += cost;
     totalMargin += margin;
     marginCount++;
     marginRevenue += revenue;
 
-    accumulateGroup(byClient, rec.client || "(미지정)", revenue, cost, n(rec.qty));
-    accumulateGroup(byItem, rec.itemName || rec.partNo || "(미지정)", revenue, cost, n(rec.qty));
+    accumulateGroup(byClient, rec.client || "(미지정)", revenue, cost, n(rec.qty), rec.docNo);
+    accumulateGroup(byItem, rec.itemName || rec.partNo || "(미지정)", revenue, cost, n(rec.qty), rec.docNo);
   });
 
   return {
     totalRevenue, totalCost, totalMargin, marginRevenue,
     revenueCount, marginCount,
     noDateCount, noCostCount, noCostRevenue,
+    noItemIdCount, badQtyPriceCount,
     byClient, byItem,
     avgMap, sales  // 환율 리스크 + 역마진 계산용
   };
 }
 
-function accumulateGroup(map, key, revenue, cost, qty){
-  const prev = map.get(key) || {revenue:0, cost:0, qty:0, hasCost:false, count:0, noCostRevenue:0, noCostCount:0};
+function accumulateGroup(map, key, revenue, cost, qty, docNo){
+  const prev = map.get(key) || {revenue:0, cost:0, qty:0, hasCost:false, count:0, noCostRevenue:0, noCostCount:0, docNos: new Set()};
   prev.revenue += revenue;
   prev.qty += qty;
   prev.count++;
@@ -596,6 +695,7 @@ function accumulateGroup(map, key, revenue, cost, qty){
     prev.noCostRevenue += revenue;
     prev.noCostCount++;
   }
+  if(docNo) prev.docNos.add(docNo);
   map.set(key, prev);
 }
 
@@ -608,16 +708,53 @@ function render(){
   // ── 경고 바 ──
   let warns = "";
   // [FIX] 매출 데이터 없을 때 안내 (₩0 오해 방지)
-  if(r.revenueCount === 0 && r.noDateCount === 0){
+  if(r.revenueCount === 0 && r.noDateCount === 0 && !activeWarnFilter){
     warns += `<div class="warn-card orange"><span class="wi">📋</span>매출 데이터가 없습니다<span class="wv">💰 매출 탭에서 먼저 입력하세요</span></div>`;
   }
   if(r.noDateCount > 0){
     warns += `<div class="warn-card orange"><span class="wi">⚠️</span>날짜 미정 매출<span class="wv">${r.noDateCount}건</span> — 기간 필터 집계에서 제외됨</div>`;
   }
+  // A) item_id 없는 매출
+  if(r.noItemIdCount > 0){
+    const active = activeWarnFilter === "no-item-id" ? " active" : "";
+    warns += `<div class="warn-card orange clickable${active}" data-filter="no-item-id" style="cursor:pointer"><span class="wi">🏷️</span>item_id 없는 매출<span class="wv">${r.noItemIdCount}건</span></div>`;
+  }
+  // B) 원가 미확인
   if(r.noCostCount > 0){
-    warns += `<div class="warn-card red"><span class="wi">🔴</span>원가 미정 매출<span class="wv">${fmtW(r.noCostRevenue)} (${r.noCostCount}건)</span> — 마진 계산에서 제외됨</div>`;
+    const active = activeWarnFilter === "no-cost" ? " active" : "";
+    warns += `<div class="warn-card red clickable${active}" data-filter="no-cost" style="cursor:pointer"><span class="wi">🔴</span>원가 미확인<span class="wv">${fmtW(r.noCostRevenue)} (${r.noCostCount}건)</span></div>`;
+  }
+  // C) 수량·단가 이상
+  if(r.badQtyPriceCount > 0){
+    const active = activeWarnFilter === "bad-qty-price" ? " active" : "";
+    warns += `<div class="warn-card orange clickable${active}" data-filter="bad-qty-price" style="cursor:pointer"><span class="wi">⚠️</span>수량·단가 이상<span class="wv">${r.badQtyPriceCount}건</span></div>`;
   }
   $("warnBar").innerHTML = warns;
+  // 경고 배너 클릭 핸들러
+  $("warnBar").querySelectorAll("[data-filter]").forEach(card => {
+    card.addEventListener("click", () => {
+      const f = card.dataset.filter;
+      activeWarnFilter = (activeWarnFilter === f) ? null : f; // 토글
+      render();
+    });
+  });
+
+  // ── 프리셋 필터 뱃지 업데이트 ──
+  $("presetNoCostN").textContent = r.noCostCount;
+  const reverseItems = detectReverseMargins(r.avgMap, r.sales);
+  $("presetReverseN").textContent = reverseItems.length;
+  // 활성 상태 표시
+  $("presetNoCost").classList.toggle("active", activePresetFilter === "need-cost");
+  $("presetReverse").classList.toggle("active", activePresetFilter === "reverse");
+  $("presetClient").classList.toggle("active", !!activeClientFilter);
+  // 거래처 필터 버튼 텍스트 갱신
+  if(activeClientFilter){
+    $("presetClient").innerHTML = `<span class="picon">📊</span>${esc(activeClientFilter)} <span style="font-size:10px;color:var(--primary)">✕</span>`;
+  } else {
+    $("presetClient").innerHTML = `<span class="picon">📊</span>거래처 빠른필터<span style="font-size:10px;color:var(--muted)">▼</span>`;
+  }
+  // 거래처 드롭다운 목록 구축 (매출 기준 — 하드코딩 금지)
+  _buildClientDropdown(r.byClient);
 
   // ── KPI 카드 ──
   $("kRevenue").textContent = fmtW(r.totalRevenue);
@@ -641,11 +778,16 @@ function render(){
   // ── 역마진 경고 ──
   renderReverseMargins(r.avgMap, r.sales);
 
-  // ── 거래처별 테이블 ──
-  renderGroupTable(r.byClient, "clientTable", "clientEmpty", "clientBadge");
+  // 역마진 프리셋 필터 → 품목 이름 Set 생성
+  const reverseNameSet = (activePresetFilter === "reverse" && reverseItems.length > 0)
+    ? new Set(reverseItems.map(it => it.name))
+    : null;
 
-  // ── 품목별 테이블 ──
-  renderGroupTable(r.byItem, "itemTable", "itemEmpty", "itemBadge");
+  // ── 거래처별 테이블 ── (역마진 필터는 품목 기준이므로 거래처 테이블엔 미적용)
+  renderGroupTable(r.byClient, "clientTable", "clientEmpty", "clientBadge", null);
+
+  // ── 품목별 테이블 ── (역마진 프리셋 → 품목 필터링)
+  renderGroupTable(r.byItem, "itemTable", "itemEmpty", "itemBadge", reverseNameSet);
 }
 
 /* ── 환율 리스크 KPI 렌더링 ── */
@@ -740,16 +882,20 @@ function renderReverseMargins(avgMap, sales){
   ).join("");
 }
 
-function renderGroupTable(map, tbodyId, emptyId, badgeId){
-  // 마진 계산 가능한 항목만 정렬 (원가 있는 매출 - 원가)
-  const entries = [...map.entries()].map(([name, v]) => {
+function renderGroupTable(map, tbodyId, emptyId, badgeId, reverseNameSet){
+  let entries = [...map.entries()].map(([name, v]) => {
     const marginableRevenue = v.revenue - v.noCostRevenue;
     const margin = marginableRevenue - v.cost;
     const marginRate = marginableRevenue > 0 ? margin / marginableRevenue : 0;
-    return { name, revenue: v.revenue, cost: v.cost, margin, marginRate, count: v.count, hasCost: v.hasCost, noCostCount: v.noCostCount };
+    const docNos = v.docNos ? [...v.docNos].join(", ") : "";
+    return { name, revenue: v.revenue, cost: v.cost, margin, marginRate, count: v.count, hasCost: v.hasCost, noCostCount: v.noCostCount, docNos };
   });
 
-  // 마진 내림차순 정렬
+  // 역마진 프리셋 필터 적용 — 해당 이름만 남기기
+  if(reverseNameSet){
+    entries = entries.filter(e => reverseNameSet.has(e.name));
+  }
+
   entries.sort((a,b) => b.margin - a.margin);
   const top20 = entries.slice(0, 20);
 
@@ -783,6 +929,7 @@ function renderGroupTable(map, tbodyId, emptyId, badgeId){
       <td class="right">${costDisplay}</td>
       <td class="right"><span class="margin-bar" style="width:${barWidth}px;background:${barColor}"></span>${marginDisplay}</td>
       <td class="right">${rateDisplay}</td>
+      <td class="muted" style="font-size:10px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap" title="${esc(e.docNos)}">${esc(e.docNos)}</td>
     </tr>`;
   }).join("");
 }
@@ -854,6 +1001,106 @@ $("fxJpy").addEventListener("input", onFxInput);
     $("fxUpdated").textContent = "마지막 입력: " + rates.updatedAt.substring(0,10);
   }
 })();
+
+/* ══════════════════════════════════════════
+   프리셋 필터 이벤트
+   ══════════════════════════════════════════ */
+// 🔴 원가입력 필요
+$("presetNoCost").addEventListener("click", () => {
+  // 다른 프리셋/경고 필터 초기화
+  activeClientFilter = null;
+  activeWarnFilter = null;
+  activePresetFilter = (activePresetFilter === "need-cost") ? null : "need-cost";
+  _closeClientDropdown();
+  render();
+});
+
+// ⚠️ 역마진 주의
+$("presetReverse").addEventListener("click", () => {
+  activeClientFilter = null;
+  activeWarnFilter = null;
+  activePresetFilter = (activePresetFilter === "reverse") ? null : "reverse";
+  _closeClientDropdown();
+  render();
+});
+
+// 📊 거래처 빠른필터 — 드롭다운 토글
+$("presetClient").addEventListener("click", (e) => {
+  e.stopPropagation();
+  if(activeClientFilter){
+    // 이미 선택된 거래처 → 해제
+    activeClientFilter = null;
+    activePresetFilter = null;
+    _closeClientDropdown();
+    render();
+    return;
+  }
+  const menu = $("clientDropdownMenu");
+  menu.classList.toggle("open");
+  if(menu.classList.contains("open")){
+    $("cdSearch").value = "";
+    $("cdSearch").focus();
+    _filterClientList("");
+  }
+});
+
+// 드롭다운 외부 클릭 시 닫기
+document.addEventListener("click", (e) => {
+  if(!$("clientDropdown").contains(e.target)){
+    _closeClientDropdown();
+  }
+});
+
+// 드롭다운 검색 필터
+$("cdSearch").addEventListener("input", (e) => {
+  _filterClientList(e.target.value);
+});
+// 검색 필드 클릭 시 이벤트 전파 중단
+$("cdSearch").addEventListener("click", (e) => e.stopPropagation());
+
+function _closeClientDropdown(){
+  $("clientDropdownMenu").classList.remove("open");
+}
+
+/* 거래처 드롭다운 목록 구축 — 매출 데이터 기반 동적 생성 (하드코딩 금지) */
+let _clientListData = []; // {name, revenue}
+function _buildClientDropdown(byClientMap){
+  _clientListData = [...byClientMap.entries()].map(([name, v]) => ({
+    name,
+    revenue: v.revenue
+  })).sort((a,b) => b.revenue - a.revenue); // 매출 높은 순 정렬
+  _filterClientList($("cdSearch").value || "");
+}
+
+function _filterClientList(query){
+  const q = query.trim().toLowerCase();
+  const filtered = q
+    ? _clientListData.filter(c => c.name.toLowerCase().includes(q))
+    : _clientListData;
+
+  const html = filtered.slice(0, 20).map(c => {
+    const sel = activeClientFilter === c.name ? " selected" : "";
+    return `<div class="cd-item${sel}" data-client="${esc(c.name)}">
+      <span>${esc(c.name)}</span>
+      <span class="cd-rev">${fmtW(c.revenue)}</span>
+    </div>`;
+  }).join("");
+
+  $("cdList").innerHTML = html || '<div class="cd-item" style="color:var(--muted);cursor:default">결과 없음</div>';
+
+  // 항목 클릭 핸들러
+  $("cdList").querySelectorAll("[data-client]").forEach(item => {
+    item.addEventListener("click", (e) => {
+      e.stopPropagation();
+      const name = item.dataset.client;
+      activeClientFilter = (activeClientFilter === name) ? null : name;
+      activePresetFilter = null;
+      activeWarnFilter = null;
+      _closeClientDropdown();
+      render();
+    });
+  });
+}
 
 /* ── 크로스탭 동기화 ── */
 window.addEventListener("storage", e => {
