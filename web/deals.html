@@ -49,7 +49,7 @@
     .evt-btn.pending{background:rgba(8,145,178,.06);border:1px solid rgba(8,145,178,.25);color:var(--deal)}
     /* Table */
     .tableWrap{overflow:auto;border-radius:10px;border:1px solid var(--line)}
-    table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
+    table{width:100%;border-collapse:collapse;font-size:12px;min-width:680px}
     th{background:#f8fafc;color:var(--muted);text-align:left;padding:10px 12px;position:sticky;top:0;white-space:nowrap;z-index:2;border-bottom:1px solid var(--line)}
     td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
     tr:hover{background:rgba(8,145,178,.02)}
@@ -98,6 +98,27 @@
     .profit-chain .step{display:flex;align-items:center;gap:4px}
     .profit-chain .arrow{color:var(--muted);font-size:10px}
     .profit-chain b{font-size:13px}
+    /* v2.3 상태바 [견][발][계][입][정] */
+    .status-bar{display:inline-flex;gap:2px}
+    .sb{display:inline-flex;align-items:center;justify-content:center;
+      width:22px;height:22px;border-radius:4px;font-size:9px;font-weight:800;
+      cursor:pointer;border:1px solid transparent;transition:all .12s;user-select:none}
+    .sb.sb-done{background:rgba(22,163,74,.15);color:#15803d;border-color:rgba(22,163,74,.25);cursor:default}
+    .sb.sb-wait{background:#f1f5f9;color:#cbd5e1}
+    .sb.sb-ready{background:rgba(217,119,6,.12);color:#b45309;border-color:rgba(217,119,6,.3)}
+    .sb.sb-overdue{background:rgba(220,38,38,.12);color:#dc2626;border-color:rgba(220,38,38,.3);animation:sbPulse 1.5s infinite}
+    .sb:not(.sb-done):hover{transform:scale(1.15);box-shadow:0 1px 4px rgba(0,0,0,.1)}
+    @keyframes sbPulse{0%,100%{opacity:1}50%{opacity:.6}}
+    /* 서브탭 (유형별) */
+    .sub-tabs{display:flex;gap:4px;margin-bottom:12px;flex-wrap:wrap}
+    .sub-tab{padding:6px 14px;border-radius:8px;font-size:11px;font-weight:700;
+      background:transparent;border:1px solid var(--line);color:var(--muted);cursor:pointer;transition:all .15s}
+    .sub-tab.active{background:var(--deal);color:#fff;border-color:var(--deal)}
+    .sub-tab:hover:not(.active){border-color:var(--deal);color:var(--deal)}
+    .sub-tab .sub-count{display:inline-flex;align-items:center;justify-content:center;
+      min-width:16px;height:16px;border-radius:99px;font-size:9px;font-weight:800;margin-left:4px;
+      background:rgba(255,255,255,.3);padding:0 4px}
+    .sub-tab:not(.active) .sub-count{background:rgba(100,116,139,.1)}
     /* 상세 행 */
     .detail-row td{background:rgba(8,145,178,.02);padding:14px 16px;border-bottom:2px solid var(--line)}
     .detail-section{margin-bottom:10px}
@@ -148,10 +169,11 @@
     <div class="kpi"><div class="t">미수금 합계</div><div class="v" id="kReceivable" style="color:var(--warn)">₩0</div></div>
     <div class="kpi"><div class="t">내 실수익</div><div class="v" id="kMyProfit" style="color:var(--accent)">₩0</div><div class="sub" id="kMyProfitSub"></div></div>
   </div>
-  <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+  <div class="kpi-grid" style="grid-template-columns:repeat(4,1fr)">
     <div class="kpi"><div class="t">진행중</div><div class="v" id="kActive">0</div></div>
     <div class="kpi"><div class="t">완료</div><div class="v" id="kComplete" style="color:var(--accent)">0</div></div>
     <div class="kpi"><div class="t">SAVE 누적</div><div class="v" id="kSaveTotal" style="color:#7c3aed">₩0</div></div>
+    <div class="kpi"><div class="t">보관중 VAT</div><div class="v" id="kHoldVat" style="color:var(--warn)">₩0</div><div class="sub">입금완료·미신고</div></div>
   </div>
 
   <!-- 등록 폼 -->
@@ -253,6 +275,14 @@
   <!-- 필터 + 목록 -->
   <div class="card">
     <h2>📋 거래 목록 <span class="badge" id="listBadge">0</span></h2>
+    <!-- 서브탭 (유형별) -->
+    <div class="sub-tabs" id="subTabs">
+      <button class="sub-tab active" data-stype="">전체<span class="sub-count" id="scAll"></span></button>
+      <button class="sub-tab" data-stype="daesung_trade">대성무역<span class="sub-count" id="scDaesung"></span></button>
+      <button class="sub-tab" data-stype="friend_manage">지인관리<span class="sub-count" id="scFriend"></span></button>
+      <button class="sub-tab" data-stype="brokerage">중개<span class="sub-count" id="scBrokerage"></span></button>
+      <button class="sub-tab" data-stype="direct">직접<span class="sub-count" id="scDirect"></span></button>
+    </div>
     <div class="filter-row">
       <input id="fSearch" placeholder="거래처/품목/메모 검색..." style="flex:2" />
       <select id="fStatus">
@@ -263,13 +293,6 @@
         <option value="계산서 발행">계산서 발행</option>
         <option value="공급가 입금">공급가 입금</option>
         <option value="거래 완료">거래 완료</option>
-      </select>
-      <select id="fDealType">
-        <option value="">전체 유형</option>
-        <option value="direct">직접</option>
-        <option value="daesung_trade">대성무역</option>
-        <option value="friend_manage">지인관리</option>
-        <option value="brokerage">중개</option>
       </select>
       <select id="fDealStatus">
         <option value="">진행+완료</option>
@@ -284,14 +307,11 @@
         <thead>
           <tr>
             <th>거래처</th>
-            <th>유형</th>
             <th>품목</th>
             <th>공급가</th>
-            <th>계산서</th>
-            <th>공급가 입금</th>
-            <th>VAT 입금</th>
-            <th>상태</th>
             <th>실수익</th>
+            <th>진행</th>
+            <th>D+N</th>
             <th style="text-align:right">관리</th>
           </tr>
         </thead>
@@ -313,6 +333,7 @@ var $ = function(id){ return document.getElementById(id); };
 var editingId = null;
 var _expandedId = null;
 var _selectedItemId = null;
+var _activeDealType = "";
 var DT = GoLabDealTracker;
 
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
@@ -433,8 +454,14 @@ function computeKPI(){
   var receivable = 0;
   var myProfitTotal = 0;
   var saveTotal = 0;
+  var holdVat = 0;
+  /* 서브탭 카운트 */
+  var typeCounts = { daesung_trade:0, friend_manage:0, brokerage:0, direct:0 };
 
   all.forEach(function(d){
+    /* 유형별 카운트 (취소 포함) */
+    var dt = d.deal_type || "direct";
+    if(typeCounts[dt] !== undefined) typeCounts[dt]++;
     /* 거래 상태별 카운트 */
     if(d.deal_status === "cancelled"){ cancelledCount++; return; }
     if(d.deal_status === "completed" || d.status === DT.STATUS.COMPLETE) completedCount++;
@@ -442,6 +469,8 @@ function computeKPI(){
     /* 미수금 (취소 제외) */
     if(d.invoice_date && !d.deposit_supply_date) receivable += DT.n(d.supply_amount);
     if(d.invoice_date && !d.deposit_vat_date) receivable += DT.n(d.vat_amount);
+    /* 보관중 VAT: 계산서 발행 완료된 거래의 VAT (대표님 돈이 아닌 금액) */
+    if(d.invoice_date) holdVat += DT.n(d.vat_amount);
     /* 수익 합계 */
     if(d.my_profit_amount != null) myProfitTotal += DT.n(d.my_profit_amount);
     saveTotal += DT.n(d.save_amount);
@@ -455,6 +484,14 @@ function computeKPI(){
   $("kMyProfit").textContent = DT.fmt(myProfitTotal);
   $("kMyProfitSub").textContent = "전체 거래 기준";
   $("kSaveTotal").textContent = DT.fmt(saveTotal);
+  $("kHoldVat").textContent = DT.fmt(holdVat);
+  /* 서브탭 카운트 갱신 */
+  var nonCancelled = totalCount - cancelledCount;
+  $("scAll").textContent = nonCancelled;
+  $("scDaesung").textContent = typeCounts.daesung_trade || "";
+  $("scFriend").textContent = typeCounts.friend_manage || "";
+  $("scBrokerage").textContent = typeCounts.brokerage || "";
+  $("scDirect").textContent = typeCounts.direct || "";
 }
 
 /* ── 상태 배지 ── */
@@ -481,6 +518,57 @@ function renderAging(d){
   return parts.join(" ");
 }
 
+/* ── 상태바 [견][발][계][입][정] (v2.3 UX) ── */
+function renderStatusBar(d){
+  var evts = [
+    {key:"quote",         field:"quote_date",          label:"견"},
+    {key:"po",            field:"po_date",             label:"발"},
+    {key:"invoice",       field:"invoice_date",        label:"계"},
+    {key:"deposit_supply",field:"deposit_supply_date", label:"입"},
+    {key:"deposit_vat",   field:"deposit_vat_date",    label:"정"}
+  ];
+  var html = '<div class="status-bar">';
+  var prevDone = true;
+  var today = new Date();
+  evts.forEach(function(evt, i){
+    var isDone = !!d[evt.field];
+    var cls = "sb ";
+    var title = DT.EVENT_LABEL[evt.key];
+    if(isDone){
+      cls += "sb-done";
+      title += " (" + d[evt.field] + ")";
+    } else if(!prevDone){
+      cls += "sb-wait";
+    } else {
+      /* 이전 단계 완료 → 이 단계 대기 중. 지연 여부 판단 */
+      var prevDate = i > 0 ? d[evts[i-1].field] : d.created_at;
+      if(prevDate){
+        var diff = Math.floor((today - new Date(prevDate)) / 86400000);
+        cls += diff > 7 ? "sb-overdue" : "sb-ready";
+      } else {
+        cls += "sb-ready";
+      }
+    }
+    html += '<span class="'+cls+'" title="'+title+'"';
+    if(!isDone) html += ' data-sb-stamp="'+d.deal_id+'" data-sb-evt="'+evt.key+'"';
+    html += '>'+evt.label+'</span>';
+    prevDone = isDone;
+  });
+  html += '</div>';
+  return html;
+}
+
+/* ── D+N 컴팩트 표시 ── */
+function renderDN(d){
+  var aging = DT.calcAging(d);
+  var parts = [];
+  if(aging.supplyAging != null)
+    parts.push('<span class="'+DT.agingColor(aging.supplyAging)+'">D+'+aging.supplyAging+'</span>');
+  if(aging.vatAging != null)
+    parts.push('<span class="'+DT.agingColor(aging.vatAging)+'">D+'+aging.vatAging+'</span>');
+  return parts.length ? parts.join('<br>') : '<span class="muted">—</span>';
+}
+
 /* ── 거래 유형 배지 CSS 클래스 ── */
 function typeClass(t){
   if(t==="daesung_trade") return "type-daesung";
@@ -494,7 +582,7 @@ function render(){
   var all = DT.loadAll();
   var q = ($("fSearch").value||"").trim().toLowerCase();
   var statusFilter = $("fStatus").value;
-  var typeFilter = $("fDealType").value;
+  var typeFilter = _activeDealType;
   var dsFilter = $("fDealStatus").value;
   var filtered = all;
 
@@ -539,45 +627,42 @@ function render(){
     var isCancelled = (d.deal_status === "cancelled");
     var rowClass = isCancelled ? ' class="cancelled-row"' : '';
 
-    /* 메인 행 */
-    html += '<tr'+rowClass+' style="cursor:pointer" data-toggle="'+d.deal_id+'">';
-    html += '<td><b>'+esc(d.partner_name_snapshot)+'</b></td>';
-    /* 유형 배지 (v2.3) */
+    /* 메인 행 (v2.3 컴팩트) */
     var dtLabel = (DT.DEAL_TYPE_LABEL||{})[d.deal_type||"direct"] || "직접";
-    html += '<td><span class="type-badge '+typeClass(d.deal_type)+'">'+dtLabel+'</span></td>';
-    html += '<td>'+esc(d.item_name);
-    if(!d.item_id) html += ' <span class="tag tag-unreg">미등록</span>';
-    html += '</td>';
-    html += '<td>'+DT.fmt(d.supply_amount);
-    if(d.manual_amount) html += ' <span class="tag tag-manual">수동</span>';
-    html += '</td>';
-    html += '<td class="muted">'+(d.invoice_date||"—")+'</td>';
-    html += '<td class="muted">'+(d.deposit_supply_date||"—");
-    if(aging.supplyAging!=null) html += ' <span class="'+DT.agingColor(aging.supplyAging)+'">D+'+aging.supplyAging+'</span>';
-    html += '</td>';
-    html += '<td class="muted">'+(d.deposit_vat_date||"—");
-    if(aging.vatAging!=null) html += ' <span class="'+DT.agingColor(aging.vatAging)+'">D+'+aging.vatAging+'</span>';
-    html += '</td>';
-    html += '<td><span class="status-badge '+statusClass(d.status)+'">'+esc(d.status)+'</span>';
+    html += '<tr'+rowClass+' style="cursor:pointer" data-toggle="'+d.deal_id+'">';
+    /* 거래처 + 유형 배지 */
+    html += '<td><b>'+esc(d.partner_name_snapshot)+'</b>';
+    html += ' <span class="type-badge '+typeClass(d.deal_type)+'">'+dtLabel+'</span>';
     if(isCancelled) html += ' <span class="tag" style="background:rgba(100,116,139,.12);color:#94a3b8">취소</span>';
     html += '</td>';
-    /* 실수익 컬럼 (v2.3) */
+    /* 품목 */
+    html += '<td>'+esc(d.item_name);
+    if(!d.item_id) html += ' <span class="tag tag-unreg">미등록</span>';
+    if(d.manual_amount) html += ' <span class="tag tag-manual">수동</span>';
+    html += '</td>';
+    /* 공급가 */
+    html += '<td>'+DT.fmt(d.supply_amount)+'</td>';
+    /* 실수익 */
     html += '<td>';
     if(d.my_profit_amount != null){
       html += '<b>'+DT.fmt(d.my_profit_amount)+'</b>';
-      if(DT.n(d.save_amount) > 0) html += ' <span class="tag tag-save">S:'+DT.fmt(d.save_amount)+'</span>';
+      if(DT.n(d.save_amount) > 0) html += ' <span class="tag tag-save">S</span>';
     } else {
-      html += '<span class="tag tag-no-cost">원가 미정</span>';
+      html += '<span class="tag tag-no-cost">미정</span>';
     }
     html += '</td>';
+    /* 진행 상태바 [견][발][계][입][정] */
+    html += '<td>'+renderStatusBar(d)+'</td>';
+    /* D+N */
+    html += '<td style="font-size:11px">'+renderDN(d)+'</td>';
+    /* 관리 */
     html += '<td style="text-align:right;white-space:nowrap">';
-    html += '<button class="secondary" style="padding:5px 8px;font-size:11px" data-detail="'+d.deal_id+'">상세</button> ';
-    html += '<button class="danger" style="padding:5px 8px;font-size:11px" data-del="'+d.deal_id+'">삭제</button>';
+    html += '<button class="secondary" style="padding:5px 8px;font-size:11px" data-detail="'+d.deal_id+'">▼</button>';
     html += '</td></tr>';
 
     /* 상세 행 (펼쳐진 경우) */
     if(_expandedId === d.deal_id){
-      html += '<tr class="detail-row"><td colspan="10">';
+      html += '<tr class="detail-row"><td colspan="7">';
       /* 거래 진행 */
       html += '<div class="detail-section"><div class="detail-section-title">⏱ 거래 진행</div>';
       html += '<div class="evt-grid">';
@@ -768,6 +853,20 @@ function render(){
       computeKPI(); render();
     };
   });
+  /* v2.3: 상태바 칩 클릭 → 이벤트 스탬프 */
+  tb.querySelectorAll("[data-sb-stamp]").forEach(function(chip){
+    chip.onclick=function(e){
+      e.stopPropagation();
+      var dealId = chip.dataset.sbStamp;
+      var evt = chip.dataset.sbEvt;
+      var deal = DT.getById(dealId);
+      if(!deal) return;
+      var field = DT.EVENT_FIELD[evt];
+      if(deal[field]) return;
+      DT.stampEvent(dealId, evt);
+      computeKPI(); render();
+    };
+  });
 }
 
 /* ── 상세 토글 ── */
@@ -954,8 +1053,17 @@ $("btnCancel").addEventListener("click", clearForm);
 var _searchTimer = null;
 $("fSearch").addEventListener("input", function(){ clearTimeout(_searchTimer); _searchTimer = setTimeout(render, 200); });
 $("fStatus").addEventListener("change", render);
-$("fDealType").addEventListener("change", render);
 $("fDealStatus").addEventListener("change", render);
+
+/* v2.3: 서브탭 (유형별 필터) */
+document.querySelectorAll(".sub-tab").forEach(function(btn){
+  btn.addEventListener("click", function(){
+    document.querySelectorAll(".sub-tab").forEach(function(b){ b.classList.remove("active"); });
+    btn.classList.add("active");
+    _activeDealType = btn.dataset.stype;
+    render();
+  });
+});
 
 /* Enter → 저장 */
 ["inItemName","inQty","inUnitPrice","inSupply","inCost","inMemo"].forEach(function(id){
@@ -981,5 +1089,6 @@ $("inSettlement").addEventListener("input", updateFormCalc);
 computeKPI();
 render();
 </script>
+<script src="js/sidebar-nav.js"></script>
 </body>
 </html>

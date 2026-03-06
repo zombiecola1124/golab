@@ -359,6 +359,16 @@
       <div class="more-btn" id="todayMore" style="display:none"></div>
     </div>
 
+    <!-- ═══ 오늘 처리할 거래 (v2.3) ═══ -->
+    <div class="card" id="dealTodayCard" style="display:none">
+      <div class="card-header">
+        <h2>📑 오늘 처리할 거래</h2>
+        <span class="badge blue" id="dealTodayCount">0</span>
+        <span class="count"><a href="./deals.html" style="color:var(--primary);text-decoration:none;font-size:11px">전체 보기 →</a></span>
+      </div>
+      <ul class="action-list" id="dealTodayList"></ul>
+    </div>
+
     <!-- ═══ 미등록 거래처 카드 ═══ -->
     <div class="unreg-card" id="unregCard" style="display:none" onclick="openUnregPanel()">
       <span class="uc-icon">⚠️</span>
@@ -423,10 +433,11 @@
     </div>
 
     <!-- ═══ v2.3 거래 수익 KPI ═══ -->
-    <div style="display:grid;grid-template-columns:repeat(3,1fr);gap:12px;margin-bottom:12px">
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
       <div class="kpi-card"><div class="t">이번달 거래매출</div><div class="v" id="kDealMonthRevenue" style="color:var(--orange)">₩0</div></div>
       <div class="kpi-card"><div class="t">내 실수익</div><div class="v" id="kDealMyProfit" style="color:var(--accent)">₩0</div></div>
       <div class="kpi-card"><div class="t">SAVE 누적</div><div class="v" id="kDealSave" style="color:#7c3aed">₩0</div></div>
+      <div class="kpi-card"><div class="t">보관중 VAT</div><div class="v" id="kDealHoldVat" style="color:var(--orange)">₩0</div><div class="t" style="font-size:10px;color:var(--muted)">입금완료·미신고</div></div>
     </div>
 
     <!-- ═══ KPI (최하단) ═══ -->
@@ -1042,6 +1053,79 @@ function renderTimeline(){
 }
 
 /* ══════════════════════════════════════════
+   v2.3 오늘 처리할 거래 (대시보드)
+   ══════════════════════════════════════════ */
+function renderDealToday(){
+  if(typeof GoLabDealTracker === "undefined") return;
+  var DT = GoLabDealTracker;
+  var all = DT.loadAll();
+  var items = [];
+  var today = new Date();
+
+  all.forEach(function(d){
+    if(d.deal_status === "cancelled") return;
+    if(d.deal_status === "completed") return;
+    var name = (d.partner_name_snapshot||"") + " · " + (d.item_name||"");
+    /* 계산서 미발행 (발주 완료 이후) */
+    if(d.po_date && !d.invoice_date){
+      var diff = Math.floor((today - new Date(d.po_date)) / 86400000);
+      items.push({pri: diff > 7 ? 1 : 2, label:"계산서 발행", name:name, id:d.deal_id, days:diff, color: diff > 7 ? "var(--warn)" : "var(--orange)"});
+    }
+    /* 공급가 미수 (계산서 발행 이후) */
+    if(d.invoice_date && !d.deposit_supply_date){
+      var diff = Math.floor((today - new Date(d.invoice_date)) / 86400000);
+      items.push({pri: diff > 14 ? 0 : 2, label:"공급가 미수", name:name, id:d.deal_id, days:diff, color: diff > 14 ? "var(--warn)" : "var(--orange)"});
+    }
+    /* VAT 미수 (공급가 입금 이후) */
+    if(d.deposit_supply_date && !d.deposit_vat_date){
+      var diff = Math.floor((today - new Date(d.deposit_supply_date)) / 86400000);
+      items.push({pri: diff > 14 ? 0 : 3, label:"VAT 확인", name:name, id:d.deal_id, days:diff, color: diff > 14 ? "var(--warn)" : "#0891b2"});
+    }
+    /* 정산 대기 (지인관리 + 공급가 입금 완료 + 정산 미완) */
+    if((d.deal_type === "friend_manage") && d.deposit_supply_date && !d.settlement_date){
+      items.push({pri:1, label:"정산 대기", name:name, id:d.deal_id, days:null, color:"var(--primary)"});
+    }
+    /* 30일 초과 미수 */
+    var aging = DT.calcAging ? DT.calcAging(d) : {};
+    if((aging.supplyAging && aging.supplyAging > 30) || (aging.vatAging && aging.vatAging > 30)){
+      var maxAge = Math.max(aging.supplyAging||0, aging.vatAging||0);
+      items.push({pri:0, label:"30일 초과", name:name, id:d.deal_id, days:maxAge, color:"var(--warn)"});
+    }
+  });
+
+  /* 중복 제거: 같은 deal_id+label은 하나만 */
+  var seen = {};
+  items = items.filter(function(it){
+    var key = it.id + ":" + it.label;
+    if(seen[key]) return false;
+    seen[key] = true;
+    return true;
+  });
+
+  /* 우선순위 정렬 (낮을수록 위) */
+  items.sort(function(a,b){ return a.pri - b.pri; });
+
+  var card = $("dealTodayCard");
+  var list = $("dealTodayList");
+  if(!items.length){ card.style.display="none"; return; }
+  card.style.display="";
+  $("dealTodayCount").textContent = items.length;
+
+  var html = "";
+  items.slice(0, 8).forEach(function(it){
+    html += '<li class="action-item" style="cursor:pointer" onclick="window.location.href=\'./deals.html\'">';
+    html += '<div style="width:4px;height:32px;border-radius:2px;background:'+it.color+';flex-shrink:0"></div>';
+    html += '<div class="act-body">';
+    html += '<div class="act-title" style="font-size:12px"><span style="color:'+it.color+';font-weight:800">'+it.label+'</span> '+it.name+'</div>';
+    if(it.days != null) html += '<div class="act-meta"><span style="color:'+it.color+'">D+'+it.days+'</span></div>';
+    html += '</div>';
+    html += '</li>';
+  });
+  if(items.length > 8) html += '<li style="text-align:center;padding:8px;font-size:11px;color:var(--muted)">외 '+(items.length-8)+'건 더...</li>';
+  list.innerHTML = html;
+}
+
+/* ══════════════════════════════════════════
    MONTHLY KPI (₩ 통일)
    ══════════════════════════════════════════ */
 function computeKPI(){
@@ -1093,6 +1177,16 @@ function computeKPI(){
     $("kDealMonthRevenue").textContent = GoLabDealTracker.fmt(ds.monthRevenue);
     $("kDealMyProfit").textContent = GoLabDealTracker.fmt(ds.totalMyProfit);
     $("kDealSave").textContent = GoLabDealTracker.fmt(ds.totalSave);
+
+    /* v2.3 보관중 VAT */
+    var holdVat = 0;
+    GoLabDealTracker.loadAll().forEach(function(d){
+      if(d.deal_status !== "cancelled" && d.invoice_date) holdVat += GoLabDealTracker.n(d.vat_amount);
+    });
+    $("kDealHoldVat").textContent = GoLabDealTracker.fmt(holdVat);
+
+    /* v2.3 오늘 처리할 거래 렌더 */
+    renderDealToday();
 
     /* 이번 달 매출에 거래 매출 병합 */
     sT += ds.monthRevenue;
@@ -1816,5 +1910,6 @@ const acActVendor = GoLabPartnerMaster.createAutocomplete($("acActVendorWrap"), 
 /* ── Init ── */
 renderAll();
 </script>
+<script src="js/sidebar-nav.js"></script>
 </body>
 </html>
