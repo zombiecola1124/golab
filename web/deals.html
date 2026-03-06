@@ -73,6 +73,31 @@
     .aging-orange{color:#d97706;font-weight:700}
     .aging-deep-orange{color:#ea580c;font-weight:700}
     .aging-red{color:#dc2626;font-weight:700}
+    /* v2.3 거래 유형 칩 */
+    .type-radio{cursor:pointer;display:inline-block}
+    .type-chip{display:inline-block;padding:7px 14px;border-radius:8px;border:1px solid var(--line);
+      font-size:11px;font-weight:700;color:var(--muted);background:var(--chip);transition:all .15s}
+    .type-radio.active .type-chip{color:#fff;border-color:transparent}
+    .type-radio[data-type="direct"].active .type-chip{background:var(--deal)}
+    .type-radio[data-type="daesung_trade"].active .type-chip{background:#7c3aed}
+    .type-radio[data-type="friend_manage"].active .type-chip{background:#2563eb}
+    .type-radio[data-type="brokerage"].active .type-chip{background:#d97706}
+    /* v2.3 유형 배지 (테이블) */
+    .type-badge{display:inline-block;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700}
+    .type-direct{background:rgba(8,145,178,.1);color:#0e7490}
+    .type-daesung{background:rgba(124,58,237,.1);color:#6d28d9}
+    .type-friend{background:rgba(37,99,235,.1);color:#1d4ed8}
+    .type-brokerage{background:rgba(217,119,6,.1);color:#92400e}
+    /* v2.3 거래 상태 */
+    .ds-active{color:#0e7490}.ds-completed{color:#15803d}.ds-cancelled{color:#94a3b8}
+    tr.cancelled-row{opacity:.4}tr.cancelled-row:hover{opacity:.6}
+    .tag-settle-wait{background:rgba(37,99,235,.1);color:#1d4ed8}
+    .tag-save{background:rgba(124,58,237,.1);color:#6d28d9}
+    /* v2.3 수익 체인 */
+    .profit-chain{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;align-items:center;padding:8px 0}
+    .profit-chain .step{display:flex;align-items:center;gap:4px}
+    .profit-chain .arrow{color:var(--muted);font-size:10px}
+    .profit-chain b{font-size:13px}
     /* 상세 행 */
     .detail-row td{background:rgba(8,145,178,.02);padding:14px 16px;border-bottom:2px solid var(--line)}
     .detail-section{margin-bottom:10px}
@@ -118,16 +143,42 @@
 
 <div class="wrap">
   <!-- KPI -->
-  <div class="kpi-grid">
-    <div class="kpi"><div class="t">총 거래</div><div class="v" id="kTotal">0</div></div>
-    <div class="kpi"><div class="t">진행중</div><div class="v" id="kActive">0</div></div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi"><div class="t">총 거래</div><div class="v" id="kTotal">0</div><div class="sub" id="kTotalSub"></div></div>
     <div class="kpi"><div class="t">미수금 합계</div><div class="v" id="kReceivable" style="color:var(--warn)">₩0</div></div>
+    <div class="kpi"><div class="t">내 실수익</div><div class="v" id="kMyProfit" style="color:var(--accent)">₩0</div><div class="sub" id="kMyProfitSub"></div></div>
+  </div>
+  <div class="kpi-grid" style="grid-template-columns:repeat(3,1fr)">
+    <div class="kpi"><div class="t">진행중</div><div class="v" id="kActive">0</div></div>
     <div class="kpi"><div class="t">완료</div><div class="v" id="kComplete" style="color:var(--accent)">0</div></div>
+    <div class="kpi"><div class="t">SAVE 누적</div><div class="v" id="kSaveTotal" style="color:#7c3aed">₩0</div></div>
   </div>
 
   <!-- 등록 폼 -->
   <div class="card">
     <h2>➕ 거래 등록</h2>
+    <!-- 거래 유형 선택 (v2.3) -->
+    <div style="margin-bottom:12px">
+      <label>거래 유형</label>
+      <div id="dealTypeRow" style="display:flex;gap:8px;flex-wrap:wrap">
+        <label class="type-radio active" data-type="direct">
+          <input type="radio" name="dealType" value="direct" checked style="display:none" />
+          <span class="type-chip">직접</span>
+        </label>
+        <label class="type-radio" data-type="daesung_trade">
+          <input type="radio" name="dealType" value="daesung_trade" style="display:none" />
+          <span class="type-chip">대성무역</span>
+        </label>
+        <label class="type-radio" data-type="friend_manage">
+          <input type="radio" name="dealType" value="friend_manage" style="display:none" />
+          <span class="type-chip">지인관리</span>
+        </label>
+        <label class="type-radio" data-type="brokerage">
+          <input type="radio" name="dealType" value="brokerage" style="display:none" />
+          <span class="type-chip">중개</span>
+        </label>
+      </div>
+    </div>
     <div class="row r4">
       <div>
         <label>거래처 *</label>
@@ -166,6 +217,36 @@
         <button id="btnCancel" class="secondary" style="display:none">취소</button>
       </div>
     </div>
+    <!-- SAVE 필드 — 대성무역 선택 시만 표시 (v2.3) -->
+    <div id="saveFields" style="display:none" class="row r3">
+      <div>
+        <label>SAVE 비율</label>
+        <input id="inSaveRate" type="number" step="0.01" value="0.30" placeholder="0.30" />
+      </div>
+      <div>
+        <label>SAVE 금액 <span class="opt">(자동)</span></label>
+        <input id="inSaveAmount" readonly disabled style="background:#f1f5f9" />
+      </div>
+      <div>
+        <label>내 실수익 <span class="opt">(자동)</span></label>
+        <input id="inMyProfitCalc" readonly disabled style="background:#f1f5f9" />
+      </div>
+    </div>
+    <!-- 정산 필드 — 지인관리 선택 시만 표시 (v2.3) -->
+    <div id="settlementFields" style="display:none" class="row r3">
+      <div>
+        <label>정산금 (수동입력)</label>
+        <input id="inSettlement" type="number" step="1" placeholder="₩ 지인 정산금" />
+      </div>
+      <div>
+        <label>정산일 <span class="opt">(선택)</span></label>
+        <input id="inSettlementDate" type="date" />
+      </div>
+      <div>
+        <label>내 실수익 <span class="opt">(자동)</span></label>
+        <input id="inMyProfitFriend" readonly disabled style="background:#f1f5f9" />
+      </div>
+    </div>
     <div id="formCalc" style="text-align:right;font-size:11px;color:var(--muted);margin-top:2px"></div>
   </div>
 
@@ -183,19 +264,34 @@
         <option value="공급가 입금">공급가 입금</option>
         <option value="거래 완료">거래 완료</option>
       </select>
+      <select id="fDealType">
+        <option value="">전체 유형</option>
+        <option value="direct">직접</option>
+        <option value="daesung_trade">대성무역</option>
+        <option value="friend_manage">지인관리</option>
+        <option value="brokerage">중개</option>
+      </select>
+      <select id="fDealStatus">
+        <option value="">진행+완료</option>
+        <option value="all">전체 (취소 포함)</option>
+        <option value="active">진행중</option>
+        <option value="completed">완료</option>
+        <option value="cancelled">취소</option>
+      </select>
     </div>
     <div class="tableWrap">
       <table>
         <thead>
           <tr>
             <th>거래처</th>
+            <th>유형</th>
             <th>품목</th>
             <th>공급가</th>
             <th>계산서</th>
             <th>공급가 입금</th>
             <th>VAT 입금</th>
             <th>상태</th>
-            <th>마진</th>
+            <th>실수익</th>
             <th style="text-align:right">관리</th>
           </tr>
         </thead>
@@ -297,30 +393,68 @@ function updateFormCalc(){
     if(isManual) txt += " [수동]";
     txt += " | VAT: " + DT.fmt(vat) + " | 합계: " + DT.fmt(total);
     var cost = $("inCost").value.trim();
+    var grossProfit = null;
     if(cost !== ""){
-      var margin = supply - DT.n(cost);
-      txt += " | 마진: " + DT.fmt(margin);
+      grossProfit = supply - DT.n(cost);
+      txt += " | 총이익: " + DT.fmt(grossProfit);
     }
     el.textContent = txt;
+
+    /* v2.3: 유형별 실시간 계산 */
+    var dealType = _getSelectedDealType();
+    if(dealType === "daesung_trade" && grossProfit != null){
+      var saveRate = DT.n($("inSaveRate").value, 0.30);
+      var saveAmt = Math.round(grossProfit * saveRate);
+      var myProfit = grossProfit - saveAmt;
+      $("inSaveAmount").value = DT.fmt(saveAmt);
+      $("inMyProfitCalc").value = DT.fmt(myProfit);
+    }
+    if(dealType === "friend_manage" && grossProfit != null){
+      var stlAmt = DT.n($("inSettlement").value, 0);
+      var myProfitF = grossProfit - stlAmt;
+      $("inMyProfitFriend").value = DT.fmt(myProfitF);
+    }
   } else {
     el.textContent = "";
+    $("inSaveAmount").value = "";
+    $("inMyProfitCalc").value = "";
+    $("inMyProfitFriend").value = "";
   }
 }
 $("inCost").addEventListener("input", updateFormCalc);
 
-/* ── KPI ── */
+/* ── KPI (v2.3 확장) ── */
 function computeKPI(){
   var all = DT.loadAll();
-  $("kTotal").textContent = all.length;
-  $("kComplete").textContent = all.filter(function(d){ return d.status === DT.STATUS.COMPLETE; }).length;
-  var active = all.filter(function(d){ return d.status !== DT.STATUS.COMPLETE; });
-  $("kActive").textContent = active.length;
+  var totalCount = all.length;
+  var completedCount = 0;
+  var activeCount = 0;
+  var cancelledCount = 0;
   var receivable = 0;
+  var myProfitTotal = 0;
+  var saveTotal = 0;
+
   all.forEach(function(d){
+    /* 거래 상태별 카운트 */
+    if(d.deal_status === "cancelled"){ cancelledCount++; return; }
+    if(d.deal_status === "completed" || d.status === DT.STATUS.COMPLETE) completedCount++;
+    else activeCount++;
+    /* 미수금 (취소 제외) */
     if(d.invoice_date && !d.deposit_supply_date) receivable += DT.n(d.supply_amount);
     if(d.invoice_date && !d.deposit_vat_date) receivable += DT.n(d.vat_amount);
+    /* 수익 합계 */
+    if(d.my_profit_amount != null) myProfitTotal += DT.n(d.my_profit_amount);
+    saveTotal += DT.n(d.save_amount);
   });
+
+  $("kTotal").textContent = totalCount;
+  $("kTotalSub").textContent = cancelledCount > 0 ? "(취소 "+cancelledCount+"건 포함)" : "";
+  $("kActive").textContent = activeCount;
+  $("kComplete").textContent = completedCount;
   $("kReceivable").textContent = DT.fmt(receivable);
+  $("kMyProfit").textContent = DT.fmt(myProfitTotal);
+  $("kMyProfitSub").textContent = "전체 거래 기준";
+  $("kSaveTotal").textContent = DT.fmt(saveTotal);
 }
 
 /* ── 상태 배지 ── */
@@ -347,12 +481,24 @@ function renderAging(d){
   return parts.join(" ");
 }
 
-/* ── 렌더링 ── */
+/* ── 거래 유형 배지 CSS 클래스 ── */
+function typeClass(t){
+  if(t==="daesung_trade") return "type-daesung";
+  if(t==="friend_manage") return "type-friend";
+  if(t==="brokerage") return "type-brokerage";
+  return "type-direct";
+}
+
+/* ── 렌더링 (v2.3) ── */
 function render(){
   var all = DT.loadAll();
   var q = ($("fSearch").value||"").trim().toLowerCase();
   var statusFilter = $("fStatus").value;
+  var typeFilter = $("fDealType").value;
+  var dsFilter = $("fDealStatus").value;
   var filtered = all;
+
+  /* 텍스트 검색 */
   if(q){
     filtered = filtered.filter(function(d){
       return (d.partner_name_snapshot||"").toLowerCase().includes(q) ||
@@ -360,8 +506,26 @@ function render(){
              (d.memo||"").toLowerCase().includes(q);
     });
   }
+  /* 진행 상태 필터 */
   if(statusFilter){
     filtered = filtered.filter(function(d){ return d.status === statusFilter; });
+  }
+  /* 거래 유형 필터 (v2.3) */
+  if(typeFilter){
+    filtered = filtered.filter(function(d){ return (d.deal_type||"direct") === typeFilter; });
+  }
+  /* 거래 상태 필터 (v2.3): 기본=취소 제외 */
+  if(dsFilter === "all"){
+    /* 전체: 아무것도 필터 안함 */
+  } else if(dsFilter === "active"){
+    filtered = filtered.filter(function(d){ return (d.deal_status||"active") === "active"; });
+  } else if(dsFilter === "completed"){
+    filtered = filtered.filter(function(d){ return (d.deal_status||"active") === "completed"; });
+  } else if(dsFilter === "cancelled"){
+    filtered = filtered.filter(function(d){ return (d.deal_status||"active") === "cancelled"; });
+  } else {
+    /* 기본: 취소 제외 */
+    filtered = filtered.filter(function(d){ return (d.deal_status||"active") !== "cancelled"; });
   }
 
   $("listBadge").textContent = filtered.length;
@@ -372,10 +536,15 @@ function render(){
   var html = "";
   filtered.forEach(function(d){
     var aging = DT.calcAging(d);
-    var agingHtml = renderAging(d);
+    var isCancelled = (d.deal_status === "cancelled");
+    var rowClass = isCancelled ? ' class="cancelled-row"' : '';
+
     /* 메인 행 */
-    html += '<tr style="cursor:pointer" data-toggle="'+d.deal_id+'">';
+    html += '<tr'+rowClass+' style="cursor:pointer" data-toggle="'+d.deal_id+'">';
     html += '<td><b>'+esc(d.partner_name_snapshot)+'</b></td>';
+    /* 유형 배지 (v2.3) */
+    var dtLabel = (DT.DEAL_TYPE_LABEL||{})[d.deal_type||"direct"] || "직접";
+    html += '<td><span class="type-badge '+typeClass(d.deal_type)+'">'+dtLabel+'</span></td>';
     html += '<td>'+esc(d.item_name);
     if(!d.item_id) html += ' <span class="tag tag-unreg">미등록</span>';
     html += '</td>';
@@ -389,10 +558,17 @@ function render(){
     html += '<td class="muted">'+(d.deposit_vat_date||"—");
     if(aging.vatAging!=null) html += ' <span class="'+DT.agingColor(aging.vatAging)+'">D+'+aging.vatAging+'</span>';
     html += '</td>';
-    html += '<td><span class="status-badge '+statusClass(d.status)+'">'+esc(d.status)+'</span></td>';
+    html += '<td><span class="status-badge '+statusClass(d.status)+'">'+esc(d.status)+'</span>';
+    if(isCancelled) html += ' <span class="tag" style="background:rgba(100,116,139,.12);color:#94a3b8">취소</span>';
+    html += '</td>';
+    /* 실수익 컬럼 (v2.3) */
     html += '<td>';
-    if(d.margin_amount!=null) html += DT.fmt(d.margin_amount);
-    else html += '<span class="tag tag-no-cost">원가 미정</span>';
+    if(d.my_profit_amount != null){
+      html += '<b>'+DT.fmt(d.my_profit_amount)+'</b>';
+      if(DT.n(d.save_amount) > 0) html += ' <span class="tag tag-save">S:'+DT.fmt(d.save_amount)+'</span>';
+    } else {
+      html += '<span class="tag tag-no-cost">원가 미정</span>';
+    }
     html += '</td>';
     html += '<td style="text-align:right;white-space:nowrap">';
     html += '<button class="secondary" style="padding:5px 8px;font-size:11px" data-detail="'+d.deal_id+'">상세</button> ';
@@ -401,7 +577,7 @@ function render(){
 
     /* 상세 행 (펼쳐진 경우) */
     if(_expandedId === d.deal_id){
-      html += '<tr class="detail-row"><td colspan="9">';
+      html += '<tr class="detail-row"><td colspan="10">';
       /* 거래 진행 */
       html += '<div class="detail-section"><div class="detail-section-title">⏱ 거래 진행</div>';
       html += '<div class="evt-grid">';
@@ -433,11 +609,45 @@ function render(){
       if(d.purchase_cost!=null) html += DT.fmt(d.purchase_cost);
       else html += '<span class="tag tag-no-cost">원가 미정</span>';
       html += '</span>';
-      html += '<span>마진 ';
-      if(d.margin_amount!=null) html += '<b>'+DT.fmt(d.margin_amount)+'</b>';
-      else html += '—';
-      html += '</span>';
       html += '</div></div>';
+
+      /* 📈 수익 체인 (v2.3) */
+      html += '<div class="detail-section"><div class="detail-section-title">📈 수익 체인</div>';
+      html += '<div class="profit-chain">';
+      html += '<span class="step">총이익 '+(d.gross_profit != null ? '<b>'+DT.fmt(d.gross_profit)+'</b>' : '—')+'</span>';
+      if((d.deal_type||"direct") === "daesung_trade"){
+        html += '<span class="arrow">→</span>';
+        html += '<span class="step"><span class="tag tag-save">SAVE '+DT.fmt(d.save_amount)+' ('+(DT.n(d.save_rate)*100).toFixed(0)+'%)</span></span>';
+      }
+      if(DT.n(d.actual_settlement_amount) > 0){
+        html += '<span class="arrow">→</span>';
+        html += '<span class="step">정산금 <b>'+DT.fmt(d.actual_settlement_amount)+'</b>';
+        if(d.settlement_date) html += ' <span class="muted">('+d.settlement_date+')</span>';
+        else html += ' <span class="tag tag-settle-wait">미정산</span>';
+        html += '</span>';
+      }
+      html += '<span class="arrow">→</span>';
+      html += '<span class="step">내 실수익 <b style="color:var(--accent)">'+(d.my_profit_amount != null ? DT.fmt(d.my_profit_amount) : '—')+'</b></span>';
+      html += '</div></div>';
+
+      /* 정산 입력 (지인관리용) — 상세에서 바로 입력 가능 */
+      if((d.deal_type||"direct") === "friend_manage"){
+        html += '<div class="detail-section"><div class="detail-section-title">💸 지인 정산</div>';
+        html += '<div class="row r3" style="max-width:500px">';
+        html += '<div><label>정산금</label><input type="number" step="1" data-settle-amount="'+d.deal_id+'" value="'+DT.n(d.actual_settlement_amount)+'" placeholder="₩ 정산금" /></div>';
+        html += '<div><label>정산일</label><input type="date" data-settle-date="'+d.deal_id+'" value="'+(d.settlement_date||"")+'" /></div>';
+        html += '<div style="display:flex;align-items:end"><button class="secondary" data-settle-save="'+d.deal_id+'" style="width:100%">정산 저장</button></div>';
+        html += '</div></div>';
+      }
+
+      /* SAVE 비율 조정 (대성무역용) */
+      if((d.deal_type||"direct") === "daesung_trade"){
+        html += '<div class="detail-section"><div class="detail-section-title">💜 SAVE 비율</div>';
+        html += '<div style="display:flex;gap:8px;align-items:end;max-width:300px">';
+        html += '<div><label>SAVE 비율</label><input type="number" step="0.01" data-save-rate="'+d.deal_id+'" value="'+DT.n(d.save_rate, 0.30)+'" style="width:100px" /></div>';
+        html += '<button class="secondary" data-save-rate-save="'+d.deal_id+'">적용</button>';
+        html += '</div></div>';
+      }
 
       /* 메모 */
       html += '<div class="detail-section"><div class="detail-section-title">📝 메모</div>';
@@ -446,9 +656,18 @@ function render(){
       html += '<button class="memo-stamp" data-memostamp="'+d.deal_id+'">오늘 날짜</button>';
       html += '</div></div>';
 
-      /* 수정/삭제 */
-      html += '<div style="display:flex;gap:8px;margin-top:4px">';
+      /* 빠른 액션 (v2.3) */
+      html += '<div style="display:flex;gap:8px;margin-top:8px;flex-wrap:wrap">';
       html += '<button class="secondary" data-edit="'+d.deal_id+'">수정</button>';
+      if(!isCancelled && d.deal_status !== "completed"){
+        html += '<button class="save" data-quick-complete="'+d.deal_id+'" style="font-size:11px;padding:8px 14px">⚡ 빠른 완료</button>';
+      }
+      if((d.deal_type||"direct") === "friend_manage" && d.deposit_supply_date && !d.settlement_date){
+        html += '<button class="secondary" data-settle-done="'+d.deal_id+'" style="font-size:11px">✅ 정산 완료</button>';
+      }
+      if(!isCancelled){
+        html += '<button class="danger" style="padding:5px 8px;font-size:10px" data-cancel-deal="'+d.deal_id+'">취소</button>';
+      }
       html += '<button class="danger" data-del2="'+d.deal_id+'">삭제</button>';
       html += '</div>';
       html += '</td></tr>';
@@ -456,7 +675,7 @@ function render(){
   });
   tb.innerHTML = html;
 
-  /* 이벤트 바인딩 */
+  /* ── 이벤트 바인딩 ── */
   tb.querySelectorAll("[data-toggle]").forEach(function(tr){
     tr.addEventListener("click", function(e){
       if(e.target.closest("button") || e.target.closest("input") || e.target.closest("textarea")) return;
@@ -482,7 +701,7 @@ function render(){
       var deal = DT.getById(btn.dataset.stamp);
       if(!deal) return;
       var field = DT.EVENT_FIELD[btn.dataset.evt];
-      if(deal[field]) return; /* 이미 완료 */
+      if(deal[field]) return;
       DT.stampEvent(btn.dataset.stamp, btn.dataset.evt);
       computeKPI(); render();
     };
@@ -513,6 +732,42 @@ function render(){
       DT.update(btn.dataset.memostamp, { memo: ta.value });
     };
   });
+  /* v2.3: 빠른 완료 */
+  tb.querySelectorAll("[data-quick-complete]").forEach(function(btn){
+    btn.onclick=function(){ quickComplete(btn.dataset.quickComplete); };
+  });
+  /* v2.3: 정산 완료 */
+  tb.querySelectorAll("[data-settle-done]").forEach(function(btn){
+    btn.onclick=function(){ settleComplete(btn.dataset.settleDone); };
+  });
+  /* v2.3: 거래 취소 */
+  tb.querySelectorAll("[data-cancel-deal]").forEach(function(btn){
+    btn.onclick=function(){ cancelDeal(btn.dataset.cancelDeal); };
+  });
+  /* v2.3: 정산 저장 */
+  tb.querySelectorAll("[data-settle-save]").forEach(function(btn){
+    btn.onclick=function(){
+      var id = btn.dataset.settleSave;
+      var amtInput = tb.querySelector('[data-settle-amount="'+id+'"]');
+      var dateInput = tb.querySelector('[data-settle-date="'+id+'"]');
+      if(!amtInput) return;
+      DT.update(id, {
+        actual_settlement_amount: DT.n(amtInput.value, 0),
+        settlement_date: (dateInput && dateInput.value) || null
+      });
+      computeKPI(); render();
+    };
+  });
+  /* v2.3: SAVE 비율 저장 */
+  tb.querySelectorAll("[data-save-rate-save]").forEach(function(btn){
+    btn.onclick=function(){
+      var id = btn.dataset.saveRateSave;
+      var rateInput = tb.querySelector('[data-save-rate="'+id+'"]');
+      if(!rateInput) return;
+      DT.update(id, { save_rate: DT.n(rateInput.value, 0.30) });
+      computeKPI(); render();
+    };
+  });
 }
 
 /* ── 상세 토글 ── */
@@ -521,7 +776,12 @@ function toggleDetail(dealId){
   render();
 }
 
-/* ── CRUD ── */
+/* ── CRUD (v2.3) ── */
+function _getSelectedDealType(){
+  var checked = document.querySelector('input[name="dealType"]:checked');
+  return checked ? checked.value : "direct";
+}
+
 function saveDeal(){
   var partnerId = acPartner.getValue();
   if(!partnerId){ alert("거래처를 선택해주세요."); return; }
@@ -538,6 +798,7 @@ function saveDeal(){
   var supplyVal = supplyInput !== "" ? DT.n(supplyInput) : autoSupply;
   var isManual = (supplyInput !== "" && supplyVal !== autoSupply);
   var costInput = $("inCost").value.trim();
+  var dealType = _getSelectedDealType();
 
   var fields = {
     partner_id: partnerId,
@@ -549,8 +810,21 @@ function saveDeal(){
     supply_amount: supplyVal,
     manual_amount: isManual,
     purchase_cost: costInput !== "" ? DT.n(costInput) : null,
-    memo: $("inMemo").value
+    memo: $("inMemo").value,
+    /* v2.3 신규 필드 */
+    deal_type: dealType
   };
+
+  /* 대성무역: SAVE 비율 */
+  if(dealType === "daesung_trade"){
+    fields.save_rate = DT.n($("inSaveRate").value, 0.30);
+  }
+  /* 지인관리: 정산 금액/일자 */
+  if(dealType === "friend_manage"){
+    var stlInput = $("inSettlement").value.trim();
+    fields.actual_settlement_amount = stlInput !== "" ? DT.n(stlInput) : 0;
+    fields.settlement_date = $("inSettlementDate").value || null;
+  }
 
   try{
     if(editingId){
@@ -579,6 +853,20 @@ function startEdit(dealId){
   $("inSupply").value = d.manual_amount ? d.supply_amount : "";
   $("inCost").value = d.purchase_cost != null ? d.purchase_cost : "";
   $("inMemo").value = d.memo || "";
+  /* v2.3: 거래 유형 복원 */
+  var dt = d.deal_type || "direct";
+  document.querySelectorAll(".type-radio").forEach(function(lbl){
+    lbl.classList.toggle("active", lbl.dataset.type === dt);
+    lbl.querySelector("input").checked = (lbl.dataset.type === dt);
+  });
+  _showTypeFields(dt);
+  /* 대성무역 필드 */
+  if(dt === "daesung_trade") $("inSaveRate").value = DT.n(d.save_rate, 0.30);
+  /* 지인관리 필드 */
+  if(dt === "friend_manage"){
+    $("inSettlement").value = DT.n(d.actual_settlement_amount) || "";
+    $("inSettlementDate").value = d.settlement_date || "";
+  }
   $("btnSave").textContent = "저장";
   $("btnCancel").style.display = "inline-block";
   updateFormCalc();
@@ -608,6 +896,55 @@ function clearForm(){
   editingId = null;
   $("btnSave").textContent = "등록";
   $("btnCancel").style.display = "none";
+  /* v2.3: 유형 초기화 */
+  document.querySelectorAll(".type-radio").forEach(function(lbl){
+    lbl.classList.toggle("active", lbl.dataset.type === "direct");
+    lbl.querySelector("input").checked = (lbl.dataset.type === "direct");
+  });
+  _showTypeFields("direct");
+  $("inSaveRate").value = "0.30";
+  $("inSaveAmount").value = "";
+  $("inMyProfitCalc").value = "";
+  $("inSettlement").value = "";
+  $("inSettlementDate").value = "";
+  $("inMyProfitFriend").value = "";
+}
+
+/* ── v2.3 유형별 필드 표시 ── */
+function _showTypeFields(type){
+  $("saveFields").style.display = (type === "daesung_trade") ? "" : "none";
+  $("settlementFields").style.display = (type === "friend_manage") ? "" : "none";
+}
+
+/* ── v2.3 빠른 완료 ── */
+function quickComplete(dealId){
+  if(!confirm("모든 미입력 날짜를 오늘로 설정하고 거래를 완료하시겠습니까?")) return;
+  var d = DT.getById(dealId);
+  if(!d) return;
+  var today = new Date().toISOString().substring(0, 10);
+  var fields = { deal_status: "completed" };
+  if(!d.quote_date) fields.quote_date = today;
+  if(!d.po_date) fields.po_date = today;
+  if(!d.invoice_date) fields.invoice_date = today;
+  if(!d.deposit_supply_date) fields.deposit_supply_date = today;
+  if(!d.deposit_vat_date) fields.deposit_vat_date = today;
+  DT.update(dealId, fields);
+  computeKPI(); render();
+}
+
+/* ── v2.3 정산 완료 ── */
+function settleComplete(dealId){
+  if(!confirm("정산 완료 처리하시겠습니까? 오늘 날짜가 입력됩니다.")) return;
+  var today = new Date().toISOString().substring(0, 10);
+  DT.update(dealId, { settlement_date: today });
+  computeKPI(); render();
+}
+
+/* ── v2.3 거래 취소 ── */
+function cancelDeal(dealId){
+  if(!confirm("이 거래를 취소 처리하시겠습니까?\n(데이터는 유지되며 미수금에서 제외됩니다)")) return;
+  DT.update(dealId, { deal_status: "cancelled" });
+  computeKPI(); render();
 }
 
 /* ── 이벤트 ── */
@@ -617,11 +954,28 @@ $("btnCancel").addEventListener("click", clearForm);
 var _searchTimer = null;
 $("fSearch").addEventListener("input", function(){ clearTimeout(_searchTimer); _searchTimer = setTimeout(render, 200); });
 $("fStatus").addEventListener("change", render);
+$("fDealType").addEventListener("change", render);
+$("fDealStatus").addEventListener("change", render);
 
 /* Enter → 저장 */
 ["inItemName","inQty","inUnitPrice","inSupply","inCost","inMemo"].forEach(function(id){
   $(id).addEventListener("keydown", function(e){ if(e.key==="Enter") saveDeal(); });
 });
+
+/* v2.3: 거래 유형 토글 */
+document.querySelectorAll(".type-radio").forEach(function(label){
+  label.addEventListener("click", function(){
+    document.querySelectorAll(".type-radio").forEach(function(l){ l.classList.remove("active"); });
+    label.classList.add("active");
+    label.querySelector("input").checked = true;
+    _showTypeFields(label.dataset.type);
+    updateFormCalc();
+  });
+});
+
+/* v2.3: SAVE/정산 필드 입력 시 실시간 계산 */
+$("inSaveRate").addEventListener("input", updateFormCalc);
+$("inSettlement").addEventListener("input", updateFormCalc);
 
 /* ── Init ── */
 computeKPI();

@@ -74,6 +74,12 @@
     .margin-negative{color:var(--warn)}
     .no-data{text-align:center;padding:30px 20px;color:var(--muted);font-size:12px}
 
+    /* v2.3 유형 배지 */
+    .type-direct{background:rgba(8,145,178,.1);color:#0e7490}
+    .type-daesung{background:rgba(124,58,237,.1);color:#6d28d9}
+    .type-friend{background:rgba(37,99,235,.1);color:#1d4ed8}
+    .type-brokerage{background:rgba(217,119,6,.1);color:#92400e}
+
     /* ─ 마진 바 (인라인) ─ */
     .margin-bar{display:inline-block;height:6px;border-radius:3px;min-width:2px;vertical-align:middle;margin-right:6px}
 
@@ -260,6 +266,49 @@
   <!-- ═══ 역마진 경고 ═══ -->
   <div class="reverse-bar" id="reverseBar"></div>
 
+  <!-- ═══ v2.3 거래 수익 KPI ═══ -->
+  <div class="kpi-row" id="dealProfitRow" style="display:none">
+    <div class="kpi">
+      <div class="label">거래 매출</div>
+      <div class="value orange" id="kDealRevenue">₩0</div>
+      <div class="sub" id="kDealRevenueSub">0건</div>
+    </div>
+    <div class="kpi">
+      <div class="label">총이익 (Gross)</div>
+      <div class="value green" id="kDealGross">₩0</div>
+      <div class="sub">공급가 - 원가</div>
+    </div>
+    <div class="kpi">
+      <div class="label">SAVE + 정산</div>
+      <div class="value" id="kDealDeductions" style="color:#7c3aed">₩0</div>
+      <div class="sub" id="kDealDeductionsSub">SAVE ₩0 + 정산 ₩0</div>
+    </div>
+    <div class="kpi">
+      <div class="label">내 실수익</div>
+      <div class="value green" id="kDealMyProfit">₩0</div>
+      <div class="sub">총이익 - SAVE - 정산</div>
+    </div>
+  </div>
+
+  <!-- ═══ v2.3 유형별 분석 ═══ -->
+  <div class="tcard" id="dealTypeCard" style="display:none;margin-bottom:24px">
+    <h3>거래 유형별 분석 <span class="badge" id="dealTypeBadge">0</span></h3>
+    <table>
+      <thead>
+        <tr>
+          <th>유형</th>
+          <th class="right">매출</th>
+          <th class="right">총이익</th>
+          <th class="right">SAVE</th>
+          <th class="right">정산</th>
+          <th class="right">실수익</th>
+          <th>건수</th>
+        </tr>
+      </thead>
+      <tbody id="dealTypeTable"></tbody>
+    </table>
+  </div>
+
   <!-- ═══ 테이블 2개 ═══ -->
   <div class="table-row">
     <!-- 거래처별 마진 TOP -->
@@ -305,6 +354,7 @@
 
 </div>
 
+<script src="js/deal-tracker.js"></script>
 <script>
 /* ══════════════════════════════════════════
    GoLab Profit Dashboard v1.2
@@ -789,6 +839,9 @@ function render(){
 
   // ── 품목별 테이블 ── (역마진 프리셋 → 품목 필터링)
   renderGroupTable(r.byItem, "itemTable", "itemEmpty", "itemBadge", reverseNameSet);
+
+  // ── v2.3 거래 수익 대시보드 ──
+  renderDealProfit();
 }
 
 /* ── 환율 리스크 KPI 렌더링 ── */
@@ -1101,6 +1154,63 @@ function _filterClientList(query){
       render();
     });
   });
+}
+
+/* ══════════════════════════════════════════
+   v2.3 거래 수익 대시보드 통합
+   ══════════════════════════════════════════ */
+function renderDealProfit(){
+  if(typeof GoLabDealTracker === "undefined"){
+    $("dealProfitRow").style.display = "none";
+    $("dealTypeCard").style.display = "none";
+    return;
+  }
+  var range = getDateRange();
+  var dp = GoLabDealTracker.getProfitSummary(range.from, range.to);
+  if(dp.count === 0){
+    $("dealProfitRow").style.display = "none";
+    $("dealTypeCard").style.display = "none";
+    return;
+  }
+
+  $("dealProfitRow").style.display = "";
+  $("dealTypeCard").style.display = "";
+
+  $("kDealRevenue").textContent = fmtW(dp.revenue);
+  $("kDealRevenueSub").textContent = dp.count + "건";
+  $("kDealGross").textContent = fmtW(dp.grossProfit);
+  $("kDealGross").className = "value " + (dp.grossProfit >= 0 ? "green" : "red");
+  var deductions = dp.saveTotal + dp.settlementTotal;
+  $("kDealDeductions").textContent = fmtW(deductions);
+  $("kDealDeductionsSub").textContent = "SAVE " + fmtW(dp.saveTotal) + " + 정산 " + fmtW(dp.settlementTotal);
+  $("kDealMyProfit").textContent = fmtW(dp.myProfit);
+  $("kDealMyProfit").className = "value " + (dp.myProfit >= 0 ? "green" : "red");
+
+  $("dealTypeBadge").textContent = dp.count;
+
+  /* 유형별 테이블 */
+  var types = ["direct", "daesung_trade", "friend_manage", "brokerage"];
+  var labels = GoLabDealTracker.DEAL_TYPE_LABEL || {};
+  var typeClasses = {
+    "direct": "type-direct", "daesung_trade": "type-daesung",
+    "friend_manage": "type-friend", "brokerage": "type-brokerage"
+  };
+  var tbody = "";
+  types.forEach(function(t){
+    var row = dp.byType[t];
+    if(!row || row.count === 0) return;
+    var tc = typeClasses[t] || "";
+    tbody += "<tr>";
+    tbody += '<td><span style="display:inline-block;padding:2px 7px;border-radius:4px;font-size:9px;font-weight:700" class="'+tc+'">'+(labels[t]||t)+'</span></td>';
+    tbody += '<td class="right">' + fmtW(row.revenue) + '</td>';
+    tbody += '<td class="right">' + fmtW(row.grossProfit) + '</td>';
+    tbody += '<td class="right">' + fmtW(row.save) + '</td>';
+    tbody += '<td class="right">' + fmtW(row.settlement) + '</td>';
+    tbody += '<td class="right"><b>' + fmtW(row.myProfit) + '</b></td>';
+    tbody += '<td>' + row.count + '</td>';
+    tbody += "</tr>";
+  });
+  $("dealTypeTable").innerHTML = tbody || '<tr><td colspan="7" class="no-data">데이터 없음</td></tr>';
 }
 
 /* ── 크로스탭 동기화 ── */
