@@ -58,12 +58,35 @@
     .type-badge.sell{background:rgba(217,119,6,.1);color:#92400e}
     .type-badge.buy{background:rgba(37,99,235,.1);color:#1d4ed8}
     .type-badge.both{background:rgba(124,58,237,.1);color:#6d28d9}
+    /* 복사 버튼 */
+    .copy-btn{
+      display:inline-flex;align-items:center;justify-content:center;
+      border:none;background:rgba(124,58,237,.08);color:var(--partner);
+      border-radius:6px;padding:2px 6px;font-size:10px;cursor:pointer;
+      margin-left:4px;vertical-align:middle;font-weight:400;
+    }
+    .copy-btn:hover{background:rgba(124,58,237,.18)}
+    /* 상세 행 */
+    .detail-row td{
+      background:rgba(124,58,237,.03);padding:8px 12px;
+      border-bottom:2px solid var(--line);
+    }
+    .detail-grid{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:11px;color:var(--muted)}
+    .detail-grid b{color:var(--text);font-weight:600}
     /* Search */
     .search-bar{margin-bottom:12px}
     .stat-inline{font-size:11px;color:var(--muted);margin-left:auto}
+    /* 섹션 구분 */
+    .form-section{margin-bottom:4px}
+    .form-section-label{font-size:10px;color:#94a3b8;margin-bottom:6px;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
     @media(max-width:900px){
       .kpi-grid{grid-template-columns:1fr 1fr}
+      .r3{grid-template-columns:1fr 1fr}
       .r4{grid-template-columns:1fr 1fr}
+    }
+    @media(max-width:600px){
+      .r3{grid-template-columns:1fr}
+      .r2{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -101,31 +124,71 @@
     </div>
   </div>
 
-  <!-- 등록/수정 폼 -->
+  <!-- 등록/수정 폼 — v2.2 확장 -->
   <div class="card">
     <h2>➕ 거래처 등록</h2>
-    <div class="row r4">
-      <div>
-        <label>거래처명 *</label>
-        <input id="inName" placeholder="예: 대성금속" />
-      </div>
-      <div>
-        <label>유형</label>
-        <select id="inType">
-          <option value="매출처" selected>매출처</option>
-          <option value="매입처">매입처</option>
-          <option value="겸용">겸용</option>
-        </select>
-      </div>
-      <div>
-        <label>연락처 <span class="opt">(선택)</span></label>
-        <input id="inContact" placeholder="예: 010-1234-5678" />
-      </div>
-      <div>
-        <label>비고 <span class="opt">(선택)</span></label>
-        <input id="inNote" placeholder="메모" />
+
+    <!-- 상단: 기본 정보 -->
+    <div class="form-section">
+      <div class="form-section-label">기본 정보</div>
+      <div class="row r3">
+        <div>
+          <label>거래처명 *</label>
+          <input id="inName" placeholder="예: 대성금속" />
+        </div>
+        <div>
+          <label>유형</label>
+          <select id="inType">
+            <option value="매출처" selected>매출처</option>
+            <option value="매입처">매입처</option>
+            <option value="겸용">겸용</option>
+          </select>
+        </div>
+        <div>
+          <label>별칭 <span class="opt">(선택)</span></label>
+          <input id="inAlias" placeholder="예: 시흥공장, 대성(시흥)" />
+        </div>
       </div>
     </div>
+
+    <!-- 중단: 연락 정보 -->
+    <div class="form-section">
+      <div class="form-section-label">연락 정보</div>
+      <div class="row r3">
+        <div>
+          <label>지역 <span class="opt">(선택)</span></label>
+          <input id="inRegion" placeholder="예: 시흥, 도쿄" />
+        </div>
+        <div>
+          <label>담당자명 <span class="opt">(선택)</span></label>
+          <input id="inContactName" placeholder="예: 김철수" />
+        </div>
+        <div>
+          <label>전화번호 <span class="opt">(선택)</span></label>
+          <input id="inPhone" placeholder="예: 01012345678" />
+        </div>
+      </div>
+    </div>
+
+    <!-- 하단: 부가 정보 -->
+    <div class="form-section">
+      <div class="form-section-label">부가 정보</div>
+      <div class="row r3">
+        <div>
+          <label>부서 <span class="opt">(선택)</span></label>
+          <input id="inDept" placeholder="예: 영업1팀" />
+        </div>
+        <div>
+          <label>이메일 <span class="opt">(선택)</span></label>
+          <input id="inEmail" placeholder="예: kim@company.com" type="email" />
+        </div>
+        <div>
+          <label>메모 <span class="opt">(선택)</span></label>
+          <input id="inMemo" placeholder="메모" />
+        </div>
+      </div>
+    </div>
+
     <div style="display:flex;gap:8px;margin-top:4px">
       <button id="btnSave" class="save">등록</button>
       <button id="btnCancel" class="secondary" style="display:none">취소</button>
@@ -134,11 +197,11 @@
     </div>
   </div>
 
-  <!-- 목록 -->
+  <!-- 목록 — v2.2 컬럼 변경 -->
   <div class="card">
     <h2>📋 거래처 목록 <span class="badge" id="listBadge">0</span></h2>
     <div class="search-bar">
-      <input id="fSearch" placeholder="거래처명/연락처/비고 검색..." />
+      <input id="fSearch" placeholder="거래처명/별칭/지역/담당자/전화/메모 검색..." />
     </div>
     <div class="tableWrap">
       <table>
@@ -146,10 +209,10 @@
           <tr>
             <th>#</th>
             <th>거래처명</th>
+            <th>지역</th>
+            <th>담당자</th>
+            <th>전화번호</th>
             <th>유형</th>
-            <th>연락처</th>
-            <th>비고</th>
-            <th>등록일</th>
             <th style="text-align:right">관리</th>
           </tr>
         </thead>
@@ -163,17 +226,21 @@
 <script src="js/partner-master.js"></script>
 <script>
 /* ══════════════════════════════════════════
-   GoLab 거래처 마스터 관리 페이지
+   GoLab v2.2 거래처 마스터 관리 페이지
    ══════════════════════════════════════════ */
-const $ = id => document.getElementById(id);
-let editingId = null;
+var $ = function(id){ return document.getElementById(id); };
+var editingId = null;
+var _expandedId = null; /* 상세보기 토글 상태 */
+
+/* ── 모바일 감지 ── */
+var _isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
 /* ── KPI ── */
 function computeKPI(){
-  const all = GoLabPartnerMaster.loadAll();
+  var all = GoLabPartnerMaster.loadAll();
   $("kTotal").textContent = all.length;
-  $("kSell").textContent = all.filter(p => p.type === "매출처" || p.type === "겸용").length;
-  $("kBuy").textContent = all.filter(p => p.type === "매입처" || p.type === "겸용").length;
+  $("kSell").textContent = all.filter(function(p){ return p.type === "매출처" || p.type === "겸용"; }).length;
+  $("kBuy").textContent = all.filter(function(p){ return p.type === "매입처" || p.type === "겸용"; }).length;
 }
 
 /* ── 유형 뱃지 클래스 ── */
@@ -184,22 +251,40 @@ function typeClass(t){
 }
 
 /* ── HTML 이스케이프 ── */
-function esc(s){ return (s||"").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
-/* ── 렌더링 ── */
+/* ── 전화번호 표시 (PC: 포맷+복사 / 모바일: tel링크) ── */
+function renderPhone(digits){
+  if(!digits) return "";
+  var formatted = GoLabPartnerMaster.formatPhone(digits);
+  if(_isMobile){
+    return '<a href="javascript:void(0)" class="tel-link" data-tel="' + esc(digits) + '" style="color:var(--partner);text-decoration:none">' + esc(formatted) + '</a>';
+  }
+  return esc(formatted) + ' <button class="copy-btn" data-copy="' + esc(digits) + '" title="복사">📋</button>';
+}
+
+/* ── 이메일 표시 (복사 버튼 + confirm 후 mailto) ── */
+function renderEmail(email){
+  if(!email) return "";
+  return '<a href="javascript:void(0)" class="mailto-link" data-email="' + esc(email) + '" style="color:var(--partner);text-decoration:none;font-size:11px">' + esc(email) + '</a>' +
+         ' <button class="copy-btn" data-copy="' + esc(email) + '" title="복사">📋</button>';
+}
+
+/* ── 렌더링 — v2.2 ── */
 function render(){
-  const all = GoLabPartnerMaster.loadAll();
-  const q = ($("fSearch").value||"").trim().toLowerCase();
-  let filtered = all;
+  var all = GoLabPartnerMaster.loadAll();
+  var q = ($("fSearch").value||"").trim();
+  var filtered = all;
   if(q){
-    filtered = all.filter(p => {
-      const combined = (p.name||"") + " " + (p.contact||"") + " " + (p.note||"");
-      return combined.toLowerCase().includes(q);
+    /* search_text 기반 normalize 매칭 */
+    var qNorm = GoLabPartnerMaster.normalize(q);
+    filtered = all.filter(function(p){
+      return (p.search_text || "").includes(qNorm);
     });
   }
 
   $("listBadge").textContent = filtered.length;
-  const tb = $("tbody");
+  var tb = $("tbody");
 
   if(filtered.length === 0){
     tb.innerHTML = "";
@@ -208,51 +293,79 @@ function render(){
   }
 
   $("emptyMsg").style.display = "none";
-  tb.innerHTML = filtered.map((p, i) => {
-    const dateStr = p.created_at ? p.created_at.substring(0,10) : "-";
-    return `<tr>
-      <td class="muted">${i+1}</td>
-      <td><b>${esc(p.name)}</b></td>
-      <td><span class="type-badge ${typeClass(p.type)}">${esc(p.type)}</span></td>
-      <td class="muted">${esc(p.contact)}</td>
-      <td class="muted">${esc(p.note)}</td>
-      <td class="muted">${dateStr}</td>
-      <td style="text-align:right;white-space:nowrap">
-        <button class="secondary" style="padding:5px 8px;font-size:11px" data-edit="${p.partner_id}">수정</button>
-        <button class="danger" style="padding:5px 8px;font-size:11px" data-del="${p.partner_id}">삭제</button>
-      </td>
-    </tr>`;
-  }).join("");
+  var html = "";
+  filtered.forEach(function(p, i){
+    html += '<tr>' +
+      '<td class="muted">' + (i+1) + '</td>' +
+      '<td><b>' + esc(p.display_name || p.name) + '</b></td>' +
+      '<td class="muted">' + esc(p.region) + '</td>' +
+      '<td class="muted">' + esc(p.contact_name) + '</td>' +
+      '<td class="muted">' + renderPhone(p.phone) + '</td>' +
+      '<td><span class="type-badge ' + typeClass(p.type) + '">' + esc(p.type) + '</span></td>' +
+      '<td style="text-align:right;white-space:nowrap">' +
+        '<button class="secondary" style="padding:5px 8px;font-size:11px" data-detail="' + p.partner_id + '">상세</button> ' +
+        '<button class="secondary" style="padding:5px 8px;font-size:11px" data-edit="' + p.partner_id + '">수정</button> ' +
+        '<button class="danger" style="padding:5px 8px;font-size:11px" data-del="' + p.partner_id + '">삭제</button>' +
+      '</td>' +
+    '</tr>';
 
-  // 이벤트 바인딩
-  tb.querySelectorAll("button[data-edit]").forEach(btn => {
-    btn.onclick = () => startEdit(btn.dataset.edit);
+    /* 상세 행 (현재 펼쳐진 경우) */
+    if(_expandedId === p.partner_id){
+      html += '<tr class="detail-row"><td colspan="7"><div class="detail-grid">';
+      if(p.alias)        html += '<span><b>별칭:</b> ' + esc(p.alias) + '</span>';
+      if(p.dept)         html += '<span><b>부서:</b> ' + esc(p.dept) + '</span>';
+      if(p.email)        html += '<span><b>이메일:</b> ' + renderEmail(p.email) + '</span>';
+      if(p.memo)         html += '<span><b>메모:</b> ' + esc(p.memo) + '</span>';
+      var dateStr = p.created_at ? p.created_at.substring(0,10) : "-";
+      html += '<span><b>등록일:</b> ' + dateStr + '</span>';
+      /* 레거시 필드 (있으면 표시) */
+      if(p.contact && p.contact !== p.phone) html += '<span><b>연락처(v1):</b> ' + esc(p.contact) + '</span>';
+      if(p.note && p.note !== p.memo)        html += '<span><b>비고(v1):</b> ' + esc(p.note) + '</span>';
+      html += '</div></td></tr>';
+    }
   });
-  tb.querySelectorAll("button[data-del]").forEach(btn => {
-    btn.onclick = () => deletePartner(btn.dataset.del);
+  tb.innerHTML = html;
+
+  /* 이벤트 바인딩 */
+  tb.querySelectorAll("button[data-detail]").forEach(function(btn){
+    btn.onclick = function(){ toggleDetail(btn.dataset.detail); };
   });
+  tb.querySelectorAll("button[data-edit]").forEach(function(btn){
+    btn.onclick = function(){ startEdit(btn.dataset.edit); };
+  });
+  tb.querySelectorAll("button[data-del]").forEach(function(btn){
+    btn.onclick = function(){ deletePartner(btn.dataset.del); };
+  });
+}
+
+/* ── 상세보기 토글 ── */
+function toggleDetail(partnerId){
+  _expandedId = (_expandedId === partnerId) ? null : partnerId;
+  render();
 }
 
 /* ── CRUD ── */
 function savePartner(){
-  const name = $("inName").value.trim();
+  var name = $("inName").value.trim();
   if(!name){ alert("거래처명을 입력해주세요."); $("inName").focus(); return; }
+
+  var fields = {
+    name:         name,
+    type:         $("inType").value,
+    alias:        $("inAlias").value,
+    region:       $("inRegion").value,
+    contact_name: $("inContactName").value,
+    phone:        $("inPhone").value,
+    dept:         $("inDept").value,
+    email:        $("inEmail").value,
+    memo:         $("inMemo").value
+  };
 
   try{
     if(editingId){
-      GoLabPartnerMaster.update(editingId, {
-        name,
-        type: $("inType").value,
-        contact: $("inContact").value,
-        note: $("inNote").value
-      });
+      GoLabPartnerMaster.update(editingId, fields);
     } else {
-      GoLabPartnerMaster.create({
-        name,
-        type: $("inType").value,
-        contact: $("inContact").value,
-        note: $("inNote").value
-      });
+      GoLabPartnerMaster.create(fields);
     }
     clearForm();
     computeKPI();
@@ -263,32 +376,44 @@ function savePartner(){
 }
 
 function startEdit(partnerId){
-  const p = GoLabPartnerMaster.getById(partnerId);
+  var p = GoLabPartnerMaster.getById(partnerId);
   if(!p) return;
   editingId = p.partner_id;
-  $("inName").value = p.name || "";
-  $("inType").value = p.type || "매출처";
-  $("inContact").value = p.contact || "";
-  $("inNote").value = p.note || "";
+  $("inName").value        = p.name || "";
+  $("inType").value        = p.type || "매출처";
+  $("inAlias").value       = p.alias || "";
+  $("inRegion").value      = p.region || "";
+  $("inContactName").value = p.contact_name || "";
+  /* 전화번호: 포맷된 형태로 input에 표시 */
+  $("inPhone").value       = GoLabPartnerMaster.formatPhone(p.phone || "");
+  $("inDept").value        = p.dept || "";
+  $("inEmail").value       = p.email || "";
+  $("inMemo").value        = p.memo || "";
   $("btnSave").textContent = "저장";
   $("btnCancel").style.display = "inline-block";
   window.scrollTo({top:0, behavior:"smooth"});
 }
 
 function deletePartner(partnerId){
-  const p = GoLabPartnerMaster.getById(partnerId);
+  var p = GoLabPartnerMaster.getById(partnerId);
   if(!p) return;
-  if(!confirm(`"${p.name}" 거래처를 삭제하시겠습니까?`)) return;
+  if(!confirm('"' + (p.display_name || p.name) + '" 거래처를 삭제하시겠습니까?')) return;
   GoLabPartnerMaster.remove(partnerId);
+  if(_expandedId === partnerId) _expandedId = null;
   computeKPI();
   render();
 }
 
 function clearForm(){
-  $("inName").value = "";
-  $("inType").value = "매출처";
-  $("inContact").value = "";
-  $("inNote").value = "";
+  $("inName").value        = "";
+  $("inType").value        = "매출처";
+  $("inAlias").value       = "";
+  $("inRegion").value      = "";
+  $("inContactName").value = "";
+  $("inPhone").value       = "";
+  $("inDept").value        = "";
+  $("inEmail").value       = "";
+  $("inMemo").value        = "";
   editingId = null;
   $("btnSave").textContent = "등록";
   $("btnCancel").style.display = "none";
@@ -297,33 +422,68 @@ function clearForm(){
 /* ── 마이그레이션 ── */
 function runMigration(){
   if(!confirm("매출 데이터에서 거래처를 자동 추출합니다.\n기존 거래처와 중복되지 않게 처리됩니다. 실행할까요?")) return;
-  const result = GoLabPartnerMaster.migrateFromSales();
+  var result = GoLabPartnerMaster.migrateFromSales();
   alert(
-    `마이그레이션 완료!\n` +
-    `• 새로 생성: ${result.created}건\n` +
-    `• 기존 유지: ${result.existing}건\n` +
-    `• 전체: ${result.total}건\n` +
-    `• 매출 레코드 backfill: ${result.backfilled}건`
+    "마이그레이션 완료!\n" +
+    "• 새로 생성: " + result.created + "건\n" +
+    "• 기존 유지: " + result.existing + "건\n" +
+    "• 전체: " + result.total + "건\n" +
+    "• 매출 레코드 backfill: " + result.backfilled + "건"
   );
   computeKPI();
   render();
 }
+
+/* ── 복사 / 전화 / 이메일 글로벌 이벤트 ── */
+document.addEventListener("click", function(e){
+  /* 복사 버튼 */
+  var copyBtn = e.target.closest(".copy-btn");
+  if(copyBtn){
+    var text = copyBtn.dataset.copy;
+    navigator.clipboard.writeText(text).then(function(){
+      var orig = copyBtn.textContent;
+      copyBtn.textContent = "✓";
+      setTimeout(function(){ copyBtn.textContent = orig; }, 1000);
+    });
+    return;
+  }
+  /* 전화 링크 (모바일: confirm 후 tel: 실행) */
+  var telLink = e.target.closest(".tel-link");
+  if(telLink){
+    e.preventDefault();
+    var tel = telLink.dataset.tel;
+    if(confirm(GoLabPartnerMaster.formatPhone(tel) + " 로 전화하시겠습니까?")){
+      window.location.href = "tel:" + tel;
+    }
+    return;
+  }
+  /* 이메일 링크 (confirm 후 mailto: 실행) */
+  var mailLink = e.target.closest(".mailto-link");
+  if(mailLink){
+    e.preventDefault();
+    var email = mailLink.dataset.email;
+    if(confirm(email + " 에 메일을 보내시겠습니까?")){
+      window.location.href = "mailto:" + email;
+    }
+    return;
+  }
+});
 
 /* ── 이벤트 ── */
 $("btnSave").addEventListener("click", savePartner);
 $("btnCancel").addEventListener("click", clearForm);
 $("btnMigrate").addEventListener("click", runMigration);
 
-let _searchTimer = null;
-$("fSearch").addEventListener("input", () => {
+var _searchTimer = null;
+$("fSearch").addEventListener("input", function(){
   clearTimeout(_searchTimer);
   _searchTimer = setTimeout(render, 200);
 });
 
-// Enter → 저장
-$("inName").addEventListener("keydown", e => { if(e.key==="Enter") savePartner(); });
-$("inContact").addEventListener("keydown", e => { if(e.key==="Enter") savePartner(); });
-$("inNote").addEventListener("keydown", e => { if(e.key==="Enter") savePartner(); });
+/* Enter → 저장 (모든 입력 필드에서) */
+["inName","inAlias","inRegion","inContactName","inPhone","inDept","inEmail","inMemo"].forEach(function(id){
+  $(id).addEventListener("keydown", function(e){ if(e.key==="Enter") savePartner(); });
+});
 
 /* ── Init ── */
 computeKPI();

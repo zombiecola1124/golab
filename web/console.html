@@ -1123,7 +1123,7 @@ function openDrawer(nameOrId){
   // partner 해석
   const partnerId = resolvePartnerId(nameOrId);
   const partner = partnerId ? GoLabPartnerMaster.getById(partnerId) : null;
-  const displayName = partner ? partner.name : nameOrId;
+  const displayName = partner ? (partner.display_name || partner.name) : nameOrId;
   $("vpName").textContent = displayName;
 
   // 매칭 헬퍼 — partner_id/이름/정규화 3단 비교
