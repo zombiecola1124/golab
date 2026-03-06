@@ -1,0 +1,631 @@
+<!doctype html>
+<html lang="ko">
+<head>
+  <meta charset="utf-8" />
+  <meta name="viewport" content="width=device-width,initial-scale=1" />
+  <title>GoLab · 거래 추적</title>
+  <style>
+    :root{
+      --bg:#f5f7fa;--card:#ffffff;--muted:#64748b;--text:#0f172a;
+      --line:#e5e7eb;--accent:#16a34a;--warn:#d97706;--bad:#dc2626;--point:#2563eb;
+      --chip:#f8fafc;--deal:#0891b2;
+    }
+    *{box-sizing:border-box}
+    body{margin:0;background:var(--bg);color:var(--text);
+      font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",Arial;}
+    header{padding:14px 18px;border-bottom:1px solid var(--line);position:sticky;top:0;background:rgba(255,255,255,.92);backdrop-filter:blur(8px);z-index:10}
+    header .top{display:flex;align-items:center;justify-content:space-between;gap:10px}
+    header h1{margin:0;font-size:16px;letter-spacing:.2px;color:var(--deal)}
+    .tabs{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .tab{display:inline-flex;align-items:center;gap:8px;padding:8px 10px;border-radius:10px;border:1px solid var(--line);color:var(--muted);text-decoration:none;background:transparent;font-size:12px}
+    .tab.active{color:var(--deal);background:rgba(8,145,178,.08);border-color:rgba(8,145,178,.3)}
+    .wrap{max-width:1440px;margin:0 auto;padding:16px 16px 36px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .card h2{margin:0 0 12px;font-size:13px;color:var(--deal);display:flex;align-items:center;gap:8px}
+    /* KPI */
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+    .kpi{padding:14px;border-radius:10px;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .kpi .t{font-size:11px;color:var(--muted)}
+    .kpi .v{margin-top:6px;font-size:24px;font-weight:600;color:var(--deal)}
+    .kpi .sub{margin-top:4px;font-size:10px;color:var(--muted)}
+    /* Form */
+    .row{display:grid;gap:10px;margin-bottom:10px}
+    .r2{grid-template-columns:1fr 1fr}.r3{grid-template-columns:1fr 1fr 1fr}.r4{grid-template-columns:1fr 1fr 1fr 1fr}
+    label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:700}
+    label .opt{font-weight:400;color:#94a3b8}
+    input,select,textarea{width:100%;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--text);padding:9px 10px;font-size:12px;outline:none;transition:border .2s;box-sizing:border-box}
+    input:focus,select:focus,textarea:focus{border-color:var(--deal)}
+    input::placeholder,textarea::placeholder{color:#94a3b8}
+    textarea{min-height:50px;resize:vertical}
+    button{border:1px solid var(--line);background:var(--card);color:var(--text);border-radius:10px;padding:10px 14px;font-size:12px;cursor:pointer;font-weight:700}
+    button:hover{border-color:#cbd5e1;background:#f8fafc}
+    button.save{background:var(--deal);border:none;color:#fff}
+    button.save:hover{background:#0e7490}
+    button.danger{color:var(--bad);background:none;border:1px solid rgba(220,38,38,.3)}
+    button.secondary{background:rgba(8,145,178,.06);border:1px solid rgba(8,145,178,.25);color:var(--deal)}
+    /* 이벤트 버튼 */
+    .evt-btn{padding:6px 12px;font-size:11px;border-radius:8px;font-weight:700;white-space:nowrap}
+    .evt-btn.done{background:rgba(22,163,74,.1);color:#15803d;border-color:rgba(22,163,74,.3);cursor:default}
+    .evt-btn.pending{background:rgba(8,145,178,.06);border:1px solid rgba(8,145,178,.25);color:var(--deal)}
+    /* Table */
+    .tableWrap{overflow:auto;border-radius:10px;border:1px solid var(--line)}
+    table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
+    th{background:#f8fafc;color:var(--muted);text-align:left;padding:10px 12px;position:sticky;top:0;white-space:nowrap;z-index:2;border-bottom:1px solid var(--line)}
+    td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+    tr:hover{background:rgba(8,145,178,.02)}
+    .muted{color:var(--muted)}
+    /* 배지 */
+    .badge{display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;background:var(--deal);color:#fff;border-radius:99px;min-width:20px;height:20px;padding:0 6px;margin-left:6px}
+    .tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;margin-left:4px;vertical-align:middle}
+    .tag-manual{background:rgba(217,119,6,.15);color:#92400e}
+    .tag-no-cost{background:rgba(100,116,139,.12);color:#475569}
+    .tag-unreg{background:rgba(220,38,38,.1);color:#b91c1c}
+    /* 상태 배지 */
+    .status-badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700}
+    .st-new{background:#f1f5f9;color:#64748b}
+    .st-quoted{background:rgba(37,99,235,.1);color:#1d4ed8}
+    .st-po{background:rgba(124,58,237,.1);color:#6d28d9}
+    .st-invoiced{background:rgba(217,119,6,.1);color:#92400e}
+    .st-supply-paid{background:rgba(8,145,178,.1);color:#0e7490}
+    .st-complete{background:rgba(22,163,74,.1);color:#15803d}
+    /* 에이징 */
+    .aging-default{color:var(--muted)}
+    .aging-orange{color:#d97706;font-weight:700}
+    .aging-deep-orange{color:#ea580c;font-weight:700}
+    .aging-red{color:#dc2626;font-weight:700}
+    /* 상세 행 */
+    .detail-row td{background:rgba(8,145,178,.02);padding:14px 16px;border-bottom:2px solid var(--line)}
+    .detail-section{margin-bottom:10px}
+    .detail-section-title{font-size:11px;font-weight:700;color:var(--deal);margin-bottom:8px}
+    .evt-grid{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
+    .evt-item{display:flex;align-items:center;gap:6px;font-size:11px}
+    .evt-date-input{width:120px;padding:5px 8px;font-size:11px}
+    .amount-grid{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;align-items:center}
+    .amount-grid b{color:var(--text)}
+    .amount-grid .muted{font-size:11px}
+    .memo-wrap{position:relative}
+    .memo-stamp{position:absolute;top:4px;right:8px;font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(8,145,178,.08);color:var(--deal);border:1px solid rgba(8,145,178,.2);cursor:pointer}
+    /* 필터 */
+    .filter-row{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+    .filter-row input,.filter-row select{width:auto;min-width:140px;flex:1}
+    .filter-info{font-size:11px;color:var(--muted)}
+    @media(max-width:900px){
+      .kpi-grid{grid-template-columns:1fr 1fr}
+      .r4{grid-template-columns:1fr 1fr}
+    }
+    @media(max-width:600px){
+      .r4,.r3,.r2{grid-template-columns:1fr}
+    }
+  </style>
+</head>
+<body>
+<header>
+  <div class="top">
+    <h1>GoLab · 거래 추적</h1>
+    <nav class="tabs">
+      <a class="tab" href="./console.html">🏠 업무</a>
+      <a class="tab" href="./calendar.html">📅 캘린더</a>
+      <a class="tab" href="./profit.html">📊 수익</a>
+      <a class="tab" href="./sales.html">💰 매출</a>
+      <a class="tab active" href="./deals.html">📑 거래</a>
+      <a class="tab" href="./index.html">📦 재고</a>
+      <a class="tab" href="./purchases.html">📥 입고</a>
+      <a class="tab" href="./deal.html">🔥 기회</a>
+      <a class="tab" href="./partner-master.html">🤝 거래처</a>
+    </nav>
+  </div>
+</header>
+
+<div class="wrap">
+  <!-- KPI -->
+  <div class="kpi-grid">
+    <div class="kpi"><div class="t">총 거래</div><div class="v" id="kTotal">0</div></div>
+    <div class="kpi"><div class="t">진행중</div><div class="v" id="kActive">0</div></div>
+    <div class="kpi"><div class="t">미수금 합계</div><div class="v" id="kReceivable" style="color:var(--warn)">₩0</div></div>
+    <div class="kpi"><div class="t">완료</div><div class="v" id="kComplete" style="color:var(--accent)">0</div></div>
+  </div>
+
+  <!-- 등록 폼 -->
+  <div class="card">
+    <h2>➕ 거래 등록</h2>
+    <div class="row r4">
+      <div>
+        <label>거래처 *</label>
+        <div id="acPartnerWrap"></div>
+      </div>
+      <div>
+        <label>품목명 *</label>
+        <input id="inItemName" placeholder="품목 검색 또는 직접 입력" autocomplete="off" />
+        <div id="itemDropdown" style="display:none;position:absolute;z-index:200;background:var(--card);border:1px solid var(--line);border-radius:10px;box-shadow:0 8px 24px rgba(0,0,0,.12);max-height:200px;overflow:auto;margin-top:4px;font-size:12px"></div>
+        <input type="hidden" id="inItemId" value="" />
+      </div>
+      <div>
+        <label>수량 *</label>
+        <input id="inQty" type="number" step="0.01" placeholder="수량" />
+      </div>
+      <div>
+        <label>단가 *</label>
+        <input id="inUnitPrice" type="number" step="1" placeholder="₩ 단가" />
+      </div>
+    </div>
+    <div class="row r4" style="align-items:end">
+      <div>
+        <label>공급가 <span class="opt">(자동계산)</span></label>
+        <input id="inSupply" type="number" step="1" placeholder="자동계산" />
+      </div>
+      <div>
+        <label>원가 <span class="opt">(선택)</span></label>
+        <input id="inCost" type="number" step="1" placeholder="비우면 [원가 미정]" />
+      </div>
+      <div>
+        <label>메모 <span class="opt">(선택)</span></label>
+        <input id="inMemo" placeholder="메모" />
+      </div>
+      <div style="display:flex;gap:8px;padding-bottom:1px">
+        <button id="btnSave" class="save" style="flex:1">등록</button>
+        <button id="btnCancel" class="secondary" style="display:none">취소</button>
+      </div>
+    </div>
+    <div id="formCalc" style="text-align:right;font-size:11px;color:var(--muted);margin-top:2px"></div>
+  </div>
+
+  <!-- 필터 + 목록 -->
+  <div class="card">
+    <h2>📋 거래 목록 <span class="badge" id="listBadge">0</span></h2>
+    <div class="filter-row">
+      <input id="fSearch" placeholder="거래처/품목/메모 검색..." style="flex:2" />
+      <select id="fStatus">
+        <option value="">전체 상태</option>
+        <option value="신규">신규</option>
+        <option value="견적 발송">견적 발송</option>
+        <option value="발주 완료">발주 완료</option>
+        <option value="계산서 발행">계산서 발행</option>
+        <option value="공급가 입금">공급가 입금</option>
+        <option value="거래 완료">거래 완료</option>
+      </select>
+    </div>
+    <div class="tableWrap">
+      <table>
+        <thead>
+          <tr>
+            <th>거래처</th>
+            <th>품목</th>
+            <th>공급가</th>
+            <th>계산서</th>
+            <th>공급가 입금</th>
+            <th>VAT 입금</th>
+            <th>상태</th>
+            <th>마진</th>
+            <th style="text-align:right">관리</th>
+          </tr>
+        </thead>
+        <tbody id="tbody"></tbody>
+      </table>
+    </div>
+    <div id="emptyMsg" class="muted" style="text-align:center;padding:24px;display:none">등록된 거래가 없습니다.</div>
+  </div>
+</div>
+
+<script src="js/partner-master.js"></script>
+<script src="js/item-master.js"></script>
+<script src="js/deal-tracker.js"></script>
+<script>
+/* ══════════════════════════════════════════
+   GoLab v2.3 거래 추적 페이지
+   ══════════════════════════════════════════ */
+var $ = function(id){ return document.getElementById(id); };
+var editingId = null;
+var _expandedId = null;
+var _selectedItemId = null;
+var DT = GoLabDealTracker;
+
+function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* ── 거래처 자동완성 ── */
+var acPartner = GoLabPartnerMaster.createAutocomplete($("acPartnerWrap"), {
+  placeholder: "거래처 검색 또는 새 등록...",
+  onSelect: function(){ updateFormCalc(); },
+  onClear: function(){ updateFormCalc(); }
+});
+
+/* ── 품목 자유입력 + 자동완성 ── */
+var _itemDebounce = null;
+$("inItemName").addEventListener("input", function(){
+  clearTimeout(_itemDebounce);
+  _itemDebounce = setTimeout(function(){ _renderItemDropdown($("inItemName").value); }, 150);
+  /* 직접 입력 시 item_id 초기화 */
+  _selectedItemId = null;
+  $("inItemId").value = "";
+});
+$("inItemName").addEventListener("focus", function(){
+  _renderItemDropdown($("inItemName").value);
+});
+$("inItemName").addEventListener("keydown", function(e){
+  if(e.key==="Escape") _closeItemDropdown();
+});
+document.addEventListener("mousedown", function(e){
+  if(!$("inItemName").contains(e.target) && !$("itemDropdown").contains(e.target)) _closeItemDropdown();
+});
+
+function _renderItemDropdown(query){
+  var dd = $("itemDropdown");
+  if(typeof GoLabItemMaster === "undefined"){ dd.style.display="none"; return; }
+  var results = GoLabItemMaster.search(query||"").slice(0,8);
+  if(!results.length){ dd.style.display="none"; return; }
+  dd.innerHTML = "";
+  results.forEach(function(item){
+    var row = document.createElement("div");
+    row.style.cssText = "padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--line)";
+    row.textContent = item.item_name + (item.spec ? " (" + item.spec + ")" : "");
+    row.addEventListener("mouseenter", function(){ row.style.background="rgba(8,145,178,.06)"; });
+    row.addEventListener("mouseleave", function(){ row.style.background=""; });
+    row.addEventListener("click", function(){
+      _selectedItemId = item.item_id;
+      $("inItemId").value = item.item_id;
+      $("inItemName").value = item.item_name;
+      _closeItemDropdown();
+    });
+    dd.appendChild(row);
+  });
+  /* 드롭다운 위치 조정 */
+  var rect = $("inItemName").parentElement.getBoundingClientRect();
+  dd.style.width = rect.width + "px";
+  dd.style.display = "block";
+}
+function _closeItemDropdown(){ $("itemDropdown").style.display="none"; }
+
+/* ── 실시간 계산 미리보기 ── */
+$("inQty").addEventListener("input", updateFormCalc);
+$("inUnitPrice").addEventListener("input", updateFormCalc);
+$("inSupply").addEventListener("input", function(){
+  /* 공급가 직접 수정 감지 */
+  updateFormCalc();
+});
+
+function updateFormCalc(){
+  var qty = DT.n($("inQty").value);
+  var price = DT.n($("inUnitPrice").value);
+  var autoSupply = Math.round(qty * price);
+  var supplyInput = $("inSupply").value.trim();
+  var supply = supplyInput !== "" ? DT.n(supplyInput) : autoSupply;
+  var isManual = (supplyInput !== "" && supply !== autoSupply);
+  var vat = Math.round(supply * 0.1);
+  var total = supply + vat;
+  var el = $("formCalc");
+  if(qty > 0 && price > 0){
+    var txt = "공급가: " + DT.fmt(supply);
+    if(isManual) txt += " [수동]";
+    txt += " | VAT: " + DT.fmt(vat) + " | 합계: " + DT.fmt(total);
+    var cost = $("inCost").value.trim();
+    if(cost !== ""){
+      var margin = supply - DT.n(cost);
+      txt += " | 마진: " + DT.fmt(margin);
+    }
+    el.textContent = txt;
+  } else {
+    el.textContent = "";
+  }
+}
+$("inCost").addEventListener("input", updateFormCalc);
+
+/* ── KPI ── */
+function computeKPI(){
+  var all = DT.loadAll();
+  $("kTotal").textContent = all.length;
+  $("kComplete").textContent = all.filter(function(d){ return d.status === DT.STATUS.COMPLETE; }).length;
+  var active = all.filter(function(d){ return d.status !== DT.STATUS.COMPLETE; });
+  $("kActive").textContent = active.length;
+  var receivable = 0;
+  all.forEach(function(d){
+    if(d.invoice_date && !d.deposit_supply_date) receivable += DT.n(d.supply_amount);
+    if(d.invoice_date && !d.deposit_vat_date) receivable += DT.n(d.vat_amount);
+  });
+  $("kReceivable").textContent = DT.fmt(receivable);
+}
+
+/* ── 상태 배지 ── */
+function statusClass(s){
+  if(s === DT.STATUS.NEW) return "st-new";
+  if(s === DT.STATUS.QUOTED) return "st-quoted";
+  if(s === DT.STATUS.PO) return "st-po";
+  if(s === DT.STATUS.INVOICED) return "st-invoiced";
+  if(s === DT.STATUS.SUPPLY_PAID) return "st-supply-paid";
+  if(s === DT.STATUS.COMPLETE) return "st-complete";
+  return "st-new";
+}
+
+/* ── 에이징 표시 ── */
+function renderAging(d){
+  var aging = DT.calcAging(d);
+  var parts = [];
+  if(aging.supplyAging != null){
+    parts.push('<span class="'+DT.agingColor(aging.supplyAging)+'">공급가 D+'+aging.supplyAging+'</span>');
+  }
+  if(aging.vatAging != null){
+    parts.push('<span class="'+DT.agingColor(aging.vatAging)+'">VAT D+'+aging.vatAging+'</span>');
+  }
+  return parts.join(" ");
+}
+
+/* ── 렌더링 ── */
+function render(){
+  var all = DT.loadAll();
+  var q = ($("fSearch").value||"").trim().toLowerCase();
+  var statusFilter = $("fStatus").value;
+  var filtered = all;
+  if(q){
+    filtered = filtered.filter(function(d){
+      return (d.partner_name_snapshot||"").toLowerCase().includes(q) ||
+             (d.item_name||"").toLowerCase().includes(q) ||
+             (d.memo||"").toLowerCase().includes(q);
+    });
+  }
+  if(statusFilter){
+    filtered = filtered.filter(function(d){ return d.status === statusFilter; });
+  }
+
+  $("listBadge").textContent = filtered.length;
+  var tb = $("tbody");
+  if(!filtered.length){ tb.innerHTML=""; $("emptyMsg").style.display="block"; return; }
+  $("emptyMsg").style.display="none";
+
+  var html = "";
+  filtered.forEach(function(d){
+    var aging = DT.calcAging(d);
+    var agingHtml = renderAging(d);
+    /* 메인 행 */
+    html += '<tr style="cursor:pointer" data-toggle="'+d.deal_id+'">';
+    html += '<td><b>'+esc(d.partner_name_snapshot)+'</b></td>';
+    html += '<td>'+esc(d.item_name);
+    if(!d.item_id) html += ' <span class="tag tag-unreg">미등록</span>';
+    html += '</td>';
+    html += '<td>'+DT.fmt(d.supply_amount);
+    if(d.manual_amount) html += ' <span class="tag tag-manual">수동</span>';
+    html += '</td>';
+    html += '<td class="muted">'+(d.invoice_date||"—")+'</td>';
+    html += '<td class="muted">'+(d.deposit_supply_date||"—");
+    if(aging.supplyAging!=null) html += ' <span class="'+DT.agingColor(aging.supplyAging)+'">D+'+aging.supplyAging+'</span>';
+    html += '</td>';
+    html += '<td class="muted">'+(d.deposit_vat_date||"—");
+    if(aging.vatAging!=null) html += ' <span class="'+DT.agingColor(aging.vatAging)+'">D+'+aging.vatAging+'</span>';
+    html += '</td>';
+    html += '<td><span class="status-badge '+statusClass(d.status)+'">'+esc(d.status)+'</span></td>';
+    html += '<td>';
+    if(d.margin_amount!=null) html += DT.fmt(d.margin_amount);
+    else html += '<span class="tag tag-no-cost">원가 미정</span>';
+    html += '</td>';
+    html += '<td style="text-align:right;white-space:nowrap">';
+    html += '<button class="secondary" style="padding:5px 8px;font-size:11px" data-detail="'+d.deal_id+'">상세</button> ';
+    html += '<button class="danger" style="padding:5px 8px;font-size:11px" data-del="'+d.deal_id+'">삭제</button>';
+    html += '</td></tr>';
+
+    /* 상세 행 (펼쳐진 경우) */
+    if(_expandedId === d.deal_id){
+      html += '<tr class="detail-row"><td colspan="9">';
+      /* 거래 진행 */
+      html += '<div class="detail-section"><div class="detail-section-title">⏱ 거래 진행</div>';
+      html += '<div class="evt-grid">';
+      ["quote","po","invoice","deposit_supply","deposit_vat"].forEach(function(evt){
+        var field = DT.EVENT_FIELD[evt];
+        var label = DT.EVENT_LABEL[evt];
+        var dateVal = d[field] || "";
+        var isDone = !!dateVal;
+        html += '<div class="evt-item">';
+        html += '<button class="evt-btn '+(isDone?"done":"pending")+'" data-stamp="'+d.deal_id+'" data-evt="'+evt+'">'+(isDone?"✓ ":"")+label+'</button>';
+        html += '<input type="date" class="evt-date-input" data-datefield="'+d.deal_id+'" data-field="'+field+'" value="'+dateVal+'" />';
+        html += '</div>';
+      });
+      html += '</div></div>';
+
+      /* 금액 상세 */
+      html += '<div class="detail-section"><div class="detail-section-title">💰 금액 상세</div>';
+      html += '<div class="amount-grid">';
+      html += '<span>'+DT.n(d.qty)+' × '+DT.fmt(d.unit_price)+' =</span>';
+      html += '<span><b>공급가 '+DT.fmt(d.supply_amount)+'</b>';
+      if(d.manual_amount){
+        html += ' <span class="tag tag-manual">수동</span>';
+        if(d.qty>0) html += ' <span class="muted">(실효단가 '+DT.fmt(Math.round(d.supply_amount/d.qty))+')</span>';
+      }
+      html += '</span>';
+      html += '<span>VAT '+DT.fmt(d.vat_amount)+'</span>';
+      html += '<span><b>합계 '+DT.fmt(d.total_amount)+'</b></span>';
+      html += '<span>원가 ';
+      if(d.purchase_cost!=null) html += DT.fmt(d.purchase_cost);
+      else html += '<span class="tag tag-no-cost">원가 미정</span>';
+      html += '</span>';
+      html += '<span>마진 ';
+      if(d.margin_amount!=null) html += '<b>'+DT.fmt(d.margin_amount)+'</b>';
+      else html += '—';
+      html += '</span>';
+      html += '</div></div>';
+
+      /* 메모 */
+      html += '<div class="detail-section"><div class="detail-section-title">📝 메모</div>';
+      html += '<div class="memo-wrap">';
+      html += '<textarea class="detail-memo" data-memo="'+d.deal_id+'" rows="2">'+esc(d.memo)+'</textarea>';
+      html += '<button class="memo-stamp" data-memostamp="'+d.deal_id+'">오늘 날짜</button>';
+      html += '</div></div>';
+
+      /* 수정/삭제 */
+      html += '<div style="display:flex;gap:8px;margin-top:4px">';
+      html += '<button class="secondary" data-edit="'+d.deal_id+'">수정</button>';
+      html += '<button class="danger" data-del2="'+d.deal_id+'">삭제</button>';
+      html += '</div>';
+      html += '</td></tr>';
+    }
+  });
+  tb.innerHTML = html;
+
+  /* 이벤트 바인딩 */
+  tb.querySelectorAll("[data-toggle]").forEach(function(tr){
+    tr.addEventListener("click", function(e){
+      if(e.target.closest("button") || e.target.closest("input") || e.target.closest("textarea")) return;
+      toggleDetail(tr.dataset.toggle);
+    });
+  });
+  tb.querySelectorAll("[data-detail]").forEach(function(btn){
+    btn.onclick=function(e){ e.stopPropagation(); toggleDetail(btn.dataset.detail); };
+  });
+  tb.querySelectorAll("[data-del]").forEach(function(btn){
+    btn.onclick=function(e){ e.stopPropagation(); deleteDeal(btn.dataset.del); };
+  });
+  tb.querySelectorAll("[data-del2]").forEach(function(btn){
+    btn.onclick=function(){ deleteDeal(btn.dataset.del2); };
+  });
+  tb.querySelectorAll("[data-edit]").forEach(function(btn){
+    btn.onclick=function(){ startEdit(btn.dataset.edit); };
+  });
+  /* 이벤트 스탬프 버튼 */
+  tb.querySelectorAll("[data-stamp]").forEach(function(btn){
+    btn.onclick=function(e){
+      e.stopPropagation();
+      var deal = DT.getById(btn.dataset.stamp);
+      if(!deal) return;
+      var field = DT.EVENT_FIELD[btn.dataset.evt];
+      if(deal[field]) return; /* 이미 완료 */
+      DT.stampEvent(btn.dataset.stamp, btn.dataset.evt);
+      computeKPI(); render();
+    };
+  });
+  /* 날짜 수정 */
+  tb.querySelectorAll("[data-datefield]").forEach(function(inp){
+    inp.addEventListener("change", function(){
+      var fields = {};
+      fields[inp.dataset.field] = inp.value || null;
+      DT.update(inp.dataset.datefield, fields);
+      computeKPI(); render();
+    });
+  });
+  /* 메모 저장 (blur) */
+  tb.querySelectorAll("[data-memo]").forEach(function(ta){
+    ta.addEventListener("blur", function(){
+      DT.update(ta.dataset.memo, { memo: ta.value });
+    });
+  });
+  /* 오늘 날짜 삽입 */
+  tb.querySelectorAll("[data-memostamp]").forEach(function(btn){
+    btn.onclick=function(){
+      var ta = tb.querySelector('[data-memo="'+btn.dataset.memostamp+'"]');
+      if(!ta) return;
+      var stamp = "["+new Date().toISOString().substring(0,10)+"] ";
+      ta.value = stamp + ta.value;
+      ta.focus();
+      DT.update(btn.dataset.memostamp, { memo: ta.value });
+    };
+  });
+}
+
+/* ── 상세 토글 ── */
+function toggleDetail(dealId){
+  _expandedId = (_expandedId === dealId) ? null : dealId;
+  render();
+}
+
+/* ── CRUD ── */
+function saveDeal(){
+  var partnerId = acPartner.getValue();
+  if(!partnerId){ alert("거래처를 선택해주세요."); return; }
+  var itemName = $("inItemName").value.trim();
+  if(!itemName){ alert("품목명을 입력해주세요."); return; }
+  var qty = DT.n($("inQty").value);
+  var unitPrice = DT.n($("inUnitPrice").value);
+  if(qty <= 0){ alert("수량을 입력해주세요."); return; }
+  if(unitPrice <= 0){ alert("단가를 입력해주세요."); return; }
+
+  var partner = GoLabPartnerMaster.getById(partnerId);
+  var autoSupply = Math.round(qty * unitPrice);
+  var supplyInput = $("inSupply").value.trim();
+  var supplyVal = supplyInput !== "" ? DT.n(supplyInput) : autoSupply;
+  var isManual = (supplyInput !== "" && supplyVal !== autoSupply);
+  var costInput = $("inCost").value.trim();
+
+  var fields = {
+    partner_id: partnerId,
+    partner_name_snapshot: partner ? (partner.display_name || partner.name) : "",
+    item_id: _selectedItemId || null,
+    item_name: itemName,
+    qty: qty,
+    unit_price: unitPrice,
+    supply_amount: supplyVal,
+    manual_amount: isManual,
+    purchase_cost: costInput !== "" ? DT.n(costInput) : null,
+    memo: $("inMemo").value
+  };
+
+  try{
+    if(editingId){
+      DT.update(editingId, fields);
+    } else {
+      DT.create(fields);
+    }
+    clearForm();
+    computeKPI();
+    render();
+  } catch(err){
+    alert("저장 실패: " + err.message);
+  }
+}
+
+function startEdit(dealId){
+  var d = DT.getById(dealId);
+  if(!d) return;
+  editingId = d.deal_id;
+  if(d.partner_id) acPartner.setValue(d.partner_id);
+  $("inItemName").value = d.item_name || "";
+  _selectedItemId = d.item_id || null;
+  $("inItemId").value = d.item_id || "";
+  $("inQty").value = d.qty || "";
+  $("inUnitPrice").value = d.unit_price || "";
+  $("inSupply").value = d.manual_amount ? d.supply_amount : "";
+  $("inCost").value = d.purchase_cost != null ? d.purchase_cost : "";
+  $("inMemo").value = d.memo || "";
+  $("btnSave").textContent = "저장";
+  $("btnCancel").style.display = "inline-block";
+  updateFormCalc();
+  window.scrollTo({top:0, behavior:"smooth"});
+}
+
+function deleteDeal(dealId){
+  var d = DT.getById(dealId);
+  if(!d) return;
+  if(!confirm('"'+esc(d.partner_name_snapshot)+" - "+esc(d.item_name)+'" 거래를 삭제하시겠습니까?')) return;
+  DT.remove(dealId);
+  if(_expandedId === dealId) _expandedId = null;
+  computeKPI(); render();
+}
+
+function clearForm(){
+  acPartner.clear();
+  $("inItemName").value = "";
+  _selectedItemId = null;
+  $("inItemId").value = "";
+  $("inQty").value = "";
+  $("inUnitPrice").value = "";
+  $("inSupply").value = "";
+  $("inCost").value = "";
+  $("inMemo").value = "";
+  $("formCalc").textContent = "";
+  editingId = null;
+  $("btnSave").textContent = "등록";
+  $("btnCancel").style.display = "none";
+}
+
+/* ── 이벤트 ── */
+$("btnSave").addEventListener("click", saveDeal);
+$("btnCancel").addEventListener("click", clearForm);
+
+var _searchTimer = null;
+$("fSearch").addEventListener("input", function(){ clearTimeout(_searchTimer); _searchTimer = setTimeout(render, 200); });
+$("fStatus").addEventListener("change", render);
+
+/* Enter → 저장 */
+["inItemName","inQty","inUnitPrice","inSupply","inCost","inMemo"].forEach(function(id){
+  $(id).addEventListener("keydown", function(e){ if(e.key==="Enter") saveDeal(); });
+});
+
+/* ── Init ── */
+computeKPI();
+render();
+</script>
+</body>
+</html>

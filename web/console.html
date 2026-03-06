@@ -290,6 +290,7 @@
     <a class="tab" href="./calendar.html">📅 캘린더</a>
     <a class="tab" href="./profit.html">📊 수익</a>
     <a class="tab" href="./sales.html">💰 매출</a>
+    <a class="tab" href="./deals.html">📑 거래</a>
     <a class="tab" href="./index.html">📦 재고</a>
     <a class="tab" href="./purchases.html">📥 입고</a>
     <a class="tab" href="./deal.html">🔥 기회</a>
@@ -411,6 +412,14 @@
         <button id="btnTlWork" class="filter-btn">업무</button>
       </div>
       <ul id="timeline" class="timeline"></ul>
+    </div>
+
+    <!-- ═══ Deal Tracker KPI ═══ -->
+    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
+      <div class="kpi-card"><div class="t">계산서 미발행</div><div class="v" id="kDealNoInvoice" style="color:#0891b2">0건</div><div class="t" id="kDealNoInvoiceAmt" style="font-size:11px">₩0</div></div>
+      <div class="kpi-card"><div class="t">공급가 미수</div><div class="v" id="kDealSupplyDue" style="color:#f59e0b">0건</div><div class="t" id="kDealSupplyDueAmt" style="font-size:11px">₩0</div></div>
+      <div class="kpi-card"><div class="t">VAT 미수</div><div class="v" id="kDealVatDue" style="color:#f59e0b">0건</div><div class="t" id="kDealVatDueAmt" style="font-size:11px">₩0</div></div>
+      <div class="kpi-card"><div class="t">30일 초과 미수</div><div class="v" id="kDealOverdue" style="color:var(--warn)">0건</div><div class="t" id="kDealOverdueAmt" style="font-size:11px;color:var(--warn)">₩0</div></div>
     </div>
 
     <!-- ═══ KPI (최하단) ═══ -->
@@ -544,6 +553,7 @@
   </div>
 </div>
 
+<script src="js/deal-tracker.js"></script>
 <script src="js/partner-master.js"></script>
 <script>
 /* ══════════════════════════════════════════
@@ -1059,6 +1069,19 @@ function computeKPI(){
   $("kMargin").textContent = fmt(margin);
   $("kMargin").style.color = margin >= 0 ? "var(--accent)" : "var(--warn)";
   $("kVendors").textContent = allV.size;
+
+  /* ── Deal Tracker KPI ── */
+  if(typeof GoLabDealTracker !== "undefined"){
+    var ds = GoLabDealTracker.getKPISummary();
+    $("kDealNoInvoice").textContent = ds.noInvoice.count + "건";
+    $("kDealNoInvoiceAmt").textContent = GoLabDealTracker.fmt(ds.noInvoice.amount);
+    $("kDealSupplyDue").textContent = ds.supplyDue.count + "건";
+    $("kDealSupplyDueAmt").textContent = GoLabDealTracker.fmt(ds.supplyDue.amount);
+    $("kDealVatDue").textContent = ds.vatDue.count + "건";
+    $("kDealVatDueAmt").textContent = GoLabDealTracker.fmt(ds.vatDue.amount);
+    $("kDealOverdue").textContent = ds.overdue30.count + "건";
+    $("kDealOverdueAmt").textContent = GoLabDealTracker.fmt(ds.overdue30.amount);
+  }
 }
 
 /* ══════════════════════════════════════════
