@@ -17,12 +17,12 @@
       font-size:13px;line-height:1.5}
 
     /* ─ Header ─ */
-    header{padding:12px 20px;border-bottom:1px solid var(--border);position:sticky;top:0;background:rgba(255,255,255,.92);backdrop-filter:blur(10px);z-index:20;display:flex;align-items:center;justify-content:space-between}
-    header h1{font-size:15px;font-weight:800;color:var(--primary);letter-spacing:-.2px}
-    .tabs{display:flex;gap:6px;flex-wrap:wrap}
-    .tab{padding:6px 10px;border-radius:8px;border:1px solid var(--border);color:var(--muted);text-decoration:none;font-size:11px;font-weight:600;background:transparent;transition:all .15s}
-    .tab:hover{color:var(--text);border-color:#cbd5e1}
-    .tab.active{color:var(--primary);background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3)}
+    header{padding:0 20px;border-bottom:none;position:sticky;top:0;background:rgba(15,23,42,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:20;display:flex;align-items:center;justify-content:space-between;height:48px}
+    header h1{font-size:15px;font-weight:800;color:#fff;letter-spacing:-.2px}
+    .tabs{display:flex;gap:2px;flex-wrap:wrap;height:100%}
+    .tab{display:inline-flex;align-items:center;padding:0 14px;height:100%;border:none;border-bottom:2px solid transparent;color:rgba(255,255,255,.55);text-decoration:none;font-size:12px;font-weight:600;background:transparent;transition:color .2s,border-color .2s}
+    .tab:hover{color:rgba(255,255,255,.85)}
+    .tab.active{color:#fff;font-weight:800;border-bottom:2px solid #fff}
 
     /* ─ Layout: 3 Column ─ */
     .bento{display:grid;grid-template-columns:200px 1fr 280px;gap:20px;max-width:1440px;margin:0 auto;padding:20px 20px 40px;min-height:calc(100vh - 50px)}
@@ -286,23 +286,20 @@
 <header>
   <h1>GoLab</h1>
   <nav class="tabs">
-    <a class="tab active" href="./console.html">🏠 업무</a>
-    <a class="tab" href="./profit.html">📊 수익</a>
-    <a class="tab" href="./sales.html">💰 매출</a>
-    <a class="tab" href="./deals.html">📑 거래</a>
+    <a class="tab active" href="./console.html">🏠 메인</a>
+    <a class="tab" href="./deals.html">🔥 거래</a>
     <a class="tab" href="./index.html">📦 재고</a>
-    <a class="tab" href="./purchases.html">📥 입고</a>
-    <a class="tab" href="./deal.html">🔥 기회</a>
-      <a class="tab" href="./partner-master.html">🤝 거래처</a>
+    <a class="tab" href="./profit.html">💰 수익</a>
+    <a class="tab" href="./partner-master.html">👥 거래처</a>
   </nav>
 </header>
 
 <div class="bento">
   <!-- LEFT: Quick Menu -->
   <aside class="sidebar">
-    <a class="quick-btn" href="./trade.html"><span class="icon">📊</span>구매 등록</a>
-    <a class="quick-btn" href="./sales.html"><span class="icon">💰</span>매출 등록</a>
+    <a class="quick-btn" href="./deals.html"><span class="icon">💰</span>매출 등록</a>
     <a class="quick-btn" href="./profit.html"><span class="icon">📈</span>수익 분석</a>
+    <a class="quick-btn" href="./trade.html"><span class="icon">📊</span>구매 이력</a>
     <button class="quick-btn" id="btnQuickTask"><span class="icon">✏️</span>Action 추가</button>
     <button class="quick-btn" id="btnQuickSearch"><span class="icon">🔍</span>거래처 검색</button>
 
@@ -415,9 +412,9 @@
     <!-- ═══ Deal Tracker KPI ═══ -->
     <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
       <div class="kpi-card"><div class="t">계산서 미발행</div><div class="v" id="kDealNoInvoice" style="color:#0891b2">0건</div><div class="t" id="kDealNoInvoiceAmt" style="font-size:11px">₩0</div></div>
-      <div class="kpi-card"><div class="t">공급가 미수</div><div class="v" id="kDealSupplyDue" style="color:#f59e0b">0건</div><div class="t" id="kDealSupplyDueAmt" style="font-size:11px">₩0</div></div>
-      <div class="kpi-card"><div class="t">VAT 미수</div><div class="v" id="kDealVatDue" style="color:#f59e0b">0건</div><div class="t" id="kDealVatDueAmt" style="font-size:11px">₩0</div></div>
-      <div class="kpi-card"><div class="t">30일 초과 미수</div><div class="v" id="kDealOverdue" style="color:var(--warn)">0건</div><div class="t" id="kDealOverdueAmt" style="font-size:11px;color:var(--warn)">₩0</div></div>
+      <div class="kpi-card"><div class="t">공급가 확인 대기</div><div class="v" id="kDealSupplyDue" style="color:var(--muted)">0건</div><div class="t" id="kDealSupplyDueAmt" style="font-size:11px">₩0</div></div>
+      <div class="kpi-card"><div class="t">VAT 확인 대기</div><div class="v" id="kDealVatDue" style="color:var(--muted)">0건</div><div class="t" id="kDealVatDueAmt" style="font-size:11px">₩0</div></div>
+      <div class="kpi-card"><div class="t">30일+ 확인 필요</div><div class="v" id="kDealOverdue" style="color:var(--orange)">0건</div><div class="t" id="kDealOverdueAmt" style="font-size:11px;color:var(--orange)">₩0</div></div>
     </div>
 
     <!-- ═══ KPI (최하단) ═══ -->

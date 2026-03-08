@@ -410,6 +410,99 @@ window.GoLabDealTracker = (function () {
   }
 
   /* ══════════════════════════════════════
+     성적표 집계 — 기간별 KPI (Profit 화면 전용)
+     ══════════════════════════════════════ */
+
+  /**
+   * getScorecard(fromDate, toDate)
+   * 기간 내 거래 집계 — Profit 성적표 KPI용
+   * @param {string} fromDate - "YYYY-MM-DD" 시작일
+   * @param {string} toDate   - "YYYY-MM-DD" 종료일
+   * @returns {Object} 성적표 집계 결과
+   */
+  function getScorecard(fromDate, toDate) {
+    var all = loadAll();
+    var totalRevenue = 0;      /* 총 매출 */
+    var paidRevenue = 0;       /* 실제 입금액 */
+    var myNetProfit = 0;       /* 내 순수익 */
+    var mineRevenue = 0;       /* 내 거래 매출 */
+    var mineCost = 0;          /* 내 거래 원가 */
+    var mineFee = 0;           /* 내 거래 수수료 */
+    var friendRevenue = 0;     /* 기타(지인) 거래 매출 */
+    var receivableAmount = 0;  /* 미입금 잔액 */
+    var dealCount = 0;         /* 기간 내 건수 */
+    var paidCount = 0;         /* 입금 건수 */
+    var receivableCount = 0;   /* 미입금 건수 */
+    var deals = [];            /* 기간 내 거래 배열 */
+
+    all.forEach(function(d) {
+      /* 취소 건 제외 */
+      if (d.deal_status === DEAL_STATUS.CANCELLED) return;
+
+      /* 날짜 필터 — quote_at 기준 */
+      var dt = (d.quote_at || d.created_at || "").substring(0, 10);
+      if (!dt) return;
+      if (dt < fromDate || dt > toDate) return;
+
+      var amt = n(d.supply_amount);
+      var cost = n(d.purchase_cost);
+      var fee = n(d.fee);
+
+      totalRevenue += amt;
+      dealCount++;
+      deals.push(d);
+
+      /* 입금 여부 */
+      if (d.payment_at) {
+        paidRevenue += amt;
+        paidCount++;
+      }
+
+      /* 미입금 (계산서 발행 + 입금 X) */
+      if (d.invoice_at && !d.payment_at) {
+        receivableAmount += amt;
+        receivableCount++;
+      }
+
+      /* 소유자별 분리 */
+      if (d.deal_owner === DEAL_OWNER.FRIEND) {
+        friendRevenue += amt;
+      } else {
+        mineRevenue += amt;
+        mineCost += cost;
+        mineFee += fee;
+        myNetProfit += (amt - cost - fee);
+      }
+    });
+
+    return {
+      totalRevenue: totalRevenue,
+      paidRevenue: paidRevenue,
+      myNetProfit: myNetProfit,
+      mineRevenue: mineRevenue,
+      mineCost: mineCost,
+      mineFee: mineFee,
+      friendRevenue: friendRevenue,
+      receivableAmount: receivableAmount,
+      dealCount: dealCount,
+      paidCount: paidCount,
+      receivableCount: receivableCount,
+      deals: deals
+    };
+  }
+
+  /**
+   * getComparison(curFrom, curTo, prevFrom, prevTo)
+   * 현재 기간 vs 이전 기간 비교 — 전월 대비 ▲/▼ 계산용
+   */
+  function getComparison(curFrom, curTo, prevFrom, prevTo) {
+    return {
+      current: getScorecard(curFrom, curTo),
+      previous: getScorecard(prevFrom, prevTo)
+    };
+  }
+
+  /* ══════════════════════════════════════
      마이그레이션 — 구 필드명 → 신 필드명 (멱등)
      ══════════════════════════════════════ */
 
@@ -634,6 +727,8 @@ window.GoLabDealTracker = (function () {
     stampStep: stampStep,
     unstampStep: unstampStep,
     getKPISummary: getKPISummary,
+    getScorecard: getScorecard,
+    getComparison: getComparison,
     migrate: migrate,
     convertSaleToDeal: convertSaleToDeal,
     migrateSalesToDeals: migrateSalesToDeals,
