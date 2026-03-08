@@ -744,75 +744,115 @@ window.GoLabPartnerMaster = (function () {
   }
 
   /* ══════════════════════════════════════
-     거래처별 통계 집계 — 거래 흐름 체크 중심 (v2.2)
-     sales_v1 기반 (+ deals_v1 확장 대비)
+     거래처별 통계 집계 — deals_v1 SSoT 기반 (v2.4)
+     deals_v1 우선, 데이터 없으면 sales_v1 폴백
      ══════════════════════════════════════ */
 
   const DEPOSIT_CUTOFF = "2026-01-01"; /* 이 날짜 이전 매출은 자동 입금 처리됨 */
 
   /**
    * 거래처별 실무 통계 — 상태창에서 호출
+   * deals_v1 SSoT 기반 + sales_v1 폴백
    * @param {string} partnerId
-   * @returns {Object} sales + deals 통계
+   * @returns {Object} 통합 통계 (totalAmount, receivable, txCount, recentDeals 등)
    */
   function calcPartnerStats(partnerId) {
     if (!partnerId) return _emptyStats();
 
-    var today = new Date();
-    today.setHours(0, 0, 0, 0);
-
-    /* ── 매출(sales_v1) 집계 ── */
-    var salesData = [];
-    try { salesData = JSON.parse(localStorage.getItem("golab_sales_v1") || "[]"); } catch(e) {}
-    var partnerSales = salesData.filter(function(r) { return r.partner_id === partnerId; });
-
-    /* 정렬: salesDate 내림차순 */
-    partnerSales.sort(function(a, b) {
-      return (b.salesDate || "").localeCompare(a.salesDate || "");
-    });
-
-    var totalAmount = 0;       /* 누적 매출액 */
-    var receivableAmount = 0;  /* 미입금 합계 */
-    var receivableCount = 0;   /* 미입금 건수 */
-
-    partnerSales.forEach(function(r) {
-      var amt = (Number(r.sellUnitPrice) || 0) * (Number(r.qty) || 0);
-      totalAmount += amt;
-      /* 미입금: deposit_date가 null이고 salesDate >= CUTOFF */
-      if (r.deposit_date === null && (r.salesDate || "") >= DEPOSIT_CUTOFF) {
-        receivableAmount += amt;
-        receivableCount++;
-      }
-    });
-
-    /* 최근 5건 */
-    var recentSales = partnerSales.slice(0, 5);
-
-    /* 최근 거래 정보 (상태창 상단용) */
-    var latestSale = partnerSales[0] || null;
-
-    /* ── 거래(deals_v1) 집계 — 확장 대비 ── */
+    /* ── deals_v1 집계 (SSoT) ── */
     var dealsData = [];
     try { dealsData = JSON.parse(localStorage.getItem("golab_deals_v1") || "[]"); } catch(e) {}
-    var partnerDeals = dealsData.filter(function(d) { return d.partner_id === partnerId; });
-
-    partnerDeals.sort(function(a, b) {
-      return (b.created_at || "").localeCompare(a.created_at || "");
+    var partnerDeals = dealsData.filter(function(d) {
+      return d.partner_id === partnerId && d.deal_status !== "cancelled";
     });
 
+    /* 정렬: quote_at 내림차순 (없으면 created_at) */
+    partnerDeals.sort(function(a, b) {
+      var dateA = a.quote_at || a.created_at || "";
+      var dateB = b.quote_at || b.created_at || "";
+      return dateB.localeCompare(dateA);
+    });
+
+    /* deals 기반 집계 */
+    var dTotalAmount = 0;
+    var dReceivableAmount = 0;
+    var dReceivableCount = 0;
+    var dCompleteCount = 0;
+    var dActiveCount = 0;
+
+    partnerDeals.forEach(function(d) {
+      var amt = Number(d.supply_amount) || 0;
+      dTotalAmount += amt;
+      /* 미입금: invoice_at 있고 payment_at 없는 건 */
+      if (d.invoice_at && !d.payment_at) {
+        dReceivableAmount += amt;
+        dReceivableCount++;
+      }
+      if (d.deal_status === "completed") dCompleteCount++;
+      else dActiveCount++;
+    });
+
+    var latestDeal = partnerDeals[0] || null;
     var recentDeals = partnerDeals.slice(0, 5);
 
-    return {
-      sales: {
-        totalAmount: totalAmount,
-        receivableAmount: receivableAmount,
-        receivableCount: receivableCount,
+    /* ── sales_v1 폴백 (deals 데이터 없을 때만) ── */
+    var useSalesFallback = (partnerDeals.length === 0);
+    var salesFallback = { totalAmount: 0, receivableAmount: 0, receivableCount: 0, txCount: 0, latestSale: null, recentTx: [] };
+
+    if (useSalesFallback) {
+      var salesData = [];
+      try { salesData = JSON.parse(localStorage.getItem("golab_sales_v1") || "[]"); } catch(e) {}
+      var partnerSales = salesData.filter(function(r) { return r.partner_id === partnerId; });
+
+      partnerSales.sort(function(a, b) {
+        return (b.salesDate || "").localeCompare(a.salesDate || "");
+      });
+
+      var sTotalAmount = 0;
+      var sReceivableAmount = 0;
+      var sReceivableCount = 0;
+
+      partnerSales.forEach(function(r) {
+        var amt = (Number(r.sellUnitPrice) || 0) * (Number(r.qty) || 0);
+        sTotalAmount += amt;
+        if (r.deposit_date === null && (r.salesDate || "") >= DEPOSIT_CUTOFF) {
+          sReceivableAmount += amt;
+          sReceivableCount++;
+        }
+      });
+
+      salesFallback = {
+        totalAmount: sTotalAmount,
+        receivableAmount: sReceivableAmount,
+        receivableCount: sReceivableCount,
         txCount: partnerSales.length,
-        latestSale: latestSale,
-        recentTx: recentSales
-      },
+        latestSale: partnerSales[0] || null,
+        recentTx: partnerSales.slice(0, 5)
+      };
+    }
+
+    /* ── 통합 반환 ── */
+    return {
+      /* 최상위: 어디서든 바로 쓸 수 있는 통합 필드 */
+      totalAmount:      useSalesFallback ? salesFallback.totalAmount : dTotalAmount,
+      receivableAmount: useSalesFallback ? salesFallback.receivableAmount : dReceivableAmount,
+      receivableCount:  useSalesFallback ? salesFallback.receivableCount : dReceivableCount,
+      txCount:          useSalesFallback ? salesFallback.txCount : partnerDeals.length,
+      completeCount:    useSalesFallback ? 0 : dCompleteCount,
+      activeCount:      useSalesFallback ? 0 : dActiveCount,
+      latestDeal:       useSalesFallback ? null : latestDeal,
+      recentDeals:      useSalesFallback ? [] : recentDeals,
+      useSalesFallback: useSalesFallback,
+
+      /* 레거시 호환: sales/deals 하위 객체 */
+      sales: salesFallback,
       deals: {
         txCount: partnerDeals.length,
+        totalAmount: dTotalAmount,
+        receivableAmount: dReceivableAmount,
+        receivableCount: dReceivableCount,
+        completeCount: dCompleteCount,
+        activeCount: dActiveCount,
         recentTx: recentDeals
       }
     };
@@ -821,8 +861,11 @@ window.GoLabPartnerMaster = (function () {
   /** 빈 통계 객체 (partner_id 없을 때 방어) */
   function _emptyStats() {
     return {
+      totalAmount: 0, receivableAmount: 0, receivableCount: 0,
+      txCount: 0, completeCount: 0, activeCount: 0,
+      latestDeal: null, recentDeals: [], useSalesFallback: false,
       sales: { totalAmount: 0, receivableAmount: 0, receivableCount: 0, txCount: 0, latestSale: null, recentTx: [] },
-      deals: { txCount: 0, recentTx: [] }
+      deals: { txCount: 0, totalAmount: 0, receivableAmount: 0, receivableCount: 0, completeCount: 0, activeCount: 0, recentTx: [] }
     };
   }
 

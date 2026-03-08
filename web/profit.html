@@ -572,7 +572,54 @@ function detectSalesKey(){
   return best; // null이면 키 없음
 }
 
+/** deals_v1 SSoT 감지: 마이그레이션된 레코드 존재 여부 */
+var _profitUseDeals = false;
+function checkDealsSSoT(){
+  try{
+    var deals = JSON.parse(localStorage.getItem("golab_deals_v1") || "[]");
+    return deals.some(function(d){ return d.source === "migrated"; });
+  }catch(e){ return false; }
+}
+
+/** deal → sales 호환 형식 변환 (기존 analyze/lookupCost 코드 재활용) */
+function dealToSalesFormat(d){
+  return {
+    id: d.deal_id,
+    item_id: d.item_id,
+    partner_id: d.partner_id,
+    salesDate: (d.quote_at || d.created_at || "").substring(0,10),
+    client: d.partner_name_snapshot || "",
+    docNo: "",
+    partNo: "",
+    itemName: d.item_name || "",
+    itemId: d.item_id || "",
+    qty: Number(d.qty) || 0,
+    unit: "ea",
+    sellUnitPrice: Number(d.unit_price) || 0,
+    costOverrideUnitPriceKrw: d.purchase_cost != null ? d.purchase_cost : null,
+    memo: d.memo || "",
+    deposit_date: d.payment_at || null,
+    /* 확장 필드 — profit 전용 */
+    _deal_owner: d.deal_owner || "mine",
+    _deal_status: d.deal_status || "active",
+    _fee: Number(d.fee) || 0,
+    _supply_amount: Number(d.supply_amount) || 0
+  };
+}
+
 function loadSales(){
+  /* deals_v1 SSoT 모드: 마이그레이션 완료 시 deals 우선 */
+  _profitUseDeals = checkDealsSSoT();
+  if(_profitUseDeals){
+    console.log("[Profit] SSoT mode → deals_v1");
+    try{
+      var deals = JSON.parse(localStorage.getItem("golab_deals_v1") || "[]");
+      /* cancelled 제외 */
+      return deals.filter(function(d){ return d.deal_status !== "cancelled"; })
+                  .map(dealToSalesFormat);
+    }catch(e){ return []; }
+  }
+  /* 레거시: sales_v1 */
   const key = detectSalesKey();
   console.log("[Profit] sales key →", key || "(없음)");
   if(!key) return [];
@@ -663,7 +710,9 @@ function analyze(){
     if(activePresetFilter === "need-cost") return;
 
     const cost = costInfo.cost * n(rec.qty);
-    const margin = revenue - cost;
+    /* fee 반영 (deals SSoT 모드에서 수수료 차감) */
+    const fee = n(rec._fee);
+    const margin = revenue - cost - fee;
     totalCost += cost;
     totalMargin += margin;
     marginCount++;
@@ -679,7 +728,8 @@ function analyze(){
     noDateCount, noCostCount, noCostRevenue,
     noItemIdCount, badQtyPriceCount,
     byClient, byItem,
-    avgMap, sales  // 환율 리스크 + 역마진 계산용
+    avgMap, sales,  // 환율 리스크 + 역마진 계산용
+    isDealsMode: _profitUseDeals
   };
 }
 
@@ -707,6 +757,10 @@ function render(){
 
   // ── 경고 바 ──
   let warns = "";
+  // SSoT 모드 안내
+  if(r.isDealsMode){
+    warns += `<div class="warn-card" style="background:rgba(37,99,235,.06);border-color:rgba(37,99,235,.2)"><span class="wi">📑</span>거래 원장(deals_v1) 기반 수익 분석<span class="wv" style="color:var(--point)">SSoT 모드</span></div>`;
+  }
   // [FIX] 매출 데이터 없을 때 안내 (₩0 오해 방지)
   if(r.revenueCount === 0 && r.noDateCount === 0 && !activeWarnFilter){
     warns += `<div class="warn-card orange"><span class="wi">📋</span>매출 데이터가 없습니다<span class="wv">💰 매출 탭에서 먼저 입력하세요</span></div>`;

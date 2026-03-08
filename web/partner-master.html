@@ -265,7 +265,8 @@
   </div>
 </div>
 
-<script src="js/partner-master.js?v=2"></script>
+<script src="js/deal-tracker.js?v=3"></script>
+<script src="js/partner-master.js?v=3"></script>
 <script>
 /* ══════════════════════════════════════════
    GoLab v2.2 거래처 마스터 관리 페이지
@@ -323,8 +324,6 @@ function fmtAmt(v){
    ══════════════════════════════════════ */
 function buildStatusPanel(p){
   var stats = GoLabPartnerMaster.calcPartnerStats(p.partner_id);
-  var s = stats.sales;
-  var d = stats.deals;
 
   var html = '<tr class="detail-row"><td colspan="7">';
   html += '<div class="status-panel">';
@@ -333,6 +332,7 @@ function buildStatusPanel(p){
   html += '<div class="sp-header">';
   html += '<span class="sp-name">' + esc(p.display_name || p.name) + '</span>';
   html += '<span class="type-badge ' + typeClass(p.type) + '">' + esc(p.type) + '</span>';
+  if(stats.useSalesFallback) html += '<span style="font-size:10px;color:var(--warn);margin-left:8px">(매출 데이터 기반 — 마이그레이션 필요)</span>';
   html += '</div>';
 
   /* ── 기본 정보 그리드 ── */
@@ -348,9 +348,28 @@ function buildStatusPanel(p){
   html += '<span><b>등록일:</b> ' + regDate + '</span>';
   html += '</div>';
 
-  /* ── 최근 거래 요약 ── */
-  if(s.latestSale){
-    var ls = s.latestSale;
+  /* ── 최근 거래 요약 (deals 우선, sales 폴백) ── */
+  if(stats.latestDeal){
+    /* deals 기반 최근 거래 */
+    var ld = stats.latestDeal;
+    var ldDate = ld.quote_at || ld.created_at || "";
+    if(ldDate.length > 10) ldDate = ldDate.substring(0,10);
+    html += '<div class="sp-latest">';
+    html += '<span class="sl-label">최근 거래</span> ';
+    html += '<b>' + esc(ldDate) + '</b> · ';
+    html += esc(ld.item_name || "") + ' · ';
+    html += '<b>' + fmtAmt(Number(ld.supply_amount)||0) + '</b>';
+    if(ld.payment_at){
+      html += ' · <span class="sp-deposit-badge paid">입금</span>';
+    } else if(ld.invoice_at){
+      html += ' · <span class="sp-deposit-badge unpaid">미입금</span>';
+    } else {
+      html += ' · <span class="sp-deposit-badge" style="background:#fef3c7;color:#92400e">진행중</span>';
+    }
+    html += '</div>';
+  } else if(stats.useSalesFallback && stats.sales.latestSale){
+    /* sales 폴백 최근 거래 */
+    var ls = stats.sales.latestSale;
     var lsAmt = (Number(ls.sellUnitPrice)||0) * (Number(ls.qty)||0);
     html += '<div class="sp-latest">';
     html += '<span class="sl-label">최근 거래</span> ';
@@ -365,26 +384,49 @@ function buildStatusPanel(p){
     html += '</div>';
   }
 
-  /* ── KPI 바 (3칸: 누적 매출 / 미입금 / 거래건수) ── */
+  /* ── KPI 바 (3칸: 누적 매출 / 미입금 / 거래건수) — 통합 필드 사용 ── */
   html += '<div class="sp-kpi-bar">';
-  html += '<div class="sp-kpi"><div class="spk-label">누적 매출</div><div class="spk-value purple">' + fmtAmt(s.totalAmount) + '</div></div>';
-  html += '<div class="sp-kpi"><div class="spk-label">미입금</div><div class="spk-value ' + (s.receivableAmount > 0 ? 'red' : 'green') + '">' + fmtAmt(s.receivableAmount) + '</div></div>';
-  html += '<div class="sp-kpi"><div class="spk-label">거래 건수</div><div class="spk-value purple">' + s.txCount + '건</div></div>';
+  html += '<div class="sp-kpi"><div class="spk-label">누적 매출</div><div class="spk-value purple">' + fmtAmt(stats.totalAmount) + '</div></div>';
+  html += '<div class="sp-kpi"><div class="spk-label">미입금</div><div class="spk-value ' + (stats.receivableAmount > 0 ? 'red' : 'green') + '">' + fmtAmt(stats.receivableAmount) + '</div></div>';
+  html += '<div class="sp-kpi"><div class="spk-label">거래 건수</div><div class="spk-value purple">' + stats.txCount + '건</div></div>';
   html += '</div>';
 
-  /* ── 경고 플래그 — 실무 체크 ── */
-  if(s.receivableCount > 0){
+  /* ── 경고 플래그 ── */
+  if(stats.receivableCount > 0){
     html += '<div class="sp-warnings">';
-    html += '<span class="sp-warn-flag">\u26a0 입금 대기 ' + s.receivableCount + '건 (' + fmtAmt(s.receivableAmount) + ')</span>';
+    html += '<span class="sp-warn-flag">\u26a0 입금 대기 ' + stats.receivableCount + '건 (' + fmtAmt(stats.receivableAmount) + ')</span>';
     html += '</div>';
   }
 
-  /* ── 최근 매출 히스토리 (최대 5건) ── */
-  if(s.recentTx.length > 0){
+  /* ── 최근 거래 히스토리 (deals 기반) ── */
+  if(stats.recentDeals.length > 0){
     html += '<div class="sp-history">';
-    html += '<div class="sp-history-title">\uD83D\uDCB0 최근 매출 (최대 5건)</div>';
+    html += '<div class="sp-history-title">\uD83D\uDCDD 최근 거래 (최대 5건)</div>';
+    html += '<table><thead><tr><th>견적일</th><th>품목</th><th style="text-align:right">공급가</th><th style="text-align:center">상태</th></tr></thead><tbody>';
+    stats.recentDeals.forEach(function(deal){
+      var dDate = deal.quote_at || deal.created_at || "";
+      if(dDate.length > 10) dDate = dDate.substring(0,10);
+      var statusLabel = "진행";
+      var statusClass = "";
+      if(deal.deal_status === "completed"){ statusLabel = "완료"; statusClass = "paid"; }
+      else if(deal.payment_at){ statusLabel = "입금"; statusClass = "paid"; }
+      else if(deal.invoice_at){ statusLabel = "미입금"; statusClass = "unpaid"; }
+      html += '<tr>';
+      html += '<td class="muted">' + esc(dDate) + '</td>';
+      html += '<td>' + esc(deal.item_name || "") + '</td>';
+      html += '<td class="h-amt">' + fmtAmt(Number(deal.supply_amount)||0) + '</td>';
+      html += '<td class="h-status"><span class="sp-deposit-badge ' + statusClass + '">' + statusLabel + '</span></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+
+  /* ── sales 폴백: 매출 히스토리 ── */
+  if(stats.useSalesFallback && stats.sales.recentTx.length > 0){
+    html += '<div class="sp-history">';
+    html += '<div class="sp-history-title">\uD83D\uDCB0 최근 매출 (최대 5건) <span style="font-size:9px;color:var(--warn)">[레거시]</span></div>';
     html += '<table><thead><tr><th>매출일</th><th>상품명</th><th style="text-align:right">매출액</th><th style="text-align:center">입금</th></tr></thead><tbody>';
-    s.recentTx.forEach(function(r){
+    stats.sales.recentTx.forEach(function(r){
       var amt = (Number(r.sellUnitPrice)||0) * (Number(r.qty)||0);
       var isPaid = r.deposit_date != null;
       html += '<tr>';
@@ -397,23 +439,8 @@ function buildStatusPanel(p){
     html += '</tbody></table></div>';
   }
 
-  /* ── 최근 거래(deals) 히스토리 — 데이터 있을 때만 ── */
-  if(d.recentTx.length > 0){
-    html += '<div class="sp-history" style="margin-top:10px">';
-    html += '<div class="sp-history-title">\uD83D\uDCDD 최근 거래 (최대 5건)</div>';
-    html += '<table><thead><tr><th>품목</th><th style="text-align:right">공급가</th><th>상태</th></tr></thead><tbody>';
-    d.recentTx.forEach(function(deal){
-      html += '<tr>';
-      html += '<td>' + esc(deal.item_name || "") + '</td>';
-      html += '<td class="h-amt">' + fmtAmt(Number(deal.supply_amount)||0) + '</td>';
-      html += '<td class="muted">' + esc(deal.status||"") + '</td>';
-      html += '</tr>';
-    });
-    html += '</tbody></table></div>';
-  }
-
   /* 거래 데이터 없는 경우 안내 */
-  if(s.txCount === 0 && d.txCount === 0){
+  if(stats.txCount === 0){
     html += '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">아직 거래 기록이 없습니다.</div>';
   }
 

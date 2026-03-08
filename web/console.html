@@ -551,7 +551,7 @@
   </div>
 </div>
 
-<script src="js/deal-tracker.js"></script>
+<script src="js/deal-tracker.js?v=3"></script>
 <script src="js/partner-master.js"></script>
 <script>
 /* ══════════════════════════════════════════
@@ -1038,15 +1038,34 @@ function renderTimeline(){
 function computeKPI(){
   const mp = monthPrefix();
   let sT=0, pT=0; const allV=new Set();
-  // 매출 집계
-  try{JSON.parse(localStorage.getItem(SALES_KEY)||"[]").forEach(r=>{
-    if((r.salesDate||"").startsWith(mp)){
-      sT+=n(r.sellUnitPrice)*n(r.qty);
-      // partner_id 기반 거래처 카운팅 (중복 표기 통합)
-      if(r.partner_id) allV.add(r.partner_id);
-      else if(r.client){ const pid=resolvePartnerId(r.client); allV.add(pid||r.client); }
+  // 매출 집계 — deals_v1 SSoT 우선, 없으면 sales_v1 폴백
+  var _useDealsSSoT = false;
+  try{
+    var _deals = JSON.parse(localStorage.getItem("golab_deals_v1")||"[]");
+    _useDealsSSoT = _deals.some(function(d){ return d.source === "migrated"; });
+    if(_useDealsSSoT){
+      /* deals_v1 기반 매출 집계 (cancelled 제외) */
+      _deals.forEach(function(d){
+        if(d.deal_status === "cancelled") return;
+        var dt = d.quote_at || d.created_at || "";
+        if(dt.substring(0,7) === mp){
+          sT += Number(d.supply_amount) || 0;
+          if(d.partner_id) allV.add(d.partner_id);
+          else if(d.partner_name_snapshot){ var pid=resolvePartnerId(d.partner_name_snapshot); allV.add(pid||d.partner_name_snapshot); }
+        }
+      });
     }
-  });}catch{}
+  }catch(e){}
+  if(!_useDealsSSoT){
+    /* sales_v1 레거시 폴백 */
+    try{JSON.parse(localStorage.getItem(SALES_KEY)||"[]").forEach(r=>{
+      if((r.salesDate||"").startsWith(mp)){
+        sT+=n(r.sellUnitPrice)*n(r.qty);
+        if(r.partner_id) allV.add(r.partner_id);
+        else if(r.client){ const pid=resolvePartnerId(r.client); allV.add(pid||r.client); }
+      }
+    });}catch{}
+  }
   // 매입(레거시) — golab_trade_v1
   try{JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").forEach(r=>{
     if((r.purchaseDate||"").startsWith(mp)){
@@ -1158,12 +1177,24 @@ function openDrawer(nameOrId){
     return false;
   }
 
-  let trades=[], sales=[];
+  let trades=[], sales=[], deals=[];
   try{trades=JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").filter(r=>matchVendor(r.vendor));}catch{}
-  try{sales=JSON.parse(localStorage.getItem(SALES_KEY)||"[]").filter(r=>{
-    if(partnerId && r.partner_id === partnerId) return true;
-    return matchVendor(r.client);
-  });}catch{}
+  /* deals_v1 SSoT 우선, 없으면 sales_v1 폴백 */
+  var _drawerUseDeals = false;
+  try{
+    deals=JSON.parse(localStorage.getItem("golab_deals_v1")||"[]").filter(function(d){
+      if(d.deal_status === "cancelled") return false;
+      if(partnerId && d.partner_id === partnerId) return true;
+      return matchVendor(d.partner_name_snapshot);
+    });
+    _drawerUseDeals = deals.some(function(d){ return d.source === "migrated"; });
+  }catch(e){}
+  if(!_drawerUseDeals){
+    try{sales=JSON.parse(localStorage.getItem(SALES_KEY)||"[]").filter(r=>{
+      if(partnerId && r.partner_id === partnerId) return true;
+      return matchVendor(r.client);
+    });}catch{}
+  }
 
   // Actions (vendorId = partner_id 또는 레거시 텍스트)
   const vendorActions = loadActions().filter(a=>{
@@ -1173,15 +1204,21 @@ function openDrawer(nameOrId){
   }).filter(a=>a.status!=="DONE");
 
   const tTotal=trades.reduce((s,r)=>s+n(r.buyUnitPrice)*n(r.qty),0);
-  const sTotal=sales.reduce((s,r)=>s+n(r.sellUnitPrice)*n(r.qty),0);
-  const allDates=[...trades.map(r=>r.purchaseDate),...sales.map(r=>r.salesDate)].filter(Boolean).sort();
+  const sTotal = _drawerUseDeals
+    ? deals.reduce(function(s,d){ return s + (Number(d.supply_amount)||0); }, 0)
+    : sales.reduce((s,r)=>s+n(r.sellUnitPrice)*n(r.qty),0);
+  const allDates = _drawerUseDeals
+    ? [...trades.map(r=>r.purchaseDate), ...deals.map(function(d){ return d.quote_at||d.created_at||""; })].filter(Boolean).sort()
+    : [...trades.map(r=>r.purchaseDate),...sales.map(r=>r.salesDate)].filter(Boolean).sort();
   $("vpTotal").textContent=fmt(tTotal+sTotal);
   $("vpLatest").textContent=allDates.length?allDates[allDates.length-1]:"-";
-  $("vpCount").textContent=(trades.length+sales.length);
+  $("vpCount").textContent = _drawerUseDeals ? (trades.length+deals.length) : (trades.length+sales.length);
   $("vpTasks").textContent=vendorActions.length+"건";
 
   // Hashtags
-  const allMemos=[...trades.map(r=>r.memo),...sales.map(r=>r.memo),...vendorActions.map(a=>a.title)];
+  const allMemos = _drawerUseDeals
+    ? [...trades.map(r=>r.memo),...deals.map(function(d){return d.memo||""}),...vendorActions.map(a=>a.title)]
+    : [...trades.map(r=>r.memo),...sales.map(r=>r.memo),...vendorActions.map(a=>a.title)];
   const tags=new Set();
   allMemos.forEach(m=>extractHashtags(m).forEach(h=>tags.add(h)));
   $("vpTags").innerHTML=[...tags].map(t=>`<span class="htag">${esc(t)}</span>`).join("");
@@ -1229,6 +1266,16 @@ function getAllVendors(){
     .forEach(r=>{if(r.vendor && !knownNames.has(r.vendor)){
       const f=GoLabPartnerMaster.findByName(r.vendor); if(!f) unregistered.add(r.vendor);
     }});}catch{}
+  /* deals_v1 SSoT → partner_name_snapshot 기반 미등록 수집 */
+  try{JSON.parse(localStorage.getItem("golab_deals_v1")||"[]")
+    .forEach(function(d){
+      if(d.partner_id && knownIds.has(d.partner_id)) return;
+      var nm = d.partner_name_snapshot;
+      if(nm && !knownNames.has(nm)){
+        const f=GoLabPartnerMaster.findByName(nm); if(!f) unregistered.add(nm);
+      }
+    });}catch{}
+  /* sales_v1 레거시 폴백 */
   try{JSON.parse(localStorage.getItem(SALES_KEY)||"[]")
     .forEach(r=>{
       if(r.partner_id && knownIds.has(r.partner_id)) return;
@@ -1287,8 +1334,14 @@ function collectUnregistered(){
     }
     unregMap.get(norm).sources.add(source);
   }
+  /* deals_v1 SSoT 기반 수집 */
+  try{JSON.parse(localStorage.getItem("golab_deals_v1")||"[]").forEach(function(d){
+    if(d.partner_id && nameIds.has(d.partner_id)) return;
+    addName(d.partner_name_snapshot, "거래");
+  });}catch{}
+  /* sales_v1 레거시 폴백 */
   try{JSON.parse(localStorage.getItem(SALES_KEY)||"[]").forEach(r=>{
-    if(r.partner_id && nameIds.has(r.partner_id)) return; // 이미 partner_id 있음
+    if(r.partner_id && nameIds.has(r.partner_id)) return;
     addName(r.client, "매출");
   });}catch{}
   try{JSON.parse(localStorage.getItem(TRADE_KEY)||"[]").forEach(r=>{
