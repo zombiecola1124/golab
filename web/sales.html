@@ -293,6 +293,24 @@
     💡 이 페이지는 <b>매출(판매) 관리</b> 전용입니다. 원가/마진 분석은 향후 수익 분석 모듈에서 별도 처리됩니다.
   </div>
 
+  <!-- ══════════════════════════════════════════
+       Sales → Deals 마이그레이션 도구 (v2.4 SSoT 전환)
+       ══════════════════════════════════════════ -->
+  <div class="card" style="border-color:var(--point);margin-top:16px">
+    <h2 style="color:var(--point)">🔄 데이터 마이그레이션 (Sales → Deals SSoT)</h2>
+    <div class="mini" style="margin-bottom:12px">
+      매출 데이터(sales_v1)를 거래 원장(deals_v1)으로 이전합니다. <b>deals_v1이 유일한 거래 원장</b>이 됩니다.<br>
+      순서: ① 백업 → ② Dry-Run(테스트) → ③ 마이그레이션 실행 → ④ 검증
+    </div>
+    <div class="btns" style="margin-bottom:12px">
+      <button id="btnBackupSales" class="secondary" style="border-color:var(--point);color:var(--point)">💾 매출 백업</button>
+      <button id="btnBackupDeals" class="secondary" style="border-color:var(--point);color:var(--point)">💾 거래 백업</button>
+      <button id="btnMigDryRun" style="background:var(--point);border:none;color:#fff">🧪 Dry-Run (테스트)</button>
+      <button id="btnMigExecute" class="danger" disabled>⚡ 마이그레이션 실행</button>
+    </div>
+    <div id="migReport" style="display:none;font-family:'Consolas','D2Coding',monospace;white-space:pre-wrap;font-size:12px;line-height:1.7;max-height:500px;overflow:auto;padding:14px;border-radius:10px;border:1px solid var(--line);background:#f8fafc"></div>
+  </div>
+
   <!-- 매출 Import 리포트 영역 -->
   <div id="salesReport" class="card" style="display:none;font-family:monospace;white-space:pre-wrap;font-size:12px;line-height:1.6;max-height:500px;overflow:auto;margin-top:12px">
     <div id="salesReportBody"></div>
@@ -302,6 +320,7 @@
 <script src="js/item-master.js"></script>
 <script src="js/partner-master.js"></script>
 <script src="js/costing.js"></script>
+<script src="js/deal-tracker.js?v=3"></script>
 <script>
 /* ── Constants ── */
 const SALES_KEY = "golab_sales_v1";
@@ -1334,6 +1353,143 @@ refreshAC();
 refreshFilterSelects();
 computeKPI();
 render();
+
+/* ══════════════════════════════════════════════════════
+   [MIGRATION TOOL] Sales → Deals SSoT 마이그레이션
+   ══════════════════════════════════════════════════════ */
+
+/** JSON 파일 백업 다운로드 */
+function downloadBackup(key, filename){
+  try{
+    var data = localStorage.getItem(key);
+    if(!data || data === "[]"){ alert(key + " 데이터가 비어있습니다."); return; }
+    var blob = new Blob([data], {type:"application/json;charset=utf-8"});
+    var a = document.createElement("a");
+    a.href = URL.createObjectURL(blob);
+    a.download = filename;
+    a.click();
+    URL.revokeObjectURL(a.href);
+  }catch(e){ alert("백업 실패: " + e.message); }
+}
+
+/** 마이그레이션 리포트 표시 */
+function showMigReport(text){
+  var el = $("migReport");
+  el.style.display = "";
+  el.innerHTML = text;
+  el.scrollIntoView({ behavior: "smooth" });
+}
+
+/** Dry-Run: 변환 테스트 (저장하지 않음) */
+function migDryRun(){
+  if(typeof GoLabDealTracker === "undefined"){
+    alert("deal-tracker.js가 로드되지 않았습니다."); return;
+  }
+  var DT = GoLabDealTracker;
+  var result = DT.migrateSalesToDeals(true); /* dryRun = true */
+
+  var h = "";
+  h += "<b>🧪 Dry-Run 결과</b>  (" + new Date().toLocaleString("ko-KR") + ")\n";
+  h += "════════════════════════════════════════════════════\n\n";
+  h += "📊 <b>건수 비교</b>\n";
+  h += "   sales_v1 총 건수:     " + result.salesCount + "\n";
+  h += "   deals_v1 변환 건수:   " + result.convertedCount + "\n";
+  h += "   중복 스킵:            " + result.skippedCount + "\n";
+  h += "   오류:                 " + result.errorCount + "\n\n";
+
+  h += "💰 <b>금액 비교</b>\n";
+  h += "   sales_v1 총 매출:     ₩" + result.totalSalesAmt.toLocaleString() + "\n";
+  h += "   deals_v1 총 매출:     ₩" + result.totalDealsAmt.toLocaleString() + "\n";
+  h += "   금액 일치:            " + (result.amountMatch ? "✅ 일치" : "❌ 불일치 (차이: ₩" + Math.abs(result.totalSalesAmt - result.totalDealsAmt).toLocaleString() + ")") + "\n\n";
+
+  /* 변환 샘플 미리보기 (최대 5건) */
+  if(result.converted.length > 0){
+    h += "📋 <b>변환 샘플 (최대 5건)</b>\n";
+    h += "────────────────────────────────────────────────────\n";
+    result.converted.slice(0, 5).forEach(function(d, i){
+      h += "  [" + (i+1) + "] " + (d.partner_name_snapshot||"(없음)") + " — " + (d.item_name||"(없음)") + "\n";
+      h += "      공급가: ₩" + d.supply_amount.toLocaleString();
+      h += " | 견적일: " + (d.quote_at||"없음");
+      h += " | 입금: " + (d.payment_at||"미입금") + "\n";
+      h += "      소유: " + d.deal_owner + " | 상태: " + d.deal_status + " | 출처: " + d.source + "\n";
+    });
+    if(result.converted.length > 5){
+      h += "  ... 외 " + (result.converted.length - 5) + "건\n";
+    }
+    h += "\n";
+  }
+
+  /* 입금 현황 */
+  var paid = result.converted.filter(function(d){ return d.payment_at; }).length;
+  var unpaid = result.converted.filter(function(d){ return !d.payment_at; }).length;
+  h += "💳 <b>입금 현황</b>\n";
+  h += "   입금 완료:  " + paid + "건\n";
+  h += "   미입금:     " + unpaid + "건\n";
+  h += "   deal_owner 미분류: " + result.converted.length + "건 (마이그레이션 후 수동 분류 필요)\n\n";
+
+  /* 오류 */
+  if(result.errors.length > 0){
+    h += "⚠️ <b>오류 (" + result.errors.length + "건)</b>\n";
+    result.errors.slice(0, 10).forEach(function(err){
+      h += "   [" + err.index + "] id=" + (err.id||"?") + " — " + err.error + "\n";
+    });
+    h += "\n";
+  }
+
+  h += "════════════════════════════════════════════════════\n";
+  if(result.amountMatch && result.errorCount === 0){
+    h += "✅ <b>검증 통과</b> — 마이그레이션 실행 버튼이 활성화됩니다.\n";
+    $("btnMigExecute").disabled = false;
+  } else {
+    h += "❌ <b>검증 실패</b> — 오류를 확인 후 다시 시도해주세요.\n";
+    $("btnMigExecute").disabled = true;
+  }
+
+  showMigReport(h);
+}
+
+/** 실제 마이그레이션 실행 */
+function migExecute(){
+  if(typeof GoLabDealTracker === "undefined"){
+    alert("deal-tracker.js가 로드되지 않았습니다."); return;
+  }
+  if(!confirm("매출 데이터를 거래 원장으로 마이그레이션합니다.\n\n백업은 완료하셨습니까?\n이 작업은 deals_v1에 데이터를 추가합니다.")) return;
+
+  var DT = GoLabDealTracker;
+  var result = DT.migrateSalesToDeals(false); /* dryRun = false → 실제 저장 */
+
+  var h = "";
+  h += "<b>⚡ 마이그레이션 완료</b>  (" + new Date().toLocaleString("ko-KR") + ")\n";
+  h += "════════════════════════════════════════════════════\n\n";
+  h += "✅ 변환 완료:   " + result.convertedCount + "건\n";
+  h += "⏭ 중복 스킵:   " + result.skippedCount + "건\n";
+  h += "❌ 오류:        " + result.errorCount + "건\n\n";
+  h += "💰 금액 일치:   " + (result.amountMatch ? "✅ 일치" : "❌ 불일치") + "\n";
+  h += "   sales 합계:  ₩" + result.totalSalesAmt.toLocaleString() + "\n";
+  h += "   deals 합계:  ₩" + result.totalDealsAmt.toLocaleString() + "\n\n";
+
+  /* 검증: deals_v1 현재 상태 */
+  var allDeals = DT.loadAll();
+  var migDeals = allDeals.filter(function(d){ return d.source === "migrated"; });
+  h += "📊 <b>deals_v1 현재 상태</b>\n";
+  h += "   전체 거래:     " + allDeals.length + "건\n";
+  h += "   마이그레이션:  " + migDeals.length + "건\n";
+  h += "   수동 입력:     " + (allDeals.length - migDeals.length) + "건\n\n";
+
+  h += "════════════════════════════════════════════════════\n";
+  h += "다음 단계: deals.html에서 deal_owner(내 거래/지인) 분류를 진행해주세요.\n";
+
+  $("btnMigExecute").disabled = true;
+  showMigReport(h);
+}
+
+/* ── 마이그레이션 도구 이벤트 바인딩 ── */
+try{
+  $("btnBackupSales").onclick = function(){ downloadBackup("golab_sales_v1", "golab_sales_v1_backup_" + new Date().toISOString().slice(0,10) + ".json"); };
+  $("btnBackupDeals").onclick = function(){ downloadBackup("golab_deals_v1", "golab_deals_v1_backup_" + new Date().toISOString().slice(0,10) + ".json"); };
+  $("btnMigDryRun").onclick = migDryRun;
+  $("btnMigExecute").onclick = migExecute;
+}catch(e){ console.warn("[MIGRATION TOOL] 바인딩 실패:", e); }
 </script>
 </body>
 </html>

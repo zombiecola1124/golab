@@ -72,6 +72,17 @@
     .st-dn{background:rgba(217,119,6,.1);color:#92400e}
     .st-invoice{background:rgba(8,145,178,.1);color:#0e7490}
     .st-complete{background:rgba(22,163,74,.1);color:#15803d}
+    .st-cancelled{background:rgba(220,38,38,.08);color:#b91c1c;text-decoration:line-through}
+    /* 소유자 토글 */
+    .owner-toggle{display:inline-flex;border:1px solid var(--line);border-radius:8px;overflow:hidden;font-size:11px}
+    .owner-toggle label{padding:6px 12px;cursor:pointer;display:flex;align-items:center;gap:4px;transition:all .15s}
+    .owner-toggle input{display:none}
+    .owner-toggle input:checked+span{color:#fff;font-weight:700}
+    .owner-toggle label:has(input:checked){background:var(--deal);color:#fff;border-color:var(--deal)}
+    .owner-toggle label:has(input[value="friend"]:checked){background:#7c3aed}
+    /* 소유자 배지 */
+    .owner-mine{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;background:rgba(8,145,178,.1);color:#0e7490}
+    .owner-friend{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;background:rgba(124,58,237,.1);color:#6d28d9}
     /* 상세 행 */
     .detail-row td{background:rgba(8,145,178,.02);padding:14px 16px;border-bottom:2px solid var(--line)}
     .detail-section{margin-bottom:14px}
@@ -167,6 +178,19 @@
         <input id="inCost" type="number" step="1" placeholder="비우면 [원가 미정]" />
       </div>
       <div>
+        <label>수수료 <span class="opt">(선택)</span></label>
+        <input id="inFee" type="number" step="1" placeholder="₩ 수수료" value="0" />
+      </div>
+      <div>
+        <label>거래 소유</label>
+        <div class="owner-toggle">
+          <label><input type="radio" name="dealOwner" value="mine" checked /><span>🏢 내 거래</span></label>
+          <label><input type="radio" name="dealOwner" value="friend" /><span>🤝 지인</span></label>
+        </div>
+      </div>
+    </div>
+    <div class="row r4" style="align-items:end">
+      <div style="grid-column:span 3">
         <label>메모 <span class="opt">(선택)</span></label>
         <input id="inMemo" placeholder="메모" />
       </div>
@@ -192,6 +216,17 @@
         <option value="계산서">계산서</option>
         <option value="완료">완료</option>
       </select>
+      <select id="fOwner">
+        <option value="">전체 소유</option>
+        <option value="mine">🏢 내 거래</option>
+        <option value="friend">🤝 지인 거래</option>
+      </select>
+      <select id="fDealStatus">
+        <option value="">전체</option>
+        <option value="active">진행</option>
+        <option value="completed">완료</option>
+        <option value="cancelled">취소</option>
+      </select>
     </div>
     <div class="tableWrap">
       <table>
@@ -202,6 +237,7 @@
             <th>공급가</th>
             <th style="min-width:280px">진행 상태</th>
             <th>마진</th>
+            <th>소유</th>
             <th style="text-align:right">관리</th>
           </tr>
         </thead>
@@ -212,13 +248,14 @@
   </div>
 </div>
 
-<script src="js/partner-master.js?v=2"></script>
+<script src="js/partner-master.js?v=3"></script>
 <script src="js/item-master.js"></script>
-<script src="js/deal-tracker.js?v=2"></script>
+<script src="js/deal-tracker.js?v=3"></script>
 <script>
 /* ══════════════════════════════════════════
-   GoLab v2.3 거래 추적 페이지
+   GoLab v2.4 거래 추적 페이지 (SSoT)
    거래 흐름: [견적] → [발주] → [명세서] → [계산서] → [입금]
+   deal_owner: mine/friend | deal_status: active/completed/cancelled
    ══════════════════════════════════════════ */
 var $ = function(id){ return document.getElementById(id); };
 var editingId = null;
@@ -287,6 +324,7 @@ $("inQty").addEventListener("input", updateFormCalc);
 $("inUnitPrice").addEventListener("input", updateFormCalc);
 $("inSupply").addEventListener("input", updateFormCalc);
 $("inCost").addEventListener("input", updateFormCalc);
+$("inFee").addEventListener("input", updateFormCalc);
 
 function updateFormCalc(){
   var qty = DT.n($("inQty").value);
@@ -297,14 +335,16 @@ function updateFormCalc(){
   var isManual = (supplyInput !== "" && supply !== autoSupply);
   var vat = Math.round(supply * 0.1);
   var total = supply + vat;
+  var fee = DT.n($("inFee").value);
   var el = $("formCalc");
   if(qty > 0 && price > 0){
     var txt = "공급가: " + DT.fmt(supply);
     if(isManual) txt += " [수동]";
     txt += " | VAT: " + DT.fmt(vat) + " | 합계: " + DT.fmt(total);
+    if(fee > 0) txt += " | 수수료: " + DT.fmt(fee);
     var cost = $("inCost").value.trim();
     if(cost !== ""){
-      var margin = supply - DT.n(cost);
+      var margin = supply - DT.n(cost) - fee;
       txt += " | 마진: " + DT.fmt(margin);
     }
     el.textContent = txt;
@@ -371,6 +411,8 @@ function render(){
   var all = DT.loadAll();
   var q = ($("fSearch").value||"").trim().toLowerCase();
   var statusFilter = $("fStatus").value;
+  var ownerFilter = $("fOwner").value;
+  var dealStatusFilter = $("fDealStatus").value;
   var filtered = all;
   if(q){
     filtered = filtered.filter(function(d){
@@ -382,6 +424,12 @@ function render(){
   if(statusFilter){
     filtered = filtered.filter(function(d){ return d.status === statusFilter; });
   }
+  if(ownerFilter){
+    filtered = filtered.filter(function(d){ return d.deal_owner === ownerFilter; });
+  }
+  if(dealStatusFilter){
+    filtered = filtered.filter(function(d){ return d.deal_status === dealStatusFilter; });
+  }
 
   $("listBadge").textContent = filtered.length;
   var tb = $("tbody");
@@ -390,8 +438,11 @@ function render(){
 
   var html = "";
   filtered.forEach(function(d){
+    /* 취소된 거래는 줄긋기 스타일 */
+    var isCancelled = d.deal_status === "cancelled";
+    var rowStyle = isCancelled ? 'style="cursor:pointer;opacity:.5;text-decoration:line-through"' : 'style="cursor:pointer"';
     /* 메인 행 */
-    html += '<tr style="cursor:pointer" data-toggle="'+d.deal_id+'">';
+    html += '<tr '+rowStyle+' data-toggle="'+d.deal_id+'">';
     html += '<td><b>'+esc(d.partner_name_snapshot)+'</b></td>';
     html += '<td>'+esc(d.item_name);
     if(!d.item_id) html += ' <span class="tag tag-unreg">미등록</span>';
@@ -406,6 +457,11 @@ function render(){
     if(d.margin_amount!=null) html += DT.fmt(d.margin_amount);
     else html += '<span class="tag tag-no-cost">원가 미정</span>';
     html += '</td>';
+    /* 소유자 배지 */
+    html += '<td>';
+    if(d.deal_owner === "friend") html += '<span class="owner-friend">지인</span>';
+    else html += '<span class="owner-mine">내 거래</span>';
+    html += '</td>';
     html += '<td style="text-align:right;white-space:nowrap">';
     html += '<button class="secondary" style="padding:5px 8px;font-size:11px" data-detail="'+d.deal_id+'">상세</button> ';
     html += '<button class="danger" style="padding:5px 8px;font-size:11px" data-del="'+d.deal_id+'">삭제</button>';
@@ -413,7 +469,7 @@ function render(){
 
     /* 상세 행 (펼쳐진 경우) */
     if(_expandedId === d.deal_id){
-      html += '<tr class="detail-row"><td colspan="6">';
+      html += '<tr class="detail-row"><td colspan="7">';
 
       /* 진행 바 (인터랙티브 — 클릭 가능) */
       html += '<div class="detail-section"><div class="detail-section-title">⏱ 거래 진행 — 클릭하여 단계 처리</div>';
@@ -433,10 +489,28 @@ function render(){
       if(d.purchase_cost!=null) html += DT.fmt(d.purchase_cost);
       else html += '<span class="tag tag-no-cost">원가 미정</span>';
       html += '</span>';
+      html += '<span>수수료 '+DT.fmt(d.fee||0)+'</span>';
       html += '<span>마진 ';
       if(d.margin_amount!=null) html += '<b>'+DT.fmt(d.margin_amount)+'</b>';
       else html += '—';
       html += '</span>';
+      html += '</div></div>';
+
+      /* 소유자 + 거래 상태 */
+      html += '<div class="detail-section"><div class="detail-section-title">🏷 거래 정보</div>';
+      html += '<div class="amount-grid">';
+      html += '<span>소유: ';
+      if(d.deal_owner === "friend") html += '<span class="owner-friend">지인 거래</span>';
+      else html += '<span class="owner-mine">내 거래</span>';
+      html += ' <button style="padding:2px 6px;font-size:10px;margin-left:4px" data-toggle-owner="'+d.deal_id+'">' + (d.deal_owner==="friend"?"→내 거래":"→지인") + '</button>';
+      html += '</span>';
+      html += '<span>상태: ';
+      if(d.deal_status==="cancelled") html += '<span class="status-badge st-cancelled">취소됨</span>';
+      else if(d.deal_status==="completed") html += '<span class="status-badge st-complete">완료</span>';
+      else html += '<span class="status-badge st-new">진행중</span>';
+      html += ' <button style="padding:2px 6px;font-size:10px;margin-left:4px" data-toggle-cancel="'+d.deal_id+'">' + (d.deal_status==="cancelled"?"거래 복구":"거래 취소") + '</button>';
+      html += '</span>';
+      if(d.source==="migrated") html += '<span><span class="tag tag-manual">sales에서 이전</span></span>';
       html += '</div></div>';
 
       /* 타임라인 */
@@ -522,6 +596,33 @@ function render(){
       DT.update(btn.dataset.memostamp, { memo: ta.value });
     };
   });
+  /* 소유자 토글 */
+  tb.querySelectorAll("[data-toggle-owner]").forEach(function(btn){
+    btn.onclick=function(e){
+      e.stopPropagation();
+      var d = DT.getById(btn.dataset.toggleOwner);
+      if(!d) return;
+      var newOwner = d.deal_owner === "friend" ? "mine" : "friend";
+      DT.update(d.deal_id, { deal_owner: newOwner });
+      computeKPI(); render();
+    };
+  });
+  /* 거래 취소/복구 토글 */
+  tb.querySelectorAll("[data-toggle-cancel]").forEach(function(btn){
+    btn.onclick=function(e){
+      e.stopPropagation();
+      var d = DT.getById(btn.dataset.toggleCancel);
+      if(!d) return;
+      if(d.deal_status === "cancelled"){
+        if(!confirm("거래를 복구하시겠습니까?")) return;
+        DT.update(d.deal_id, { deal_status: "active" });
+      } else {
+        if(!confirm("거래를 취소 처리하시겠습니까?")) return;
+        DT.update(d.deal_id, { deal_status: "cancelled" });
+      }
+      computeKPI(); render();
+    };
+  });
 }
 
 /* ── 상세 토글 ── */
@@ -548,6 +649,10 @@ function saveDeal(){
   var isManual = (supplyInput !== "" && supplyVal !== autoSupply);
   var costInput = $("inCost").value.trim();
 
+  var feeVal = DT.n($("inFee").value);
+  var ownerRadio = document.querySelector('input[name="dealOwner"]:checked');
+  var ownerVal = ownerRadio ? ownerRadio.value : "mine";
+
   var fields = {
     partner_id: partnerId,
     partner_name_snapshot: partner ? (partner.display_name || partner.name) : "",
@@ -558,6 +663,8 @@ function saveDeal(){
     supply_amount: supplyVal,
     manual_amount: isManual,
     purchase_cost: costInput !== "" ? DT.n(costInput) : null,
+    fee: feeVal,
+    deal_owner: ownerVal,
     memo: $("inMemo").value
   };
 
@@ -587,7 +694,11 @@ function startEdit(dealId){
   $("inUnitPrice").value = d.unit_price || "";
   $("inSupply").value = d.manual_amount ? d.supply_amount : "";
   $("inCost").value = d.purchase_cost != null ? d.purchase_cost : "";
+  $("inFee").value = d.fee || 0;
   $("inMemo").value = d.memo || "";
+  /* 소유자 라디오 복원 */
+  var ownerRadio = document.querySelector('input[name="dealOwner"][value="'+(d.deal_owner||"mine")+'"]');
+  if(ownerRadio) ownerRadio.checked = true;
   $("btnSave").textContent = "저장";
   $("btnCancel").style.display = "inline-block";
   updateFormCalc();
@@ -612,8 +723,12 @@ function clearForm(){
   $("inUnitPrice").value = "";
   $("inSupply").value = "";
   $("inCost").value = "";
+  $("inFee").value = "0";
   $("inMemo").value = "";
   $("formCalc").textContent = "";
+  /* 소유자 라디오 리셋 */
+  var mineRadio = document.querySelector('input[name="dealOwner"][value="mine"]');
+  if(mineRadio) mineRadio.checked = true;
   editingId = null;
   $("btnSave").textContent = "등록";
   $("btnCancel").style.display = "none";
@@ -626,9 +741,11 @@ $("btnCancel").addEventListener("click", clearForm);
 var _searchTimer = null;
 $("fSearch").addEventListener("input", function(){ clearTimeout(_searchTimer); _searchTimer = setTimeout(render, 200); });
 $("fStatus").addEventListener("change", render);
+$("fOwner").addEventListener("change", render);
+$("fDealStatus").addEventListener("change", render);
 
 /* Enter → 저장 */
-["inItemName","inQty","inUnitPrice","inSupply","inCost","inMemo"].forEach(function(id){
+["inItemName","inQty","inUnitPrice","inSupply","inCost","inFee","inMemo"].forEach(function(id){
   $(id).addEventListener("keydown", function(e){ if(e.key==="Enter") saveDeal(); });
 });
 

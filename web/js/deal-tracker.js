@@ -1,5 +1,8 @@
 /**
- * GoLab v2.3 — Deal Tracker (거래 흐름 체크 시스템)
+ * GoLab v2.4 — Deal Tracker (거래 원장 SSoT)
+ *
+ * deals_v1 = GoLab의 유일한 거래 원장 (Single Source of Truth)
+ * 모든 View(Sales, Profit, Console, Calendar)는 deals_v1을 읽어 계산한다.
  *
  * 거래 흐름: 견적 → 발주 → 거래명세서 → 계산서 → 입금
  * UX 원칙: 액션 버튼 클릭 → 자동 타임스탬프 (수동 날짜 입력 아님)
@@ -36,7 +39,7 @@ window.GoLabDealTracker = (function () {
   var STEP_MAP = {};
   STEPS.forEach(function(s, i) { STEP_MAP[s.key] = Object.assign({ index: i }, s); });
 
-  /* ── 상태 상수 ── */
+  /* ── 진행 상태 상수 (날짜 기반 자동 계산) ── */
   var STATUS = {
     NEW:      "신규",
     QUOTE:    "견적",
@@ -44,6 +47,19 @@ window.GoLabDealTracker = (function () {
     DN:       "명세서",
     INVOICE:  "계산서",
     COMPLETE: "완료"
+  };
+
+  /* ── 거래 상태 상수 (deal_status) ── */
+  var DEAL_STATUS = {
+    ACTIVE:    "active",
+    COMPLETED: "completed",
+    CANCELLED: "cancelled"
+  };
+
+  /* ── 거래 소유자 상수 ── */
+  var DEAL_OWNER = {
+    MINE:   "mine",
+    FRIEND: "friend"
   };
 
   /* ══════════════════════════════════════
@@ -80,6 +96,13 @@ window.GoLabDealTracker = (function () {
     return STATUS.NEW;
   }
 
+  /** deal_status 자동 계산 — cancelled는 수동 설정만 가능 */
+  function _calcDealStatus(d) {
+    if (d.deal_status === DEAL_STATUS.CANCELLED) return DEAL_STATUS.CANCELLED;
+    if (d.payment_at) return DEAL_STATUS.COMPLETED;
+    return DEAL_STATUS.ACTIVE;
+  }
+
   /** 현재 진행 단계 인덱스 (0~5, 5=전체 완료) */
   function _currentStepIndex(d) {
     for (var i = STEPS.length - 1; i >= 0; i--) {
@@ -101,12 +124,17 @@ window.GoLabDealTracker = (function () {
     d.vat_amount = Math.round(n(d.supply_amount) * 0.1);
     /* 합계 */
     d.total_amount = n(d.supply_amount) + n(d.vat_amount);
-    /* 마진 */
+    /* fee 기본값 */
+    if (d.fee == null) d.fee = 0;
+    /* 마진: amount - cost - fee */
     if (d.purchase_cost != null && d.purchase_cost !== "") {
-      d.margin_amount = n(d.supply_amount) - n(d.purchase_cost);
+      d.margin_amount = n(d.supply_amount) - n(d.purchase_cost) - n(d.fee);
     } else {
       d.margin_amount = null;
     }
+    /* 편의 별칭 (amount = supply_amount, cost = purchase_cost) */
+    d.amount = n(d.supply_amount);
+    d.cost = (d.purchase_cost != null && d.purchase_cost !== "") ? n(d.purchase_cost) : 0;
     return d;
   }
 
@@ -131,7 +159,7 @@ window.GoLabDealTracker = (function () {
   /** 거래 생성 — 최소: partner_id, item_name, qty, unit_price */
   function create(fields) {
     var deal = {
-      deal_id:              crypto.randomUUID(),
+      deal_id:              fields.deal_id || crypto.randomUUID(),
       partner_id:           fields.partner_id || null,
       partner_name_snapshot: (fields.partner_name_snapshot || "").trim(),
       item_id:              fields.item_id || null,
@@ -144,6 +172,12 @@ window.GoLabDealTracker = (function () {
       manual_amount:        !!fields.manual_amount,
       purchase_cost:        (fields.purchase_cost != null && fields.purchase_cost !== "") ? n(fields.purchase_cost) : null,
       margin_amount:        null,
+      /* v2.4 SSoT 필드 */
+      deal_owner:           fields.deal_owner || DEAL_OWNER.MINE,
+      deal_status:          fields.deal_status || DEAL_STATUS.ACTIVE,
+      fee:                  n(fields.fee),
+      source:               fields.source || "manual",
+      migrated_from:        fields.migrated_from || null,
       /* 거래 흐름 5단계 타임스탬프 */
       quote_at:             fields.quote_at || null,
       order_at:             fields.order_at || null,
@@ -151,10 +185,10 @@ window.GoLabDealTracker = (function () {
       invoice_at:           fields.invoice_at || null,
       payment_at:           fields.payment_at || null,
       /* 타임라인 로그 */
-      timeline:             [],
+      timeline:             fields.timeline || [],
       status:               STATUS.NEW,
       memo:                 (fields.memo || "").trim(),
-      created_at:           new Date().toISOString(),
+      created_at:           fields.created_at || new Date().toISOString(),
       updated_at:           new Date().toISOString()
     };
     if (!deal.partner_id) throw new Error("거래처를 선택해주세요.");
@@ -162,6 +196,7 @@ window.GoLabDealTracker = (function () {
 
     _calcAmounts(deal);
     deal.status = _calcStatus(deal);
+    deal.deal_status = _calcDealStatus(deal);
     /* 생성 타임라인 */
     deal.timeline.push({ step: "create", at: deal.created_at, label: "거래 생성" });
 
@@ -199,6 +234,11 @@ window.GoLabDealTracker = (function () {
       d.purchase_cost = (fields.purchase_cost != null && fields.purchase_cost !== "") ? n(fields.purchase_cost) : null;
     }
 
+    /* v2.4 SSoT 필드 */
+    if (fields.deal_owner   !== undefined) d.deal_owner = fields.deal_owner;
+    if (fields.deal_status  !== undefined) d.deal_status = fields.deal_status;
+    if (fields.fee          !== undefined) d.fee = n(fields.fee);
+
     /* 날짜 필드 (null 허용 = 삭제 가능) */
     if (fields.quote_at         !== undefined) d.quote_at         = fields.quote_at || null;
     if (fields.order_at         !== undefined) d.order_at         = fields.order_at || null;
@@ -209,6 +249,7 @@ window.GoLabDealTracker = (function () {
     /* 금액 + 상태 재계산 */
     _calcAmounts(d);
     d.status = _calcStatus(d);
+    d.deal_status = _calcDealStatus(d);
     d.updated_at = new Date().toISOString();
 
     _save(all);
@@ -261,6 +302,7 @@ window.GoLabDealTracker = (function () {
     /* 상태 + 금액 재계산 */
     _calcAmounts(d);
     d.status = _calcStatus(d);
+    d.deal_status = _calcDealStatus(d);
     d.updated_at = new Date().toISOString();
 
     _save(all);
@@ -295,6 +337,7 @@ window.GoLabDealTracker = (function () {
 
     _calcAmounts(d);
     d.status = _calcStatus(d);
+    d.deal_status = _calcDealStatus(d);
     d.updated_at = new Date().toISOString();
 
     _save(all);
@@ -308,23 +351,43 @@ window.GoLabDealTracker = (function () {
 
   function getKPISummary() {
     var all = loadAll();
-    var active = 0;         /* 진행 중 (완료 아닌 거래) */
-    var complete = 0;       /* 완료 */
-    var noInvoice = 0;      /* 계산서 미발행 (발주 이후) */
-    var noPayment = 0;      /* 입금 대기 (계산서 이후) */
-    var paymentDueAmt = 0;  /* 입금 대기 금액 */
+    var active = 0;            /* 진행 중 */
+    var complete = 0;          /* 완료 */
+    var cancelled = 0;         /* 취소 */
+    var noInvoice = 0;         /* 계산서 미발행 */
+    var noPayment = 0;         /* 입금 대기 */
+    var paymentDueAmt = 0;     /* 입금 대기 금액 */
+    /* 소유자별 집계 */
+    var mineCount = 0, friendCount = 0;
+    var totalAmount = 0, mineTotalAmount = 0, friendTotalAmount = 0;
+    var receivableAmount = 0;  /* 미수금 (계산서 O + 입금 X) */
 
     all.forEach(function(d) {
+      /* 취소 건 별도 집계 */
+      if (d.deal_status === DEAL_STATUS.CANCELLED) {
+        cancelled++;
+        return;
+      }
+      /* 소유자별 */
+      var amt = n(d.supply_amount);
+      totalAmount += amt;
+      if (d.deal_owner === DEAL_OWNER.FRIEND) {
+        friendCount++;
+        friendTotalAmount += amt;
+      } else {
+        mineCount++;
+        mineTotalAmount += amt;
+      }
+      /* 진행/완료 */
       if (d.status === STATUS.COMPLETE) {
         complete++;
       } else {
         active++;
-        /* 발주 이후인데 계산서 미발행 */
         if (d.order_at && !d.invoice_at) noInvoice++;
-        /* 계산서 이후인데 미입금 */
         if (d.invoice_at && !d.payment_at) {
           noPayment++;
           paymentDueAmt += n(d.total_amount);
+          receivableAmount += amt;
         }
       }
     });
@@ -333,6 +396,13 @@ window.GoLabDealTracker = (function () {
       total: all.length,
       active: active,
       complete: complete,
+      cancelled: cancelled,
+      mineCount: mineCount,
+      friendCount: friendCount,
+      totalAmount: totalAmount,
+      mineTotalAmount: mineTotalAmount,
+      friendTotalAmount: friendTotalAmount,
+      receivableAmount: receivableAmount,
       noInvoice: noInvoice,
       noPayment: noPayment,
       paymentDueAmt: paymentDueAmt
@@ -344,41 +414,191 @@ window.GoLabDealTracker = (function () {
      ══════════════════════════════════════ */
 
   /**
-   * 기존 데이터 호환: quote_date→quote_at 등
-   * deposit_supply_date/deposit_vat_date → payment_at 통합
+   * 멱등 마이그레이션 — 기존 데이터 호환
+   * v2: quote_date→quote_at 등 필드명 변경
+   * v3: deal_owner, deal_status, fee, source 기본값 추가 (SSoT 전환)
    */
   function migrate() {
     var all = loadAll();
     var count = 0;
     all.forEach(function(d) {
       var changed = false;
-      /* quote_date → quote_at */
+
+      /* ── v2 마이그레이션: 구 필드명 → 신 필드명 ── */
       if (d.quote_date && !d.quote_at) { d.quote_at = d.quote_date; changed = true; }
-      /* po_date → order_at */
       if (d.po_date && !d.order_at) { d.order_at = d.po_date; changed = true; }
-      /* invoice_date → invoice_at */
       if (d.invoice_date && !d.invoice_at) { d.invoice_at = d.invoice_date; changed = true; }
-      /* deposit_supply_date/deposit_vat_date → payment_at */
       if ((d.deposit_supply_date || d.deposit_vat_date) && !d.payment_at) {
         d.payment_at = d.deposit_supply_date || d.deposit_vat_date;
         changed = true;
       }
-      /* delivery_note_at 초기화 (없으면 null) */
       if (d.delivery_note_at === undefined) { d.delivery_note_at = null; changed = true; }
-      /* timeline 초기화 */
       if (!d.timeline) { d.timeline = []; changed = true; }
-      /* 상태 재계산 */
+
+      /* ── v3 마이그레이션: SSoT 신규 필드 기본값 ── */
+      if (d.deal_owner === undefined) {
+        d.deal_owner = DEAL_OWNER.MINE;
+        changed = true;
+      }
+      if (d.deal_status === undefined) {
+        d.deal_status = d.payment_at ? DEAL_STATUS.COMPLETED : DEAL_STATUS.ACTIVE;
+        changed = true;
+      }
+      if (d.fee === undefined) {
+        d.fee = 0;
+        changed = true;
+      }
+      if (d.source === undefined) {
+        d.source = "manual";
+        changed = true;
+      }
+      if (d.migrated_from === undefined) {
+        d.migrated_from = null;
+        changed = true;
+      }
+
+      /* 상태 + 금액 재계산 */
       if (changed) {
+        _calcAmounts(d);
         d.status = _calcStatus(d);
+        d.deal_status = _calcDealStatus(d);
         d.updated_at = new Date().toISOString();
         count++;
       }
     });
     if (count > 0) {
       _save(all);
-      emitAudit("MIGRATE_DEAL_V2", { migrated: count });
-      console.log("[DEAL MIGRATE] " + count + "건 마이그레이션 완료");
+      emitAudit("MIGRATE_DEAL_V3", { migrated: count });
+      console.log("[DEAL MIGRATE] " + count + "건 마이그레이션 완료 (v3 SSoT)");
     }
+  }
+
+  /* ══════════════════════════════════════
+     Sales → Deals 마이그레이션 도구
+     ══════════════════════════════════════ */
+
+  /**
+   * sales_v1 레코드를 deals_v1 형식으로 변환 (저장하지 않음)
+   * @param {object} sale - sales_v1 레코드
+   * @returns {object} deals_v1 형식 레코드
+   */
+  function convertSaleToDeal(sale) {
+    var qty = n(sale.qty);
+    var unitPrice = n(sale.sellUnitPrice);
+    var supplyAmount = Math.round(qty * unitPrice);
+    var costOverride = (sale.costOverrideUnitPriceKrw != null && sale.costOverrideUnitPriceKrw !== "")
+      ? n(sale.costOverrideUnitPriceKrw) : null;
+    var purchaseCost = costOverride != null ? Math.round(costOverride * qty) : null;
+
+    var deal = {
+      deal_id:              crypto.randomUUID(),
+      partner_id:           sale.partner_id || null,
+      partner_name_snapshot: (sale.client || sale.clientName || "").trim(),
+      item_id:              sale.item_id || null,
+      item_name:            (sale.itemName || "").trim(),
+      qty:                  qty,
+      unit_price:           unitPrice,
+      supply_amount:        supplyAmount,
+      vat_amount:           Math.round(supplyAmount * 0.1),
+      total_amount:         supplyAmount + Math.round(supplyAmount * 0.1),
+      manual_amount:        false,
+      purchase_cost:        purchaseCost,
+      margin_amount:        purchaseCost != null ? supplyAmount - purchaseCost : null,
+      /* v2.4 SSoT 필드 */
+      deal_owner:           DEAL_OWNER.MINE,   /* 마이그레이션 후 수동 분류 */
+      deal_status:          DEAL_STATUS.ACTIVE,
+      fee:                  0,
+      source:               "migrated",
+      migrated_from:        sale.id || null,
+      /* 날짜 매핑: salesDate → quote_at, deposit_date → payment_at */
+      quote_at:             sale.salesDate || null,
+      order_at:             null,
+      delivery_note_at:     null,
+      invoice_at:           null,
+      payment_at:           sale.deposit_date || null,
+      /* 타임라인 */
+      timeline:             [{ step: "migrate", at: new Date().toISOString(), label: "sales_v1에서 마이그레이션" }],
+      status:               STATUS.NEW,
+      memo:                 (sale.memo || "").trim(),
+      created_at:           sale.createdAt || new Date().toISOString(),
+      updated_at:           new Date().toISOString()
+    };
+
+    /* 상태 자동 계산 */
+    deal.status = _calcStatus(deal);
+    deal.deal_status = _calcDealStatus(deal);
+    /* 금액 편의 별칭 */
+    deal.amount = deal.supply_amount;
+    deal.cost = deal.purchase_cost != null ? deal.purchase_cost : 0;
+
+    return deal;
+  }
+
+  /**
+   * sales_v1 전체를 deals_v1으로 마이그레이션 (dry-run 지원)
+   * @param {boolean} dryRun - true면 저장하지 않고 결과만 반환
+   * @returns {object} { converted, skipped, totalSalesAmt, totalDealsAmt, errors }
+   */
+  function migrateSalesToDeals(dryRun) {
+    var SALES_KEY = "golab_sales_v1";
+    var sales = [];
+    try { sales = JSON.parse(localStorage.getItem(SALES_KEY) || "[]"); }
+    catch(e) { return { error: "sales_v1 파싱 실패: " + e.message }; }
+
+    var existingDeals = loadAll();
+    /* 이미 마이그레이션된 sales id 목록 */
+    var migratedIds = {};
+    existingDeals.forEach(function(d) {
+      if (d.migrated_from) migratedIds[d.migrated_from] = true;
+    });
+
+    var converted = [];
+    var skipped = [];
+    var errors = [];
+    var totalSalesAmt = 0;
+    var totalDealsAmt = 0;
+
+    sales.forEach(function(sale, idx) {
+      /* 이미 마이그레이션된 건 건너뜀 */
+      if (sale.id && migratedIds[sale.id]) {
+        skipped.push({ id: sale.id, reason: "이미 마이그레이션됨" });
+        return;
+      }
+      try {
+        var deal = convertSaleToDeal(sale);
+        converted.push(deal);
+        totalSalesAmt += Math.round(n(sale.qty) * n(sale.sellUnitPrice));
+        totalDealsAmt += deal.supply_amount;
+      } catch(e) {
+        errors.push({ index: idx, id: sale.id, error: e.message });
+      }
+    });
+
+    /* dry-run이 아니면 실제 저장 */
+    if (!dryRun && converted.length > 0) {
+      var allDeals = existingDeals.concat(converted);
+      _save(allDeals);
+      emitAudit("MIGRATE_SALES_TO_DEALS", {
+        count: converted.length,
+        skipped: skipped.length,
+        totalAmount: totalDealsAmt
+      });
+      console.log("[MIGRATE] sales→deals " + converted.length + "건 완료");
+    }
+
+    return {
+      salesCount: sales.length,
+      convertedCount: converted.length,
+      skippedCount: skipped.length,
+      errorCount: errors.length,
+      totalSalesAmt: totalSalesAmt,
+      totalDealsAmt: totalDealsAmt,
+      amountMatch: totalSalesAmt === totalDealsAmt,
+      converted: converted,
+      skipped: skipped,
+      errors: errors,
+      dryRun: !!dryRun
+    };
   }
 
   /* ══════════════════════════════════════
@@ -402,6 +622,8 @@ window.GoLabDealTracker = (function () {
     DEALS_KEY: DEALS_KEY,
     AUDIT_KEY: AUDIT_KEY,
     STATUS: STATUS,
+    DEAL_STATUS: DEAL_STATUS,
+    DEAL_OWNER: DEAL_OWNER,
     STEPS: STEPS,
     STEP_MAP: STEP_MAP,
     loadAll: loadAll,
@@ -413,6 +635,8 @@ window.GoLabDealTracker = (function () {
     unstampStep: unstampStep,
     getKPISummary: getKPISummary,
     migrate: migrate,
+    convertSaleToDeal: convertSaleToDeal,
+    migrateSalesToDeals: migrateSalesToDeals,
     emitAudit: emitAudit,
     fmt: fmt,
     n: n,
