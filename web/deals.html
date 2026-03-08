@@ -28,6 +28,7 @@
     .kpi .t{font-size:11px;color:var(--muted)}
     .kpi .v{margin-top:6px;font-size:24px;font-weight:600;color:var(--deal)}
     .kpi .sub{margin-top:4px;font-size:10px;color:var(--muted)}
+    .kpi.warn .v{color:var(--bad)}
     /* Form */
     .row{display:grid;gap:10px;margin-bottom:10px}
     .r2{grid-template-columns:1fr 1fr}.r3{grid-template-columns:1fr 1fr 1fr}.r4{grid-template-columns:1fr 1fr 1fr 1fr}
@@ -43,17 +44,20 @@
     button.save:hover{background:#0e7490}
     button.danger{color:var(--bad);background:none;border:1px solid rgba(220,38,38,.3)}
     button.secondary{background:rgba(8,145,178,.06);border:1px solid rgba(8,145,178,.25);color:var(--deal)}
-    /* 이벤트 버튼 */
-    .evt-btn{padding:6px 12px;font-size:11px;border-radius:8px;font-weight:700;white-space:nowrap}
-    .evt-btn.done{background:rgba(22,163,74,.1);color:#15803d;border-color:rgba(22,163,74,.3);cursor:default}
-    .evt-btn.pending{background:rgba(8,145,178,.06);border:1px solid rgba(8,145,178,.25);color:var(--deal)}
-    /* Table */
-    .tableWrap{overflow:auto;border-radius:10px;border:1px solid var(--line)}
-    table{width:100%;border-collapse:collapse;font-size:12px;min-width:900px}
-    th{background:#f8fafc;color:var(--muted);text-align:left;padding:10px 12px;position:sticky;top:0;white-space:nowrap;z-index:2;border-bottom:1px solid var(--line)}
-    td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
-    tr:hover{background:rgba(8,145,178,.02)}
-    .muted{color:var(--muted)}
+    /* 진행 바 */
+    .progress-bar{display:flex;align-items:center;gap:0;margin:8px 0;overflow:hidden}
+    .pb-step{display:flex;align-items:center;gap:0;flex:1;min-width:0}
+    .pb-dot{width:28px;height:28px;border-radius:50%;display:flex;align-items:center;justify-content:center;font-size:11px;font-weight:700;flex-shrink:0;cursor:pointer;transition:all .2s;border:2px solid var(--line);background:#fff;color:var(--muted);position:relative}
+    .pb-dot.done{background:var(--accent);border-color:var(--accent);color:#fff}
+    .pb-dot.current{background:var(--deal);border-color:var(--deal);color:#fff;box-shadow:0 0 0 3px rgba(8,145,178,.2)}
+    .pb-dot:hover{transform:scale(1.15)}
+    .pb-line{flex:1;height:3px;background:var(--line);min-width:8px}
+    .pb-line.done{background:var(--accent)}
+    .pb-label{font-size:9px;color:var(--muted);text-align:center;margin-top:2px;white-space:nowrap}
+    .pb-label.done{color:var(--accent);font-weight:700}
+    .pb-label.current{color:var(--deal);font-weight:700}
+    .pb-wrap{display:flex;flex-direction:column;align-items:center;flex:1;min-width:0}
+    .pb-date{font-size:8px;color:var(--muted);margin-top:1px}
     /* 배지 */
     .badge{display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;background:var(--deal);color:#fff;border-radius:99px;min-width:20px;height:20px;padding:0 6px;margin-left:6px}
     .tag{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;margin-left:4px;vertical-align:middle}
@@ -63,38 +67,44 @@
     /* 상태 배지 */
     .status-badge{display:inline-block;padding:3px 8px;border-radius:6px;font-size:10px;font-weight:700}
     .st-new{background:#f1f5f9;color:#64748b}
-    .st-quoted{background:rgba(37,99,235,.1);color:#1d4ed8}
-    .st-po{background:rgba(124,58,237,.1);color:#6d28d9}
-    .st-invoiced{background:rgba(217,119,6,.1);color:#92400e}
-    .st-supply-paid{background:rgba(8,145,178,.1);color:#0e7490}
+    .st-quote{background:rgba(37,99,235,.1);color:#1d4ed8}
+    .st-order{background:rgba(124,58,237,.1);color:#6d28d9}
+    .st-dn{background:rgba(217,119,6,.1);color:#92400e}
+    .st-invoice{background:rgba(8,145,178,.1);color:#0e7490}
     .st-complete{background:rgba(22,163,74,.1);color:#15803d}
-    /* 에이징 */
-    .aging-default{color:var(--muted)}
-    .aging-orange{color:#d97706;font-weight:700}
-    .aging-deep-orange{color:#ea580c;font-weight:700}
-    .aging-red{color:#dc2626;font-weight:700}
     /* 상세 행 */
     .detail-row td{background:rgba(8,145,178,.02);padding:14px 16px;border-bottom:2px solid var(--line)}
-    .detail-section{margin-bottom:10px}
+    .detail-section{margin-bottom:14px}
     .detail-section-title{font-size:11px;font-weight:700;color:var(--deal);margin-bottom:8px}
-    .evt-grid{display:flex;flex-wrap:wrap;gap:8px;align-items:center}
-    .evt-item{display:flex;align-items:center;gap:6px;font-size:11px}
-    .evt-date-input{width:120px;padding:5px 8px;font-size:11px}
     .amount-grid{display:flex;flex-wrap:wrap;gap:12px;font-size:12px;align-items:center}
     .amount-grid b{color:var(--text)}
     .amount-grid .muted{font-size:11px}
+    /* 타임라인 */
+    .timeline{list-style:none;padding:0;margin:0}
+    .timeline li{display:flex;align-items:flex-start;gap:8px;padding:4px 0;font-size:11px;color:var(--muted)}
+    .timeline li .tl-dot{width:8px;height:8px;border-radius:50%;background:var(--deal);flex-shrink:0;margin-top:4px}
+    .timeline li .tl-date{font-size:10px;color:#94a3b8;min-width:70px}
+    /* Table */
+    .tableWrap{overflow:auto;border-radius:10px;border:1px solid var(--line)}
+    table{width:100%;border-collapse:collapse;font-size:12px;min-width:800px}
+    th{background:#f8fafc;color:var(--muted);text-align:left;padding:10px 12px;position:sticky;top:0;white-space:nowrap;z-index:2;border-bottom:1px solid var(--line)}
+    td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+    tr:hover{background:rgba(8,145,178,.02)}
+    .muted{color:var(--muted)}
+    /* 메모 */
     .memo-wrap{position:relative}
     .memo-stamp{position:absolute;top:4px;right:8px;font-size:10px;padding:3px 8px;border-radius:6px;background:rgba(8,145,178,.08);color:var(--deal);border:1px solid rgba(8,145,178,.2);cursor:pointer}
     /* 필터 */
     .filter-row{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
     .filter-row input,.filter-row select{width:auto;min-width:140px;flex:1}
-    .filter-info{font-size:11px;color:var(--muted)}
     @media(max-width:900px){
       .kpi-grid{grid-template-columns:1fr 1fr}
       .r4{grid-template-columns:1fr 1fr}
+      .pb-dot{width:24px;height:24px;font-size:10px}
     }
     @media(max-width:600px){
       .r4,.r3,.r2{grid-template-columns:1fr}
+      .kpi-grid{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -104,7 +114,6 @@
     <h1>GoLab · 거래 추적</h1>
     <nav class="tabs">
       <a class="tab" href="./console.html">🏠 업무</a>
-      <a class="tab" href="./calendar.html">📅 캘린더</a>
       <a class="tab" href="./profit.html">📊 수익</a>
       <a class="tab" href="./sales.html">💰 매출</a>
       <a class="tab active" href="./deals.html">📑 거래</a>
@@ -121,8 +130,8 @@
   <div class="kpi-grid">
     <div class="kpi"><div class="t">총 거래</div><div class="v" id="kTotal">0</div></div>
     <div class="kpi"><div class="t">진행중</div><div class="v" id="kActive">0</div></div>
-    <div class="kpi"><div class="t">미수금 합계</div><div class="v" id="kReceivable" style="color:var(--warn)">₩0</div></div>
-    <div class="kpi"><div class="t">완료</div><div class="v" id="kComplete" style="color:var(--accent)">0</div></div>
+    <div class="kpi warn"><div class="t">💰 입금 대기</div><div class="v" id="kPayment">0건</div><div class="sub" id="kPaymentAmt"></div></div>
+    <div class="kpi"><div class="t">✅ 완료</div><div class="v" id="kComplete" style="color:var(--accent)">0</div></div>
   </div>
 
   <!-- 등록 폼 -->
@@ -177,11 +186,11 @@
       <select id="fStatus">
         <option value="">전체 상태</option>
         <option value="신규">신규</option>
-        <option value="견적 발송">견적 발송</option>
-        <option value="발주 완료">발주 완료</option>
-        <option value="계산서 발행">계산서 발행</option>
-        <option value="공급가 입금">공급가 입금</option>
-        <option value="거래 완료">거래 완료</option>
+        <option value="견적">견적</option>
+        <option value="발주">발주</option>
+        <option value="명세서">명세서</option>
+        <option value="계산서">계산서</option>
+        <option value="완료">완료</option>
       </select>
     </div>
     <div class="tableWrap">
@@ -191,10 +200,7 @@
             <th>거래처</th>
             <th>품목</th>
             <th>공급가</th>
-            <th>계산서</th>
-            <th>공급가 입금</th>
-            <th>VAT 입금</th>
-            <th>상태</th>
+            <th style="min-width:280px">진행 상태</th>
             <th>마진</th>
             <th style="text-align:right">관리</th>
           </tr>
@@ -206,12 +212,13 @@
   </div>
 </div>
 
-<script src="js/partner-master.js"></script>
+<script src="js/partner-master.js?v=2"></script>
 <script src="js/item-master.js"></script>
-<script src="js/deal-tracker.js"></script>
+<script src="js/deal-tracker.js?v=2"></script>
 <script>
 /* ══════════════════════════════════════════
    GoLab v2.3 거래 추적 페이지
+   거래 흐름: [견적] → [발주] → [명세서] → [계산서] → [입금]
    ══════════════════════════════════════════ */
 var $ = function(id){ return document.getElementById(id); };
 var editingId = null;
@@ -220,6 +227,9 @@ var _selectedItemId = null;
 var DT = GoLabDealTracker;
 
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* ── 마이그레이션 (구 필드 → 신 필드) ── */
+DT.migrate();
 
 /* ── 거래처 자동완성 ── */
 var acPartner = GoLabPartnerMaster.createAutocomplete($("acPartnerWrap"), {
@@ -233,7 +243,6 @@ var _itemDebounce = null;
 $("inItemName").addEventListener("input", function(){
   clearTimeout(_itemDebounce);
   _itemDebounce = setTimeout(function(){ _renderItemDropdown($("inItemName").value); }, 150);
-  /* 직접 입력 시 item_id 초기화 */
   _selectedItemId = null;
   $("inItemId").value = "";
 });
@@ -267,7 +276,6 @@ function _renderItemDropdown(query){
     });
     dd.appendChild(row);
   });
-  /* 드롭다운 위치 조정 */
   var rect = $("inItemName").parentElement.getBoundingClientRect();
   dd.style.width = rect.width + "px";
   dd.style.display = "block";
@@ -277,10 +285,8 @@ function _closeItemDropdown(){ $("itemDropdown").style.display="none"; }
 /* ── 실시간 계산 미리보기 ── */
 $("inQty").addEventListener("input", updateFormCalc);
 $("inUnitPrice").addEventListener("input", updateFormCalc);
-$("inSupply").addEventListener("input", function(){
-  /* 공급가 직접 수정 감지 */
-  updateFormCalc();
-});
+$("inSupply").addEventListener("input", updateFormCalc);
+$("inCost").addEventListener("input", updateFormCalc);
 
 function updateFormCalc(){
   var qty = DT.n($("inQty").value);
@@ -306,45 +312,58 @@ function updateFormCalc(){
     el.textContent = "";
   }
 }
-$("inCost").addEventListener("input", updateFormCalc);
 
 /* ── KPI ── */
 function computeKPI(){
-  var all = DT.loadAll();
-  $("kTotal").textContent = all.length;
-  $("kComplete").textContent = all.filter(function(d){ return d.status === DT.STATUS.COMPLETE; }).length;
-  var active = all.filter(function(d){ return d.status !== DT.STATUS.COMPLETE; });
-  $("kActive").textContent = active.length;
-  var receivable = 0;
-  all.forEach(function(d){
-    if(d.invoice_date && !d.deposit_supply_date) receivable += DT.n(d.supply_amount);
-    if(d.invoice_date && !d.deposit_vat_date) receivable += DT.n(d.vat_amount);
-  });
-  $("kReceivable").textContent = DT.fmt(receivable);
+  var kpi = DT.getKPISummary();
+  $("kTotal").textContent = kpi.total;
+  $("kActive").textContent = kpi.active;
+  $("kComplete").textContent = kpi.complete;
+  $("kPayment").textContent = kpi.noPayment + "건";
+  $("kPaymentAmt").textContent = kpi.paymentDueAmt > 0 ? DT.fmt(kpi.paymentDueAmt) : "";
 }
 
 /* ── 상태 배지 ── */
 function statusClass(s){
   if(s === DT.STATUS.NEW) return "st-new";
-  if(s === DT.STATUS.QUOTED) return "st-quoted";
-  if(s === DT.STATUS.PO) return "st-po";
-  if(s === DT.STATUS.INVOICED) return "st-invoiced";
-  if(s === DT.STATUS.SUPPLY_PAID) return "st-supply-paid";
+  if(s === DT.STATUS.QUOTE) return "st-quote";
+  if(s === DT.STATUS.ORDER) return "st-order";
+  if(s === DT.STATUS.DN) return "st-dn";
+  if(s === DT.STATUS.INVOICE) return "st-invoice";
   if(s === DT.STATUS.COMPLETE) return "st-complete";
   return "st-new";
 }
 
-/* ── 에이징 표시 ── */
-function renderAging(d){
-  var aging = DT.calcAging(d);
-  var parts = [];
-  if(aging.supplyAging != null){
-    parts.push('<span class="'+DT.agingColor(aging.supplyAging)+'">공급가 D+'+aging.supplyAging+'</span>');
-  }
-  if(aging.vatAging != null){
-    parts.push('<span class="'+DT.agingColor(aging.vatAging)+'">VAT D+'+aging.vatAging+'</span>');
-  }
-  return parts.join(" ");
+/* ── 진행 바 HTML 생성 ── */
+function renderProgressBar(d, interactive){
+  var stepIdx = DT.currentStepIndex(d);
+  var html = '<div class="progress-bar">';
+  DT.STEPS.forEach(function(step, i){
+    var isDone = !!d[step.field];
+    var isCurrent = (i === stepIdx && !isDone);
+    var dotClass = isDone ? "done" : (isCurrent ? "current" : "");
+    var labelClass = isDone ? "done" : (isCurrent ? "current" : "");
+    var dateStr = d[step.field] ? d[step.field].substring(5) : "";
+
+    html += '<div class="pb-wrap">';
+    if(interactive){
+      html += '<div class="pb-dot '+dotClass+'" data-step-deal="'+d.deal_id+'" data-step-key="'+step.key+'" title="'+(isDone ? step.label+' 완료 ('+d[step.field]+') — 클릭하여 취소' : step.label+' — 클릭하여 처리')+'">';
+    } else {
+      html += '<div class="pb-dot '+dotClass+'">';
+    }
+    html += (isDone ? "✓" : step.icon);
+    html += '</div>';
+    html += '<div class="pb-label '+labelClass+'">'+step.label+'</div>';
+    if(dateStr) html += '<div class="pb-date">'+dateStr+'</div>';
+    html += '</div>';
+
+    /* 단계 사이 연결선 */
+    if(i < DT.STEPS.length - 1){
+      html += '<div class="pb-line'+(isDone?" done":"")+'"></div>';
+    }
+  });
+  html += '</div>';
+  return html;
 }
 
 /* ── 렌더링 ── */
@@ -371,8 +390,6 @@ function render(){
 
   var html = "";
   filtered.forEach(function(d){
-    var aging = DT.calcAging(d);
-    var agingHtml = renderAging(d);
     /* 메인 행 */
     html += '<tr style="cursor:pointer" data-toggle="'+d.deal_id+'">';
     html += '<td><b>'+esc(d.partner_name_snapshot)+'</b></td>';
@@ -382,14 +399,9 @@ function render(){
     html += '<td>'+DT.fmt(d.supply_amount);
     if(d.manual_amount) html += ' <span class="tag tag-manual">수동</span>';
     html += '</td>';
-    html += '<td class="muted">'+(d.invoice_date||"—")+'</td>';
-    html += '<td class="muted">'+(d.deposit_supply_date||"—");
-    if(aging.supplyAging!=null) html += ' <span class="'+DT.agingColor(aging.supplyAging)+'">D+'+aging.supplyAging+'</span>';
-    html += '</td>';
-    html += '<td class="muted">'+(d.deposit_vat_date||"—");
-    if(aging.vatAging!=null) html += ' <span class="'+DT.agingColor(aging.vatAging)+'">D+'+aging.vatAging+'</span>';
-    html += '</td>';
-    html += '<td><span class="status-badge '+statusClass(d.status)+'">'+esc(d.status)+'</span></td>';
+    /* 진행 바 (읽기 전용) */
+    html += '<td>'+renderProgressBar(d, false)+'</td>';
+    /* 마진 */
     html += '<td>';
     if(d.margin_amount!=null) html += DT.fmt(d.margin_amount);
     else html += '<span class="tag tag-no-cost">원가 미정</span>';
@@ -401,31 +413,19 @@ function render(){
 
     /* 상세 행 (펼쳐진 경우) */
     if(_expandedId === d.deal_id){
-      html += '<tr class="detail-row"><td colspan="9">';
-      /* 거래 진행 */
-      html += '<div class="detail-section"><div class="detail-section-title">⏱ 거래 진행</div>';
-      html += '<div class="evt-grid">';
-      ["quote","po","invoice","deposit_supply","deposit_vat"].forEach(function(evt){
-        var field = DT.EVENT_FIELD[evt];
-        var label = DT.EVENT_LABEL[evt];
-        var dateVal = d[field] || "";
-        var isDone = !!dateVal;
-        html += '<div class="evt-item">';
-        html += '<button class="evt-btn '+(isDone?"done":"pending")+'" data-stamp="'+d.deal_id+'" data-evt="'+evt+'">'+(isDone?"✓ ":"")+label+'</button>';
-        html += '<input type="date" class="evt-date-input" data-datefield="'+d.deal_id+'" data-field="'+field+'" value="'+dateVal+'" />';
-        html += '</div>';
-      });
-      html += '</div></div>';
+      html += '<tr class="detail-row"><td colspan="6">';
+
+      /* 진행 바 (인터랙티브 — 클릭 가능) */
+      html += '<div class="detail-section"><div class="detail-section-title">⏱ 거래 진행 — 클릭하여 단계 처리</div>';
+      html += renderProgressBar(d, true);
+      html += '</div>';
 
       /* 금액 상세 */
       html += '<div class="detail-section"><div class="detail-section-title">💰 금액 상세</div>';
       html += '<div class="amount-grid">';
       html += '<span>'+DT.n(d.qty)+' × '+DT.fmt(d.unit_price)+' =</span>';
       html += '<span><b>공급가 '+DT.fmt(d.supply_amount)+'</b>';
-      if(d.manual_amount){
-        html += ' <span class="tag tag-manual">수동</span>';
-        if(d.qty>0) html += ' <span class="muted">(실효단가 '+DT.fmt(Math.round(d.supply_amount/d.qty))+')</span>';
-      }
+      if(d.manual_amount) html += ' <span class="tag tag-manual">수동</span>';
       html += '</span>';
       html += '<span>VAT '+DT.fmt(d.vat_amount)+'</span>';
       html += '<span><b>합계 '+DT.fmt(d.total_amount)+'</b></span>';
@@ -438,6 +438,17 @@ function render(){
       else html += '—';
       html += '</span>';
       html += '</div></div>';
+
+      /* 타임라인 */
+      if(d.timeline && d.timeline.length > 0){
+        html += '<div class="detail-section"><div class="detail-section-title">📜 타임라인</div>';
+        html += '<ul class="timeline">';
+        d.timeline.slice().reverse().forEach(function(t){
+          var ts = t.at ? t.at.substring(0,10) + " " + t.at.substring(11,16) : "";
+          html += '<li><span class="tl-dot"></span><span class="tl-date">'+ts+'</span><span>'+esc(t.label)+'</span></li>';
+        });
+        html += '</ul></div>';
+      }
 
       /* 메모 */
       html += '<div class="detail-section"><div class="detail-section-title">📝 메모</div>';
@@ -456,10 +467,10 @@ function render(){
   });
   tb.innerHTML = html;
 
-  /* 이벤트 바인딩 */
+  /* ── 이벤트 바인딩 ── */
   tb.querySelectorAll("[data-toggle]").forEach(function(tr){
     tr.addEventListener("click", function(e){
-      if(e.target.closest("button") || e.target.closest("input") || e.target.closest("textarea")) return;
+      if(e.target.closest("button") || e.target.closest("input") || e.target.closest("textarea") || e.target.closest(".pb-dot")) return;
       toggleDetail(tr.dataset.toggle);
     });
   });
@@ -475,26 +486,24 @@ function render(){
   tb.querySelectorAll("[data-edit]").forEach(function(btn){
     btn.onclick=function(){ startEdit(btn.dataset.edit); };
   });
-  /* 이벤트 스탬프 버튼 */
-  tb.querySelectorAll("[data-stamp]").forEach(function(btn){
-    btn.onclick=function(e){
+  /* 단계 스탬프 버튼 (진행 바 dot 클릭) */
+  tb.querySelectorAll("[data-step-deal]").forEach(function(dot){
+    dot.onclick=function(e){
       e.stopPropagation();
-      var deal = DT.getById(btn.dataset.stamp);
+      var dealId = dot.dataset.stepDeal;
+      var stepKey = dot.dataset.stepKey;
+      var deal = DT.getById(dealId);
       if(!deal) return;
-      var field = DT.EVENT_FIELD[btn.dataset.evt];
-      if(deal[field]) return; /* 이미 완료 */
-      DT.stampEvent(btn.dataset.stamp, btn.dataset.evt);
+      var field = DT.STEP_MAP[stepKey].field;
+      if(deal[field]){
+        /* 이미 완료된 단계 → 취소 */
+        DT.unstampStep(dealId, stepKey);
+      } else {
+        /* 미완료 → 스탬프 */
+        DT.stampStep(dealId, stepKey);
+      }
       computeKPI(); render();
     };
-  });
-  /* 날짜 수정 */
-  tb.querySelectorAll("[data-datefield]").forEach(function(inp){
-    inp.addEventListener("change", function(){
-      var fields = {};
-      fields[inp.dataset.field] = inp.value || null;
-      DT.update(inp.dataset.datefield, fields);
-      computeKPI(); render();
-    });
   });
   /* 메모 저장 (blur) */
   tb.querySelectorAll("[data-memo]").forEach(function(ta){

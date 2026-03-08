@@ -744,6 +744,89 @@ window.GoLabPartnerMaster = (function () {
   }
 
   /* ══════════════════════════════════════
+     거래처별 통계 집계 — 거래 흐름 체크 중심 (v2.2)
+     sales_v1 기반 (+ deals_v1 확장 대비)
+     ══════════════════════════════════════ */
+
+  const DEPOSIT_CUTOFF = "2026-01-01"; /* 이 날짜 이전 매출은 자동 입금 처리됨 */
+
+  /**
+   * 거래처별 실무 통계 — 상태창에서 호출
+   * @param {string} partnerId
+   * @returns {Object} sales + deals 통계
+   */
+  function calcPartnerStats(partnerId) {
+    if (!partnerId) return _emptyStats();
+
+    var today = new Date();
+    today.setHours(0, 0, 0, 0);
+
+    /* ── 매출(sales_v1) 집계 ── */
+    var salesData = [];
+    try { salesData = JSON.parse(localStorage.getItem("golab_sales_v1") || "[]"); } catch(e) {}
+    var partnerSales = salesData.filter(function(r) { return r.partner_id === partnerId; });
+
+    /* 정렬: salesDate 내림차순 */
+    partnerSales.sort(function(a, b) {
+      return (b.salesDate || "").localeCompare(a.salesDate || "");
+    });
+
+    var totalAmount = 0;       /* 누적 매출액 */
+    var receivableAmount = 0;  /* 미입금 합계 */
+    var receivableCount = 0;   /* 미입금 건수 */
+
+    partnerSales.forEach(function(r) {
+      var amt = (Number(r.sellUnitPrice) || 0) * (Number(r.qty) || 0);
+      totalAmount += amt;
+      /* 미입금: deposit_date가 null이고 salesDate >= CUTOFF */
+      if (r.deposit_date === null && (r.salesDate || "") >= DEPOSIT_CUTOFF) {
+        receivableAmount += amt;
+        receivableCount++;
+      }
+    });
+
+    /* 최근 5건 */
+    var recentSales = partnerSales.slice(0, 5);
+
+    /* 최근 거래 정보 (상태창 상단용) */
+    var latestSale = partnerSales[0] || null;
+
+    /* ── 거래(deals_v1) 집계 — 확장 대비 ── */
+    var dealsData = [];
+    try { dealsData = JSON.parse(localStorage.getItem("golab_deals_v1") || "[]"); } catch(e) {}
+    var partnerDeals = dealsData.filter(function(d) { return d.partner_id === partnerId; });
+
+    partnerDeals.sort(function(a, b) {
+      return (b.created_at || "").localeCompare(a.created_at || "");
+    });
+
+    var recentDeals = partnerDeals.slice(0, 5);
+
+    return {
+      sales: {
+        totalAmount: totalAmount,
+        receivableAmount: receivableAmount,
+        receivableCount: receivableCount,
+        txCount: partnerSales.length,
+        latestSale: latestSale,
+        recentTx: recentSales
+      },
+      deals: {
+        txCount: partnerDeals.length,
+        recentTx: recentDeals
+      }
+    };
+  }
+
+  /** 빈 통계 객체 (partner_id 없을 때 방어) */
+  function _emptyStats() {
+    return {
+      sales: { totalAmount: 0, receivableAmount: 0, receivableCount: 0, txCount: 0, latestSale: null, recentTx: [] },
+      deals: { txCount: 0, recentTx: [] }
+    };
+  }
+
+  /* ══════════════════════════════════════
      Public API
      ══════════════════════════════════════ */
 
@@ -765,7 +848,8 @@ window.GoLabPartnerMaster = (function () {
     migrateFromSales: migrateFromSales,
     /* v2.2 신규 공개 API */
     formatPhone: _formatPhone,
-    formatDisplayLine: _formatDisplayLine
+    formatDisplayLine: _formatDisplayLine,
+    calcPartnerStats: calcPartnerStats
   };
 
 })();

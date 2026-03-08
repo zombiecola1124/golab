@@ -52,7 +52,7 @@
     button:disabled{opacity:.5;cursor:not-allowed}
     /* Table */
     .tableWrap{overflow:auto;border-radius:10px;border:1px solid var(--line)}
-    table{width:100%;border-collapse:collapse;min-width:1000px;font-size:12px}
+    table{width:100%;border-collapse:collapse;min-width:1100px;font-size:12px}
     th{background:#f8fafc;color:var(--muted);text-align:left;padding:10px 12px;position:sticky;top:0;white-space:nowrap;z-index:2;border-bottom:1px solid var(--line)}
     th.num,td.num{text-align:right}
     td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
@@ -95,6 +95,11 @@
     .margin-modal .mm-force{border:none;color:#fff}
     .margin-modal .mm-force.red{background:var(--bad)}
     .margin-modal .mm-force.orange{background:var(--warn)}
+    /* ── [DEPOSIT PATCH] 입금 토글 뱃지 ── */
+    .deposit-tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.2px;cursor:pointer;user-select:none;transition:all .15s}
+    .deposit-tag.unpaid{background:#fee2e2;color:#991b1b}
+    .deposit-tag.paid{background:#dcfce7;color:#166534}
+    .deposit-tag:hover{opacity:.75}
     @media(max-width:900px){
       .kpi-grid{grid-template-columns:1fr 1fr}
       .r4,.r5,.r6{grid-template-columns:1fr 1fr}
@@ -109,7 +114,6 @@
     <h1>GoLab · 매출 관리</h1>
     <nav class="tabs">
       <a class="tab" href="./console.html">🏠 업무</a>
-      <a class="tab" href="./calendar.html">📅 캘린더</a>
       <a class="tab" href="./profit.html">📊 수익</a>
       <a class="tab active" href="./sales.html">💰 매출</a>
       <a class="tab" href="./deals.html">📑 거래</a>
@@ -270,6 +274,7 @@
             <th>단위</th>
             <th class="num">판매단가</th>
             <th class="num">매출액</th>
+            <th style="text-align:center">입금</th>
             <th>비고</th>
             <th style="text-align:right">관리</th>
           </tr>
@@ -489,7 +494,9 @@ function normalizeRecord(r){
     costOverrideUnitPriceKrw: costOverride,
     memo: normStr(r.memo || r.note || ""),
     createdAt: r.createdAt || new Date().toISOString(),
-    updatedAt: new Date().toISOString()
+    updatedAt: new Date().toISOString(),
+    /* [DEPOSIT PATCH] 입금일: undefined=미마이그레이션, null=미입금, "YYYY-MM-DD"=입금완료 */
+    ...(r.deposit_date !== undefined ? { deposit_date: r.deposit_date } : {})
   };
 }
 
@@ -609,7 +616,7 @@ function render(){
   const tb=$("tbody");
   tb.innerHTML="";
   if(page.length===0){
-    tb.innerHTML='<tr><td colspan="11" class="muted" style="text-align:center;padding:24px">데이터가 없습니다.</td></tr>';
+    tb.innerHTML='<tr><td colspan="12" class="muted" style="text-align:center;padding:24px">데이터가 없습니다.</td></tr>';
   }
   page.forEach(r=>{
     const salesTotal=n(r.sellUnitPrice)*n(r.qty);
@@ -624,6 +631,7 @@ function render(){
       <td class="muted">${esc(r.unit)}</td>
       <td class="num">${fmt(n(r.sellUnitPrice))}</td>
       <td class="num highlight">${fmt(salesTotal)}</td>
+      <td style="text-align:center"><span class="deposit-tag ${r.deposit_date ? 'paid' : 'unpaid'}" data-deposit="${r.id}">${r.deposit_date ? '입금 ('+r.deposit_date.substring(5)+')' : '미입금'}</span></td>
       <td class="muted">${r.costOverrideUnitPriceKrw!=null ? '<span title="수동원가: '+fmt(n(r.costOverrideUnitPriceKrw))+'" style="color:var(--point);cursor:help">🔧</span> ' : ''}${esc(r.memo)}</td>
       <td style="text-align:right;white-space:nowrap">
         <button class="secondary" style="padding:5px 8px;font-size:11px" data-edit="${r.id}">수정</button>
@@ -637,6 +645,10 @@ function render(){
   });
   tb.querySelectorAll("button[data-edit]").forEach(btn=>{
     btn.onclick=e=>{ e.stopPropagation(); startEdit(btn.dataset.edit); };
+  });
+  /* [DEPOSIT PATCH] 입금 토글 이벤트 */
+  tb.querySelectorAll("[data-deposit]").forEach(el=>{
+    el.onclick=e=>{ e.stopPropagation(); toggleDeposit(el.dataset.deposit); };
   });
 
   // Pagination
@@ -767,6 +779,8 @@ async function addOrUpdate(){
     }
   }
 
+  /* [DEPOSIT PATCH] 수정 시 기존 deposit_date 보존, 신규 시 null(미입금) */
+  const existingRec = editingId ? load().find(x=>x.id===editingId) : null;
   const rec=normalizeRecord({
     id: editingId||undefined,
     item_id: selectedItemId,      // 품목 마스터 참조
@@ -781,7 +795,8 @@ async function addOrUpdate(){
     sellUnitPrice: $("inPrice").value,
     costOverrideUnitPriceKrw: costOverrideRaw,
     memo: memoVal.trim(),
-    createdAt: editingId ? (load().find(x=>x.id===editingId)||{}).createdAt : undefined
+    deposit_date: existingRec ? existingRec.deposit_date : null, /* 신규=미입금(null), 수정=보존 */
+    createdAt: existingRec ? existingRec.createdAt : undefined
   });
 
   const all=load();
@@ -1211,12 +1226,12 @@ function exportCsv(){
   try{
     const data = load();
     if(!data.length){ alert("다운로드할 데이터가 없습니다."); return; }
-    const headers = ["매출일","거래처","문서번호","품번","상품명","수량","단위","판매단가","매출액","비고"];
+    const headers = ["매출일","거래처","문서번호","품번","상품명","수량","단위","판매단가","매출액","입금일","비고"];
     const rows = data.map(r => [
       r.salesDate||"", r.client||"", r.docNo||"", r.partNo||"",
       r.itemName||"", n(r.qty), r.unit||"",
       n(r.sellUnitPrice), n(r.sellUnitPrice)*n(r.qty),
-      r.memo||""
+      r.deposit_date||"", r.memo||""
     ]);
     const csvContent = [headers, ...rows].map(row =>
       row.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(",")
@@ -1252,7 +1267,69 @@ save = function(data){
 // 버튼 바인딩
 try{ $("btnCsv").onclick = exportCsv; }catch(e){}
 
+/* ══════════════════════════════════════════
+   [DEPOSIT PATCH] 입금일(deposit_date) 마이그레이션 + 토글
+   ══════════════════════════════════════════ */
+
+const DEPOSIT_CUTOFF = "2026-01-01"; /* 이 날짜 이전 매출은 자동 입금 처리 */
+
+/**
+ * deposit_date 마이그레이션 — 멱등 (undefined→null/날짜 변환, 기존 값 보존)
+ * - salesDate < CUTOFF → deposit_date = salesDate (자동 입금)
+ * - salesDate >= CUTOFF → deposit_date = null (미수금)
+ */
+function migrateDepositDate(){
+  try{
+    var all = load();
+    var migrated = 0;
+    all.forEach(function(r){
+      if(r.deposit_date !== undefined) return; /* 이미 처리됨 */
+      if((r.salesDate || "") < DEPOSIT_CUTOFF){
+        r.deposit_date = r.salesDate || null; /* 컷오프 이전 → 자동 입금 */
+      } else {
+        r.deposit_date = null; /* 컷오프 이후 → 미수금 */
+      }
+      migrated++;
+    });
+    if(migrated > 0){
+      save(all);
+      emitAudit("MIGRATE_DEPOSIT_DATE", { migrated: migrated, cutoff: DEPOSIT_CUTOFF });
+      console.log("[DEPOSIT PATCH] 마이그레이션 완료:", migrated, "건");
+    }
+  }catch(e){ console.warn("[DEPOSIT PATCH] migrateDepositDate error:", e); }
+}
+
+/**
+ * 입금 상태 토글 — 미입금↔입금 전환
+ * - 미입금(null) → 입금(오늘 날짜)
+ * - 입금(날짜) → confirm 후 미입금(null)
+ */
+function toggleDeposit(id){
+  try{
+    var all = load();
+    var r = all.find(function(x){ return x.id === id; });
+    if(!r) return;
+    if(r.deposit_date){
+      /* 입금 → 미입금 복귀 */
+      if(!confirm("입금 처리를 취소하시겠습니까?")) return;
+      r.deposit_date = null;
+    } else {
+      /* 미입금 → 입금 처리 (오늘 날짜) */
+      r.deposit_date = new Date().toISOString().substring(0, 10);
+    }
+    r.updatedAt = new Date().toISOString();
+    save(all);
+    emitAudit("DEPOSIT_TOGGLE", {
+      id: r.id, client: r.client, itemName: r.itemName,
+      deposit_date: r.deposit_date
+    });
+    computeKPI();
+    render();
+  }catch(e){ console.warn("[DEPOSIT PATCH] toggleDeposit error:", e); }
+}
+
 /* ── Init ── */
+migrateDepositDate(); /* deposit_date 마이그레이션 (멱등) */
 refreshAC();
 refreshFilterSelects();
 computeKPI();

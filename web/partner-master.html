@@ -88,6 +88,48 @@
       .r3{grid-template-columns:1fr}
       .r2{grid-template-columns:1fr}
     }
+    /* ══ 거래처 상태창 (게임 스테이터스 패널) ══ */
+    .status-panel{padding:16px;border-radius:10px;border:2px solid var(--partner);background:rgba(124,58,237,.02)}
+    .sp-header{display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+    .sp-header .sp-name{font-size:16px;font-weight:800;color:var(--text)}
+    /* 기본 정보 그리드 */
+    .sp-info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 20px;font-size:11px;color:var(--muted);margin-bottom:14px}
+    .sp-info-grid b{color:var(--text);font-weight:600}
+    /* KPI 바 */
+    .sp-kpi-bar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
+    .sp-kpi{padding:10px;border-radius:8px;text-align:center;border:1px solid var(--line);background:var(--card)}
+    .sp-kpi .spk-label{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px}
+    .sp-kpi .spk-value{font-size:20px;font-weight:800;margin-top:4px}
+    .sp-kpi .spk-value.purple{color:var(--partner)}
+    .sp-kpi .spk-value.red{color:var(--bad)}
+    .sp-kpi .spk-value.green{color:var(--accent)}
+    /* 경고 플래그 */
+    .sp-warnings{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+    .sp-warn-flag{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;background:#fef2f2;color:#991b1b;border:1px solid #fca5a5}
+    .sp-warn-flag.ok{background:#f0fdf4;color:#166534;border-color:#86efac}
+    /* 최근 거래 요약 */
+    .sp-latest{margin-bottom:12px;padding:10px;border-radius:8px;background:rgba(124,58,237,.04);border:1px solid rgba(124,58,237,.15);font-size:12px}
+    .sp-latest b{color:var(--text)}
+    .sp-latest .sl-label{color:var(--muted);font-size:10px;font-weight:700}
+    /* 히스토리 테이블 */
+    .sp-history{margin-top:12px}
+    .sp-history-title{font-size:11px;font-weight:700;color:var(--partner);margin-bottom:8px;display:flex;align-items:center;gap:6px}
+    .sp-history table{width:100%;border-collapse:collapse;font-size:11px}
+    .sp-history th{background:#f8fafc;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:10px}
+    .sp-history td{padding:6px 8px;border-bottom:1px solid var(--line)}
+    .sp-history .h-amt{text-align:right;font-weight:700;color:var(--text)}
+    .sp-history .h-status{text-align:center}
+    .sp-deposit-badge{display:inline-block;padding:2px 6px;border-radius:999px;font-size:9px;font-weight:700}
+    .sp-deposit-badge.paid{background:#dcfce7;color:#166534}
+    .sp-deposit-badge.unpaid{background:#fee2e2;color:#991b1b}
+    @media(max-width:900px){
+      .sp-kpi-bar{grid-template-columns:1fr 1fr}
+      .sp-info-grid{grid-template-columns:1fr 1fr}
+    }
+    @media(max-width:600px){
+      .sp-kpi-bar{grid-template-columns:1fr}
+      .sp-info-grid{grid-template-columns:1fr}
+    }
   </style>
 </head>
 <body>
@@ -96,7 +138,6 @@
     <h1>GoLab · 거래처 관리</h1>
     <nav class="tabs">
       <a class="tab" href="./console.html">🏠 업무</a>
-      <a class="tab" href="./calendar.html">📅 캘린더</a>
       <a class="tab" href="./profit.html">📊 수익</a>
       <a class="tab" href="./sales.html">💰 매출</a>
       <a class="tab" href="./deals.html">📑 거래</a>
@@ -224,7 +265,7 @@
   </div>
 </div>
 
-<script src="js/partner-master.js"></script>
+<script src="js/partner-master.js?v=2"></script>
 <script>
 /* ══════════════════════════════════════════
    GoLab v2.2 거래처 마스터 관리 페이지
@@ -271,6 +312,116 @@ function renderEmail(email){
          ' <button class="copy-btn" data-copy="' + esc(email) + '" title="복사">📋</button>';
 }
 
+/* ── 금액 포맷 헬퍼 ── */
+function fmtAmt(v){
+  return "\u20a9" + Math.round(v).toLocaleString();
+}
+
+/* ══════════════════════════════════════
+   거래처 상태창 렌더링 — 거래 흐름 체크 중심 (v2.2)
+   "지금 이 거래처와 어디까지 진행됐고, 빠진 게 뭔지" 바로 보는 UI
+   ══════════════════════════════════════ */
+function buildStatusPanel(p){
+  var stats = GoLabPartnerMaster.calcPartnerStats(p.partner_id);
+  var s = stats.sales;
+  var d = stats.deals;
+
+  var html = '<tr class="detail-row"><td colspan="7">';
+  html += '<div class="status-panel">';
+
+  /* ── 헤더: 거래처명 + 유형 ── */
+  html += '<div class="sp-header">';
+  html += '<span class="sp-name">' + esc(p.display_name || p.name) + '</span>';
+  html += '<span class="type-badge ' + typeClass(p.type) + '">' + esc(p.type) + '</span>';
+  html += '</div>';
+
+  /* ── 기본 정보 그리드 ── */
+  html += '<div class="sp-info-grid">';
+  if(p.alias)        html += '<span><b>별칭:</b> ' + esc(p.alias) + '</span>';
+  if(p.region)       html += '<span><b>지역:</b> ' + esc(p.region) + '</span>';
+  if(p.contact_name) html += '<span><b>담당자:</b> ' + esc(p.contact_name) + '</span>';
+  if(p.dept)         html += '<span><b>부서:</b> ' + esc(p.dept) + '</span>';
+  if(p.phone)        html += '<span><b>전화:</b> ' + renderPhone(p.phone) + '</span>';
+  if(p.email)        html += '<span><b>이메일:</b> ' + renderEmail(p.email) + '</span>';
+  if(p.memo)         html += '<span><b>메모:</b> ' + esc(p.memo) + '</span>';
+  var regDate = p.created_at ? p.created_at.substring(0,10) : "-";
+  html += '<span><b>등록일:</b> ' + regDate + '</span>';
+  html += '</div>';
+
+  /* ── 최근 거래 요약 ── */
+  if(s.latestSale){
+    var ls = s.latestSale;
+    var lsAmt = (Number(ls.sellUnitPrice)||0) * (Number(ls.qty)||0);
+    html += '<div class="sp-latest">';
+    html += '<span class="sl-label">최근 거래</span> ';
+    html += '<b>' + esc(ls.salesDate) + '</b> · ';
+    html += esc(ls.itemName) + ' · ';
+    html += '<b>' + fmtAmt(lsAmt) + '</b>';
+    if(ls.deposit_date){
+      html += ' · <span class="sp-deposit-badge paid">입금</span>';
+    } else {
+      html += ' · <span class="sp-deposit-badge unpaid">미입금</span>';
+    }
+    html += '</div>';
+  }
+
+  /* ── KPI 바 (3칸: 누적 매출 / 미입금 / 거래건수) ── */
+  html += '<div class="sp-kpi-bar">';
+  html += '<div class="sp-kpi"><div class="spk-label">누적 매출</div><div class="spk-value purple">' + fmtAmt(s.totalAmount) + '</div></div>';
+  html += '<div class="sp-kpi"><div class="spk-label">미입금</div><div class="spk-value ' + (s.receivableAmount > 0 ? 'red' : 'green') + '">' + fmtAmt(s.receivableAmount) + '</div></div>';
+  html += '<div class="sp-kpi"><div class="spk-label">거래 건수</div><div class="spk-value purple">' + s.txCount + '건</div></div>';
+  html += '</div>';
+
+  /* ── 경고 플래그 — 실무 체크 ── */
+  if(s.receivableCount > 0){
+    html += '<div class="sp-warnings">';
+    html += '<span class="sp-warn-flag">\u26a0 입금 대기 ' + s.receivableCount + '건 (' + fmtAmt(s.receivableAmount) + ')</span>';
+    html += '</div>';
+  }
+
+  /* ── 최근 매출 히스토리 (최대 5건) ── */
+  if(s.recentTx.length > 0){
+    html += '<div class="sp-history">';
+    html += '<div class="sp-history-title">\uD83D\uDCB0 최근 매출 (최대 5건)</div>';
+    html += '<table><thead><tr><th>매출일</th><th>상품명</th><th style="text-align:right">매출액</th><th style="text-align:center">입금</th></tr></thead><tbody>';
+    s.recentTx.forEach(function(r){
+      var amt = (Number(r.sellUnitPrice)||0) * (Number(r.qty)||0);
+      var isPaid = r.deposit_date != null;
+      html += '<tr>';
+      html += '<td class="muted">' + esc(r.salesDate) + '</td>';
+      html += '<td>' + esc(r.itemName) + '</td>';
+      html += '<td class="h-amt">' + fmtAmt(amt) + '</td>';
+      html += '<td class="h-status"><span class="sp-deposit-badge ' + (isPaid?'paid':'unpaid') + '">' + (isPaid?'입금':'미입금') + '</span></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+
+  /* ── 최근 거래(deals) 히스토리 — 데이터 있을 때만 ── */
+  if(d.recentTx.length > 0){
+    html += '<div class="sp-history" style="margin-top:10px">';
+    html += '<div class="sp-history-title">\uD83D\uDCDD 최근 거래 (최대 5건)</div>';
+    html += '<table><thead><tr><th>품목</th><th style="text-align:right">공급가</th><th>상태</th></tr></thead><tbody>';
+    d.recentTx.forEach(function(deal){
+      html += '<tr>';
+      html += '<td>' + esc(deal.item_name || "") + '</td>';
+      html += '<td class="h-amt">' + fmtAmt(Number(deal.supply_amount)||0) + '</td>';
+      html += '<td class="muted">' + esc(deal.status||"") + '</td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+  }
+
+  /* 거래 데이터 없는 경우 안내 */
+  if(s.txCount === 0 && d.txCount === 0){
+    html += '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">아직 거래 기록이 없습니다.</div>';
+  }
+
+  html += '</div>'; /* close status-panel */
+  html += '</td></tr>';
+  return html;
+}
+
 /* ── 렌더링 — v2.2 ── */
 function render(){
   var all = GoLabPartnerMaster.loadAll();
@@ -310,19 +461,9 @@ function render(){
       '</td>' +
     '</tr>';
 
-    /* 상세 행 (현재 펼쳐진 경우) */
+    /* ── 상태창 (게임 스테이터스 패널) ── */
     if(_expandedId === p.partner_id){
-      html += '<tr class="detail-row"><td colspan="7"><div class="detail-grid">';
-      if(p.alias)        html += '<span><b>별칭:</b> ' + esc(p.alias) + '</span>';
-      if(p.dept)         html += '<span><b>부서:</b> ' + esc(p.dept) + '</span>';
-      if(p.email)        html += '<span><b>이메일:</b> ' + renderEmail(p.email) + '</span>';
-      if(p.memo)         html += '<span><b>메모:</b> ' + esc(p.memo) + '</span>';
-      var dateStr = p.created_at ? p.created_at.substring(0,10) : "-";
-      html += '<span><b>등록일:</b> ' + dateStr + '</span>';
-      /* 레거시 필드 (있으면 표시) */
-      if(p.contact && p.contact !== p.phone) html += '<span><b>연락처(v1):</b> ' + esc(p.contact) + '</span>';
-      if(p.note && p.note !== p.memo)        html += '<span><b>비고(v1):</b> ' + esc(p.note) + '</span>';
-      html += '</div></td></tr>';
+      html += buildStatusPanel(p);
     }
   });
   tb.innerHTML = html;
