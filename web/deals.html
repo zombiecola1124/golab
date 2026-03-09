@@ -307,8 +307,8 @@
           <div>
             <label>S 실제 지급액</label>
             <div style="display:flex;gap:4px;align-items:center">
-              <input id="inActualS_direct" type="number" step="1" value="0" style="flex:1" />
-              <button class="btn-apply-est" id="btnApplyEst_direct" title="예상 S몫을 복사">예상 몫 적용</button>
+              <input id="inActualS_daesung" type="number" step="1" value="0" style="flex:1" />
+              <button class="btn-apply-est" id="btnApplyEst_daesung" title="예상 S몫을 복사">예상 몫 적용</button>
             </div>
           </div>
         </div>
@@ -745,7 +745,7 @@ function _buildTempTrade() {
       S_rate: TE.n($("inSRate").value),
       my_rate: TE.n($("inMyRate").value)
     };
-    settlement = { actual_S_amount: TE.n($("inActualS_direct").value) };
+    settlement = { actual_S_amount: TE.n($("inActualS_daesung").value) };
   } else {
     /* mine: 비율/정산 없음 */
     rates = {};
@@ -824,16 +824,16 @@ function _cr(label, value) {
 }
 
 /* 비율 입력 변경 시 조종석 업데이트 (v2.9: inCommissionRate) */
-["inSaveRate","inSRate","inMyRate","inActualS_direct",
+["inSaveRate","inSRate","inMyRate","inActualS_daesung",
  "inCommissionRate","inSRate_ch","inMyRate_ch","inActualS_ch"].forEach(function(id) {
   $(id).addEventListener("input", updateCockpit);
 });
 
 /* [예상 몫 적용] 버튼 (v2.9: s_share 사용) */
-$("btnApplyEst_direct").addEventListener("click", function() {
+$("btnApplyEst_daesung").addEventListener("click", function() {
   var temp = _buildTempTrade();
   var c = TE.calcTrade(temp);
-  $("inActualS_direct").value = c.s_share || 0;
+  $("inActualS_daesung").value = c.s_share || 0;
   updateCockpit();
 });
 $("btnApplyEst_ch").addEventListener("click", function() {
@@ -1158,7 +1158,7 @@ function saveTrade() {
       my_rate: TE.n($("inMyRate").value)
     };
     settlement = {
-      actual_S_amount: TE.n($("inActualS_direct").value),
+      actual_S_amount: TE.n($("inActualS_daesung").value),
       memo: ($("inSettlementMemo").value || "").trim()
     };
   } else {
@@ -1278,7 +1278,7 @@ function startEdit(tid) {
     $("inSaveRate").value = r.save_rate || 30;
     $("inSRate").value = r.S_rate || 60;
     $("inMyRate").value = r.my_rate || 40;
-    $("inActualS_direct").value = (t.settlement || {}).actual_S_amount || 0;
+    $("inActualS_daesung").value = (t.settlement || {}).actual_S_amount || 0;
     $("inSettlementMemo").value = (t.settlement || {}).memo || "";
   }
   /* mine: 비율 복원 불필요 */
@@ -1321,7 +1321,7 @@ function clearForm() {
   $("inTrackingNumber").value = "";
 
   $("inSaveRate").value = 30; $("inSRate").value = 60; $("inMyRate").value = 40;
-  $("inActualS_direct").value = 0; $("inSettlementMemo").value = "";
+  $("inActualS_daesung").value = 0; $("inSettlementMemo").value = "";
   $("inCommissionRate").value = 30;
   $("inSRate_ch").value = 60; $("inMyRate_ch").value = 40;
   $("inActualS_ch").value = 0; $("inSettlementMemo_ch").value = "";
