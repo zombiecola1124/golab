@@ -1,11 +1,18 @@
 /**
- * GoLab v2.4 — Deal Tracker (거래 원장 SSoT)
+ * GoLab v2.6 — Deal Tracker (거래 원장 SSoT)
  *
  * deals_v1 = GoLab의 유일한 거래 원장 (Single Source of Truth)
  * 모든 View(Sales, Profit, Console, Calendar)는 deals_v1을 읽어 계산한다.
  *
  * 거래 흐름: 견적 → 발주 → 거래명세서 → 계산서 → 입금
  * UX 원칙: 액션 버튼 클릭 → 자동 타임스탬프 (수동 날짜 입력 아님)
+ *
+ * v2.6 추가:
+ *   channel_id — 관리업체 ID (null이면 직접 거래)
+ *   rebate_rate — 리베이트율 숫자형 0~100 (channel snapshot)
+ *   profit 계산:
+ *     직접 거래: profit = revenue - cost
+ *     관리업체 거래: profit = supply_amount * rebate_rate / 100
  *
  * 사용법: <script src="js/deal-tracker.js"></script>
  *         GoLabDealTracker.loadAll()
@@ -126,12 +133,20 @@ window.GoLabDealTracker = (function () {
     d.total_amount = n(d.supply_amount) + n(d.vat_amount);
     /* fee 기본값 */
     if (d.fee == null) d.fee = 0;
-    /* 마진: amount - cost - fee */
-    if (d.purchase_cost != null && d.purchase_cost !== "") {
-      d.margin_amount = n(d.supply_amount) - n(d.purchase_cost) - n(d.fee);
+
+    /* v2.6 channel 기반 profit 계산 */
+    if (d.channel_id) {
+      /* 관리업체 거래: profit = supply_amount * rebate_rate / 100 */
+      d.margin_amount = Math.round(n(d.supply_amount) * n(d.rebate_rate) / 100);
     } else {
-      d.margin_amount = null;
+      /* 직접 거래: profit = revenue - cost - fee */
+      if (d.purchase_cost != null && d.purchase_cost !== "") {
+        d.margin_amount = n(d.supply_amount) - n(d.purchase_cost) - n(d.fee);
+      } else {
+        d.margin_amount = null;
+      }
     }
+
     /* 편의 별칭 (amount = supply_amount, cost = purchase_cost) */
     d.amount = n(d.supply_amount);
     d.cost = (d.purchase_cost != null && d.purchase_cost !== "") ? n(d.purchase_cost) : 0;
@@ -178,6 +193,9 @@ window.GoLabDealTracker = (function () {
       fee:                  n(fields.fee),
       source:               fields.source || "manual",
       migrated_from:        fields.migrated_from || null,
+      /* v2.6 채널(관리업체) 필드 */
+      channel_id:           fields.channel_id || null,
+      rebate_rate:          (fields.channel_id) ? n(fields.rebate_rate) : null,
       /* 거래 흐름 5단계 타임스탬프 */
       quote_at:             fields.quote_at || null,
       order_at:             fields.order_at || null,
@@ -238,6 +256,10 @@ window.GoLabDealTracker = (function () {
     if (fields.deal_owner   !== undefined) d.deal_owner = fields.deal_owner;
     if (fields.deal_status  !== undefined) d.deal_status = fields.deal_status;
     if (fields.fee          !== undefined) d.fee = n(fields.fee);
+
+    /* v2.6 채널(관리업체) 필드 */
+    if (fields.channel_id   !== undefined) d.channel_id = fields.channel_id || null;
+    if (fields.rebate_rate  !== undefined) d.rebate_rate = (d.channel_id) ? n(fields.rebate_rate) : null;
 
     /* 날짜 필드 (null 허용 = 삭제 가능) */
     if (fields.quote_at         !== undefined) d.quote_at         = fields.quote_at || null;
@@ -354,13 +376,21 @@ window.GoLabDealTracker = (function () {
     var active = 0;            /* 진행 중 */
     var complete = 0;          /* 완료 */
     var cancelled = 0;         /* 취소 */
-    var noInvoice = 0;         /* 계산서 미발행 */
+    var noInvoiceCount = 0;    /* 계산서 미발행 건수 */
+    var noInvoiceAmt = 0;      /* 계산서 미발행 금액 */
     var noPayment = 0;         /* 입금 대기 */
     var paymentDueAmt = 0;     /* 입금 대기 금액 */
     /* 소유자별 집계 */
     var mineCount = 0, friendCount = 0;
     var totalAmount = 0, mineTotalAmount = 0, friendTotalAmount = 0;
     var receivableAmount = 0;  /* 미수금 (계산서 O + 입금 X) */
+    /* console 대시보드용 세부 KPI */
+    var supplyDueCount = 0, supplyDueAmt = 0;  /* 공급가 확인 대기 (명세서O + 계산서X) */
+    var vatDueCount = 0, vatDueAmt = 0;        /* VAT 확인 대기 (계산서O + 입금X) */
+    var overdue30Count = 0, overdue30Amt = 0;  /* 30일+ 미완료 */
+    var today30 = _today();  /* 30일 전 기준일 계산용 */
+    var d30 = new Date(); d30.setDate(d30.getDate() - 30);
+    var thirtyDaysAgo = d30.toISOString().substring(0, 10);
 
     all.forEach(function(d) {
       /* 취소 건 별도 집계 */
@@ -383,11 +413,29 @@ window.GoLabDealTracker = (function () {
         complete++;
       } else {
         active++;
-        if (d.order_at && !d.invoice_at) noInvoice++;
+        /* 계산서 미발행: 발주O + 계산서X */
+        if (d.order_at && !d.invoice_at) {
+          noInvoiceCount++;
+          noInvoiceAmt += amt;
+        }
+        /* 공급가 확인 대기: 명세서O + 계산서X */
+        if (d.delivery_note_at && !d.invoice_at) {
+          supplyDueCount++;
+          supplyDueAmt += amt;
+        }
+        /* VAT/입금 대기: 계산서O + 입금X */
         if (d.invoice_at && !d.payment_at) {
           noPayment++;
           paymentDueAmt += n(d.total_amount);
           receivableAmount += amt;
+          vatDueCount++;
+          vatDueAmt += amt;
+        }
+        /* 30일+ 미완료: 생성/견적일이 30일 이상 지난 진행 건 */
+        var startDate = d.quote_at || d.created_at || "";
+        if (startDate && startDate.substring(0, 10) <= thirtyDaysAgo) {
+          overdue30Count++;
+          overdue30Amt += amt;
         }
       }
     });
@@ -403,9 +451,12 @@ window.GoLabDealTracker = (function () {
       mineTotalAmount: mineTotalAmount,
       friendTotalAmount: friendTotalAmount,
       receivableAmount: receivableAmount,
-      noInvoice: noInvoice,
+      noInvoice: { count: noInvoiceCount, amount: noInvoiceAmt },
       noPayment: noPayment,
-      paymentDueAmt: paymentDueAmt
+      paymentDueAmt: paymentDueAmt,
+      supplyDue: { count: supplyDueCount, amount: supplyDueAmt },
+      vatDue: { count: vatDueCount, amount: vatDueAmt },
+      overdue30: { count: overdue30Count, amount: overdue30Amt }
     };
   }
 
@@ -469,9 +520,17 @@ window.GoLabDealTracker = (function () {
         friendRevenue += amt;
       } else {
         mineRevenue += amt;
-        mineCost += cost;
-        mineFee += fee;
-        myNetProfit += (amt - cost - fee);
+        /* v2.6: 관리업체 거래 vs 직접 거래 profit 분리 */
+        if (d.channel_id) {
+          /* 관리업체: profit = supply_amount * rebate_rate / 100 */
+          var rebateProfit = Math.round(amt * n(d.rebate_rate) / 100);
+          myNetProfit += rebateProfit;
+        } else {
+          /* 직접 거래: profit = revenue - cost - fee */
+          mineCost += cost;
+          mineFee += fee;
+          myNetProfit += (amt - cost - fee);
+        }
       }
     });
 
@@ -550,6 +609,16 @@ window.GoLabDealTracker = (function () {
         changed = true;
       }
 
+      /* ── v4 마이그레이션: 채널(관리업체) 필드 기본값 ── */
+      if (d.channel_id === undefined) {
+        d.channel_id = null;
+        changed = true;
+      }
+      if (d.rebate_rate === undefined) {
+        d.rebate_rate = null;
+        changed = true;
+      }
+
       /* 상태 + 금액 재계산 */
       if (changed) {
         _calcAmounts(d);
@@ -561,8 +630,8 @@ window.GoLabDealTracker = (function () {
     });
     if (count > 0) {
       _save(all);
-      emitAudit("MIGRATE_DEAL_V3", { migrated: count });
-      console.log("[DEAL MIGRATE] " + count + "건 마이그레이션 완료 (v3 SSoT)");
+      emitAudit("MIGRATE_DEAL_V4", { migrated: count });
+      console.log("[DEAL MIGRATE] " + count + "건 마이그레이션 완료 (v4 채널)");
     }
   }
 

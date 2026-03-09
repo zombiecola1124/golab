@@ -121,7 +121,7 @@
 
   <!-- SSoT 배지 -->
   <div class="ssot-badge" id="ssotBadge" style="display:none">
-    📑 거래 원장(deals_v1) 기반 수익 성적표 — SSoT 모드
+    📑 거래 엔진 v2 기반 수익 성적표
   </div>
 
   <!-- 기간 필터 -->
@@ -182,10 +182,11 @@
           <th>날짜</th>
           <th>거래처</th>
           <th>품목</th>
+          <th>채널</th>
           <th class="r">매출</th>
-          <th class="r">원가</th>
-          <th class="r">수수료</th>
-          <th class="r">내 수익</th>
+          <th class="r">원가/리베이트</th>
+          <th class="r">지급수수료</th>
+          <th class="r">내 최종 몫</th>
           <th>상태</th>
         </tr>
       </thead>
@@ -203,11 +204,13 @@
 
 </div>
 
-<script src="./js/deal-tracker.js?v=4"></script>
+<script src="./js/channel-master.js"></script>
+<script src="./js/trade-engine.js"></script>
 <script>
 /* ======================================================
-   GoLab Profit Scorecard v2.0
-   deals_v1 SSoT 기반 성적표
+   GoLab Profit Scorecard v2.8a
+   trade_v2 기반 수익 성적표
+   v2.8a: affects_profit 필터링 + channel 부대비용 차감
    ====================================================== */
 
 var $ = function(id){ return document.getElementById(id); };
@@ -259,11 +262,11 @@ function prevYearEnd(){
   return (new Date().getFullYear()-1)+"-12-31";
 }
 
-/* -- SSoT 감지 -- */
+/* -- 데이터 존재 감지 (v2 기반) -- */
 function checkDealsSSoT(){
   try{
-    var deals = JSON.parse(localStorage.getItem("golab_deals_v1") || "[]");
-    return deals.some(function(d){ return d.source === "migrated"; });
+    var trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]");
+    return trades.length > 0;
   }catch(e){ return false; }
 }
 
@@ -361,9 +364,9 @@ function render(){
   var prevRange = getPrevDateRange();
 
   /* 집계 */
-  var DT = window.GoLabDealTracker;
-  var cur = DT.getScorecard(range.from, range.to);
-  var prev = prevRange ? DT.getScorecard(prevRange.from, prevRange.to) : null;
+  var TE = window.GoLabTradeEngine;
+  var cur = TE.getScorecard(range.from, range.to);
+  var prev = prevRange ? TE.getScorecard(prevRange.from, prevRange.to) : null;
 
   /* -- KPI 카드 -- */
   /* 1. 내 순수익 */
@@ -415,38 +418,63 @@ function render(){
 
   var thisYear = new Date().getFullYear().toString();
 
+  var CM = window.GoLabChannelMaster;
+
   $("detailBody").innerHTML = deals.map(function(d){
     var dt = (d.quote_at || d.created_at || "").substring(0,10);
-    /* 날짜 포맷: 동일 연도 MM-DD, 다른 연도 YYYY-MM-DD */
     var dtDisp = dt;
     if(dt.substring(0,4) === thisYear) dtDisp = dt.substring(5);
 
     var partner = esc(d.partner_name_snapshot || "(미지정)");
     if(d.deal_owner === "friend") partner += ' <span class="st friend">지인</span>';
 
-    var amt = n(d.supply_amount);
-    var cost = n(d.purchase_cost);
-    var fee = n(d.fee);
-    var hasCost = d.purchase_cost != null && d.purchase_cost !== "" && cost > 0;
-    var hasFee = fee > 0;
+    /* v2.7: 계산 엔진 결과 사용 */
+    var calc = d._calc || TE.calcTrade(d);
+    var amt = calc.total_supply;
+    var isChannel = d.trade_type === "channel";
+    var rates = d.rates || {};
+    var settlement = d.settlement || {};
+    var fee = n(settlement.payout_fee);
+    var dispName = d._display_name || TE.itemDisplayName(d);
 
+    /* 채널 열 */
+    var channelDisp;
+    if(isChannel){
+      var ch = CM ? CM.getById(d.channel_id) : null;
+      channelDisp = '<span class="st" style="background:rgba(37,99,235,.08);color:#1d4ed8">' + esc(ch ? ch.code : "?") + '</span>';
+    } else {
+      channelDisp = '<span style="color:var(--muted);font-size:10px">직접</span>';
+    }
+
+    /* 원가/리베이트 열 (v2.8a: 부대비용 차감 표시) */
+    var costDisp;
+    if(isChannel){
+      costDisp = '<span style="color:#1d4ed8;font-weight:600">' + n(rates.rebate_rate) + '%</span>';
+      if(calc.extra_cost_total > 0) costDisp += ' <span style="font-size:9px;color:#92400e">(부대 −'+fmtW(calc.extra_cost_total)+')</span>';
+    } else if(calc.has_cost){
+      costDisp = fmtW(calc.total_cost);
+      if(calc.extra_cost_total > 0) costDisp += ' <span style="font-size:9px;color:#92400e">(부대 '+fmtW(calc.extra_cost_total)+')</span>';
+    } else {
+      costDisp = '<span style="color:var(--muted)">\u2014</span>';
+    }
+
+    /* 내 최종 몫 열 */
     var profitDisp;
     if(d.deal_owner === "friend"){
       profitDisp = '<span style="color:var(--muted)">\u2014</span>';
-    } else if(!hasCost){
-      profitDisp = '<span style="color:var(--muted)">\u2014</span>';
     } else {
-      var profit = amt - cost - fee;
-      profitDisp = '<span style="color:'+(profit>=0?'var(--accent)':'var(--warn)')+'">'+fmtW(profit)+'</span>';
+      var myFinal = calc.final_my_amount;
+      profitDisp = '<span style="color:'+(myFinal>=0?'var(--accent)':'var(--warn)')+'">'+fmtW(myFinal)+'</span>';
     }
 
     return '<tr>'
       + '<td class="date">'+dtDisp+'</td>'
       + '<td class="name" title="'+esc(d.partner_name_snapshot)+'">'+partner+'</td>'
-      + '<td class="name" title="'+esc(d.item_name)+'">'+esc(d.item_name || "(미지정)")+'</td>'
+      + '<td class="name" title="'+esc(dispName)+'">'+esc(dispName)+'</td>'
+      + '<td>'+channelDisp+'</td>'
       + '<td class="r">'+fmtW(amt)+'</td>'
-      + '<td class="r">'+(hasCost ? fmtW(cost) : '<span style="color:var(--muted)">\u2014</span>')+'</td>'
-      + '<td class="r">'+(hasFee ? fmtW(fee) : '<span style="color:var(--muted)">\u2014</span>')+'</td>'
+      + '<td class="r">'+costDisp+'</td>'
+      + '<td class="r">'+(fee > 0 ? fmtW(fee) : '<span style="color:var(--muted)">\u2014</span>')+'</td>'
       + '<td class="r">'+profitDisp+'</td>'
       + '<td>'+getStatusLabel(d)+'</td>'
       + '</tr>';
@@ -458,22 +486,29 @@ function render(){
    ====================================================== */
 $("btnCsv").addEventListener("click", function(){
   var range = getDateRange();
-  var DT = window.GoLabDealTracker;
-  var cur = DT.getScorecard(range.from, range.to);
+  var TE2 = window.GoLabTradeEngine;
+  var cur = TE2.getScorecard(range.from, range.to);
   var deals = cur.deals.slice().sort(function(a,b){
     return (b.quote_at||b.created_at||"").localeCompare(a.quote_at||a.created_at||"");
   });
 
-  var rows = ["날짜,거래처,품목,매출,원가,수수료,내수익,상태,소유자"];
+  var CM2 = window.GoLabChannelMaster;
+  /* v2.8: 품목원가/부대비용/총원가 분리 컬럼 */
+  var rows = ["날짜,거래처,품목,채널,매출,품목원가,부대비용,총원가,리베이트율,지급수수료,내최종몫,상태,소유자"];
   deals.forEach(function(d){
     var dt = (d.quote_at || d.created_at || "").substring(0,10);
-    var amt = n(d.supply_amount);
-    var cost = n(d.purchase_cost);
-    var fee = n(d.fee);
-    var profit = d.deal_owner === "friend" ? "" : (amt - cost - fee);
+    var calc = d._calc || TE2.calcTrade(d);
+    var isChannel = d.trade_type === "channel";
+    var ch = isChannel && CM2 ? CM2.getById(d.channel_id) : null;
+    var chName = ch ? ch.code + " " + ch.name : "";
+    var rates = d.rates || {};
+    var settlement = d.settlement || {};
+    var rebateRate = isChannel ? n(rates.rebate_rate) : "";
+    var profit = d.deal_owner === "friend" ? "" : calc.final_my_amount;
+    var dispName = d._display_name || TE2.itemDisplayName(d);
     var status = d.payment_at ? "입금완료" : d.invoice_at ? "계산서" : d.delivery_note_at ? "명세서" : d.order_at ? "발주" : "견적";
     var owner = d.deal_owner === "friend" ? "지인" : "내거래";
-    rows.push([dt, d.partner_name_snapshot||"", d.item_name||"", amt, cost, fee, profit, status, owner].join(","));
+    rows.push([dt, d.partner_name_snapshot||"", dispName, chName, calc.total_supply, calc.item_cost_total, calc.extra_cost_total, calc.total_cost, rebateRate, n(settlement.payout_fee), profit, status, owner].join(","));
   });
 
   var blob = new Blob(["\ufeff"+rows.join("\n")], {type:"text/csv;charset=utf-8"});

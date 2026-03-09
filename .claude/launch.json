@@ -4,8 +4,8 @@
     {
       "name": "golab-web",
       "runtimeExecutable": "python",
-      "runtimeArgs": ["-m", "http.server", "8080", "--directory", "C:\\Users\\KO\\Desktop\\golab\\web"],
-      "port": 8080
+      "runtimeArgs": ["-m", "http.server", "8081", "--directory", "D:\\GOLAB\\golab\\web"],
+      "port": 8081
     },
     {
       "name": "telegram-bot",

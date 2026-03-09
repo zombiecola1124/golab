@@ -548,7 +548,8 @@
   </div>
 </div>
 
-<script src="js/deal-tracker.js?v=3"></script>
+<script src="js/channel-master.js"></script>
+<script src="js/trade-engine.js"></script>
 <script src="js/partner-master.js"></script>
 <script>
 /* ══════════════════════════════════════════
@@ -1084,17 +1085,17 @@ function computeKPI(){
   $("kMargin").style.color = margin >= 0 ? "var(--accent)" : "var(--warn)";
   $("kVendors").textContent = allV.size;
 
-  /* ── Deal Tracker KPI ── */
-  if(typeof GoLabDealTracker !== "undefined"){
-    var ds = GoLabDealTracker.getKPISummary();
+  /* ── Trade Engine KPI (v2.7) ── */
+  if(typeof GoLabTradeEngine !== "undefined"){
+    var ds = GoLabTradeEngine.getKPISummary();
     $("kDealNoInvoice").textContent = ds.noInvoice.count + "건";
-    $("kDealNoInvoiceAmt").textContent = GoLabDealTracker.fmt(ds.noInvoice.amount);
+    $("kDealNoInvoiceAmt").textContent = GoLabTradeEngine.fmt(ds.noInvoice.amount);
     $("kDealSupplyDue").textContent = ds.supplyDue.count + "건";
-    $("kDealSupplyDueAmt").textContent = GoLabDealTracker.fmt(ds.supplyDue.amount);
+    $("kDealSupplyDueAmt").textContent = GoLabTradeEngine.fmt(ds.supplyDue.amount);
     $("kDealVatDue").textContent = ds.vatDue.count + "건";
-    $("kDealVatDueAmt").textContent = GoLabDealTracker.fmt(ds.vatDue.amount);
+    $("kDealVatDueAmt").textContent = GoLabTradeEngine.fmt(ds.vatDue.amount);
     $("kDealOverdue").textContent = ds.overdue30.count + "건";
-    $("kDealOverdueAmt").textContent = GoLabDealTracker.fmt(ds.overdue30.amount);
+    $("kDealOverdueAmt").textContent = GoLabTradeEngine.fmt(ds.overdue30.amount);
   }
 }
 
