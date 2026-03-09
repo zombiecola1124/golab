@@ -1,19 +1,15 @@
 /**
- * GoLab v2.8a — Trade Engine (전술 통제 시스템)
+ * GoLab v2.9 — Trade Engine (거래정산 엔진)
  *
- * 의사결정 조종석: 거래 등록 시 실시간 수익 판단
+ * 3유형 거래 계산:
+ *   ① 내 거래 (mine):    순이익 = 매출 - 비용 - 부대비용 (배분 없음)
+ *   ② 대성 거래 (daesung): SAVE → 배분대상 → S/나 배분
+ *   ③ 관리업체 거래 (channel): 수수료 → 정산대상 → S/나 배분
  *
- * 핵심 변경 (v2.8 → v2.8a):
- *   - extra_costs.affects_profit 플래그 (기본 true)
- *   - extra_cost_total = affects_profit===true 인 항목만 합산
- *   - 관리업체 거래에서도 extra_cost_total 차감
- *     distributable = rebate_amount - payout_fee - extra_cost_total
- *   - 기존 v2.8:
- *     - 다품목 거래 (items 배열 embedded)
- *     - rates / settlement 분리
- *     - 내 거래: gross_profit → SAVE → distributable → S/my 분배
- *     - 관리업체: rebate → payout_fee → distributable → S/my 분배
- *     - final_my_amount 는 파생값 (저장 금지)
+ * 핵심:
+ *   - 거래순이익(gross_profit) = 매출 - 비용 - 부대비용 (3유형 공통)
+ *   - 모든 비율은 거래별 입력값 (상수 아님)
+ *   - channel: rebate(매출% 기반) → commission(순이익% 기반) 모델 변경
  *
  * 저장 키:
  *   golab_trade_v2       — 거래 배열
@@ -69,6 +65,13 @@ window.GoLabTradeEngine = (function () {
   var DEAL_OWNER = {
     MINE:   "mine",
     FRIEND: "friend"
+  };
+
+  /* 거래 유형 3분류 (v2.9) */
+  var TRADE_TYPE = {
+    MINE:    "mine",      /* 내 거래: 배분 없음 */
+    DAESUNG: "daesung",   /* 대성 거래: SAVE + S/나 배분 */
+    CHANNEL: "channel"    /* 관리업체 거래: 수수료 + S/나 배분 */
   };
 
   /* 부대비용 유형 enum (v2.8) */
@@ -152,16 +155,22 @@ window.GoLabTradeEngine = (function () {
      ══════════════════════════════════════ */
 
   /**
-   * 거래 수익 계산 (파생값 반환)
+   * 거래 수익 계산 — v2.9 3유형 엔진 (순수 함수, 저장 안 함)
+   *
+   * 공통:  거래순이익 = 매출 - 비용 - 부대비용
+   * mine:     내 순익 = 거래순이익 (배분 없음)
+   * daesung:  SAVE → 배분대상 → S/나 배분
+   * channel:  수수료 → 정산대상 → S/나 배분
+   *
    * @param {Object} trade — 거래 객체 (또는 폼에서 조립한 임시 객체)
    * @returns {Object} 계산 결과 (저장하지 않음)
    */
   function calcTrade(trade) {
-    var items      = trade.items || [];
-    var rates      = trade.rates || {};
-    var settlement = trade.settlement || {};
+    var items  = trade.items || [];
+    var rates  = trade.rates || {};
+    var tt     = trade.trade_type || TRADE_TYPE.MINE;
 
-    /* 품목 합계 */
+    /* ── 품목 합계 ── */
     var total_supply    = 0;
     var item_cost_total = 0;
     var hasCost         = false;
@@ -175,48 +184,82 @@ window.GoLabTradeEngine = (function () {
       }
     });
 
-    /* 부대비용 합산 (v2.8a: affects_profit 필터링) */
+    /* total_supply 오버라이드 (폼에서 직접 매출액 입력한 경우) */
+    if (trade.total_supply != null && n(trade.total_supply) > 0 && items.length === 0) {
+      total_supply = n(trade.total_supply);
+    }
+
+    /* ── 부대비용 합산 (affects_profit 필터링) ── */
     var extra_cost_total = 0;
     var extra_costs = trade.extra_costs || [];
     extra_costs.forEach(function (ec) {
-      /* affects_profit 가 명시적 false 가 아닌 경우만 합산 (기본 true) */
       if (ec.affects_profit !== false) {
         extra_cost_total += n(ec.amount);
       }
     });
     if (extra_costs.length > 0 && extra_cost_total > 0) hasCost = true;
 
-    /* 총 원가 = 품목 원가 + 부대비용 */
-    var total_cost = item_cost_total + extra_cost_total;
+    /* ── 거래순이익 = 매출 - 비용 - 부대비용 (3유형 공통) ── */
+    var gross_profit = total_supply - item_cost_total - extra_cost_total;
 
     var result = {
       total_supply:     total_supply,
-      item_cost_total:  item_cost_total,    /* v2.8 분리 */
-      extra_cost_total: extra_cost_total,   /* v2.8 신규 */
-      total_cost:       total_cost,         /* v2.8: 품목원가 + 부대비용 */
+      item_cost_total:  item_cost_total,
+      extra_cost_total: extra_cost_total,
+      total_cost:       item_cost_total + extra_cost_total,
       has_cost:         hasCost,
+      gross_profit:     gross_profit,       /* 3유형 공통 */
       vat_amount:       Math.round(total_supply * 0.1),
       total_amount:     total_supply + Math.round(total_supply * 0.1)
     };
 
-    if (trade.trade_type === "channel") {
-      /* ── 관리업체 거래 (v2.8a: 부대비용도 차감) ── */
-      result.rebate_amount     = Math.round(total_supply * n(rates.rebate_rate) / 100);
-      result.distributable     = result.rebate_amount - n(settlement.payout_fee) - extra_cost_total;
-      result.expected_S_amount = Math.round(result.distributable * n(rates.S_rate) / 100);
-      result.expected_my_amount= Math.round(result.distributable * n(rates.my_rate) / 100);
-      result.final_my_amount   = result.distributable - n(settlement.actual_S_amount);
+    if (tt === TRADE_TYPE.CHANNEL) {
+      /* ── ③ 관리업체 거래: 수수료(순이익% 기반) → 정산대상 → S/나 배분 ── */
+      result.commission_amount = Math.round(gross_profit * n(rates.commission_rate) / 100);
+      result.distributable     = gross_profit - result.commission_amount;
+      result.s_share           = Math.round(result.distributable * n(rates.S_rate) / 100);
+      result.final_my_amount   = Math.round(result.distributable * n(rates.my_rate) / 100);
+    } else if (tt === TRADE_TYPE.DAESUNG) {
+      /* ── ② 대성 거래: SAVE → 배분대상 → S/나 배분 ── */
+      result.save_amount       = Math.round(gross_profit * n(rates.save_rate) / 100);
+      result.distributable     = gross_profit - result.save_amount;
+      result.s_share           = Math.round(result.distributable * n(rates.S_rate) / 100);
+      result.final_my_amount   = Math.round(result.distributable * n(rates.my_rate) / 100);
     } else {
-      /* ── 내 거래 (direct) ── */
-      result.gross_profit      = total_supply - total_cost;
-      result.save_amount       = Math.round(result.gross_profit * n(rates.save_rate) / 100);
-      result.distributable     = result.gross_profit - result.save_amount;
-      result.expected_S_amount = Math.round(result.distributable * n(rates.S_rate) / 100);
-      result.expected_my_amount= Math.round(result.distributable * n(rates.my_rate) / 100);
-      result.final_my_amount   = result.distributable - n(settlement.actual_S_amount);
+      /* ── ① 내 거래 (mine): 배분 없음, 순이익 = 내 몫 ── */
+      result.save_amount       = 0;
+      result.commission_amount = 0;
+      result.distributable     = 0;
+      result.s_share           = 0;
+      result.final_my_amount   = gross_profit;
     }
 
     return result;
+  }
+
+  /* ══════════════════════════════════════
+     비율 기본값 빌더 (v2.9)
+     ══════════════════════════════════════ */
+
+  /** 유형별 rates 기본값 생성 */
+  function _buildRates(tradeType, inputRates) {
+    var r = inputRates || {};
+    if (tradeType === TRADE_TYPE.DAESUNG) {
+      return {
+        save_rate: n(r.save_rate, 30),
+        S_rate:    n(r.S_rate, 60),
+        my_rate:   n(r.my_rate, 40)
+      };
+    }
+    if (tradeType === TRADE_TYPE.CHANNEL) {
+      return {
+        commission_rate: n(r.commission_rate, 30),
+        S_rate:          n(r.S_rate, 60),
+        my_rate:         n(r.my_rate, 40)
+      };
+    }
+    /* mine: 비율 없음 */
+    return {};
   }
 
   /* ══════════════════════════════════════
@@ -249,7 +292,8 @@ window.GoLabTradeEngine = (function () {
       partner_id:            fields.partner_id,
       partner_name_snapshot: (fields.partner_name_snapshot || "").trim(),
       channel_id:            fields.channel_id || null,
-      trade_type:            fields.channel_id ? "channel" : "direct",
+      channel_name:          (fields.channel_name || "").trim(),
+      trade_type:            fields.trade_type || TRADE_TYPE.MINE,
       deal_owner:            fields.deal_owner || DEAL_OWNER.MINE,
       deal_status:           DEAL_STATUS.ACTIVE,
 
@@ -281,17 +325,11 @@ window.GoLabTradeEngine = (function () {
       /* 운송장 번호 (v2.8) */
       tracking_number: (fields.tracking_number || "").trim(),
 
-      /* 비율 — 예상 계산용 */
-      rates: {
-        save_rate:   n(fields.rates ? fields.rates.save_rate : 30),
-        rebate_rate: n(fields.rates ? fields.rates.rebate_rate : 30),
-        S_rate:      n(fields.rates ? fields.rates.S_rate : 60),
-        my_rate:     n(fields.rates ? fields.rates.my_rate : 40)
-      },
+      /* 비율 — 거래별 입력값 (v2.9: 유형별 분리) */
+      rates: _buildRates(fields.trade_type || TRADE_TYPE.MINE, fields.rates),
 
-      /* 정산 — 실제 확정값 */
+      /* 정산 — 실제 확정값 (v2.9: payout_fee 제거) */
       settlement: {
-        payout_fee:      n(fields.settlement ? fields.settlement.payout_fee : 0),
         actual_S_amount: n(fields.settlement ? fields.settlement.actual_S_amount : 0),
         memo:            (fields.settlement && fields.settlement.memo) ? fields.settlement.memo.trim() : ""
       },
@@ -334,10 +372,9 @@ window.GoLabTradeEngine = (function () {
     /* 기본 필드 */
     if (fields.partner_id            !== undefined) d.partner_id            = fields.partner_id;
     if (fields.partner_name_snapshot !== undefined) d.partner_name_snapshot = fields.partner_name_snapshot.trim();
-    if (fields.channel_id            !== undefined) {
-      d.channel_id = fields.channel_id || null;
-      d.trade_type = d.channel_id ? "channel" : "direct";
-    }
+    if (fields.channel_id            !== undefined) d.channel_id = fields.channel_id || null;
+    if (fields.channel_name          !== undefined) d.channel_name = (fields.channel_name || "").trim();
+    if (fields.trade_type            !== undefined) d.trade_type = fields.trade_type;
     if (fields.deal_owner  !== undefined) d.deal_owner  = fields.deal_owner;
     if (fields.deal_status !== undefined) d.deal_status = fields.deal_status;
     if (fields.memo        !== undefined) d.memo        = fields.memo.trim();
@@ -376,20 +413,14 @@ window.GoLabTradeEngine = (function () {
       d.tracking_number = (fields.tracking_number || "").trim();
     }
 
-    /* 비율 */
+    /* 비율 (v2.9: 유형별 분리) */
     if (fields.rates !== undefined) {
-      d.rates = {
-        save_rate:   n(fields.rates.save_rate,   d.rates ? d.rates.save_rate   : 30),
-        rebate_rate: n(fields.rates.rebate_rate,  d.rates ? d.rates.rebate_rate : 30),
-        S_rate:      n(fields.rates.S_rate,       d.rates ? d.rates.S_rate      : 60),
-        my_rate:     n(fields.rates.my_rate,      d.rates ? d.rates.my_rate     : 40)
-      };
+      d.rates = _buildRates(d.trade_type || TRADE_TYPE.MINE, fields.rates);
     }
 
-    /* 정산 */
+    /* 정산 (v2.9: payout_fee 제거) */
     if (fields.settlement !== undefined) {
       d.settlement = {
-        payout_fee:      n(fields.settlement.payout_fee,      d.settlement ? d.settlement.payout_fee      : 0),
         actual_S_amount: n(fields.settlement.actual_S_amount, d.settlement ? d.settlement.actual_S_amount : 0),
         memo:            fields.settlement.memo !== undefined
           ? fields.settlement.memo.trim()
@@ -556,10 +587,17 @@ window.GoLabTradeEngine = (function () {
   function getScorecard(fromDate, toDate) {
     var all = loadAll();
     var totalRevenue = 0, paidRevenue = 0, myNetProfit = 0;
-    var mineRevenue = 0, mineCost = 0, mineFee = 0;
-    var friendRevenue = 0, receivableAmount = 0;
+    var mineRevenue = 0, mineCost = 0;
+    var receivableAmount = 0;
     var dealCount = 0, paidCount = 0, receivableCount = 0;
     var deals = [];
+
+    /* v2.9: 유형별 집계 */
+    var byType = {
+      mine:    { count: 0, revenue: 0, profit: 0 },
+      daesung: { count: 0, revenue: 0, profit: 0 },
+      channel: { count: 0, revenue: 0, profit: 0 }
+    };
 
     all.forEach(function (t) {
       if (t.deal_status === DEAL_STATUS.CANCELLED) return;
@@ -569,6 +607,7 @@ window.GoLabTradeEngine = (function () {
 
       var calc = calcTrade(t);
       var amt = calc.total_supply;
+      var tt = t.trade_type || TRADE_TYPE.MINE;
 
       totalRevenue += amt;
       dealCount++;
@@ -581,14 +620,16 @@ window.GoLabTradeEngine = (function () {
       if (t.payment_at) { paidRevenue += amt; paidCount++; }
       if (t.invoice_at && !t.payment_at) { receivableAmount += amt; receivableCount++; }
 
-      if (t.deal_owner === DEAL_OWNER.FRIEND) {
-        friendRevenue += amt;
-      } else {
-        mineRevenue += amt;
-        mineCost += calc.total_cost;
-        mineFee += n(t.settlement ? t.settlement.payout_fee : 0);
-        myNetProfit += calc.final_my_amount;
+      /* 유형별 집계 */
+      if (byType[tt]) {
+        byType[tt].count++;
+        byType[tt].revenue += amt;
+        byType[tt].profit += calc.final_my_amount;
       }
+
+      mineRevenue += amt;
+      mineCost += calc.total_cost;
+      myNetProfit += calc.final_my_amount;
     });
 
     return {
@@ -597,12 +638,11 @@ window.GoLabTradeEngine = (function () {
       myNetProfit: myNetProfit,
       mineRevenue: mineRevenue,
       mineCost: mineCost,
-      mineFee: mineFee,
-      friendRevenue: friendRevenue,
       receivableAmount: receivableAmount,
       dealCount: dealCount,
       paidCount: paidCount,
       receivableCount: receivableCount,
+      byType: byType,
       deals: deals
     };
   }
@@ -653,6 +693,7 @@ window.GoLabTradeEngine = (function () {
 
     v1Data.forEach(function (d, idx) {
       var isChannel = !!d.channel_id;
+      var tradeType = isChannel ? "channel" : "daesung"; /* v2.9: direct→daesung */
 
       /* 단가 보정: manual_amount 인 경우 역산 */
       var qty       = n(d.qty);
@@ -667,7 +708,7 @@ window.GoLabTradeEngine = (function () {
         partner_id:            d.partner_id || null,
         partner_name_snapshot: d.partner_name_snapshot || "",
         channel_id:            d.channel_id || null,
-        trade_type:            isChannel ? "channel" : "direct",
+        trade_type:            tradeType,
         deal_owner:            d.deal_owner || "mine",
         deal_status:           d.deal_status || "active",
 
@@ -685,20 +726,22 @@ window.GoLabTradeEngine = (function () {
         extra_costs:     [],   /* v2.8: 마이그레이션 시 부대비용 없음 */
         tracking_number: "",   /* v2.8: 마이그레이션 시 운송장 없음 */
 
-        /* 마이그레이션 비율 — 기존 계산 결과 보존을 위해 조정 */
-        rates: {
+        /* 마이그레이션 비율 — v2.9: 유형별 분리 */
+        rates: isChannel ? {
+          commission_rate: n(d.rebate_rate, 30),
+          S_rate:          0,    /* 기존에 S 배분 없었으므로 0 */
+          my_rate:         100   /* 전액 내 몫으로 설정 */
+        } : {
           save_rate:   0,    /* 기존에 SAVE 개념 없었으므로 0 */
-          rebate_rate: isChannel ? n(d.rebate_rate, 30) : 30,
           S_rate:      0,    /* 기존에 S 배분 없었으므로 0 */
           my_rate:     100   /* 전액 내 몫으로 설정 */
         },
 
         settlement: {
-          payout_fee:      isChannel ? 0 : 0,
-          /* 직접 거래: 기존 fee를 actual_S_amount로 이전 (profit 보존) */
           actual_S_amount: isChannel ? 0 : n(d.fee),
           memo:            ""
         },
+        channel_name: "",
 
         quote_at:         d.quote_at || null,
         order_at:         d.order_at || null,
@@ -774,7 +817,8 @@ window.GoLabTradeEngine = (function () {
     STATUS:           STATUS,
     DEAL_STATUS:      DEAL_STATUS,
     DEAL_OWNER:       DEAL_OWNER,
-    EXTRA_COST_TYPES: EXTRA_COST_TYPES,   /* v2.8 */
+    TRADE_TYPE:       TRADE_TYPE,          /* v2.9 */
+    EXTRA_COST_TYPES: EXTRA_COST_TYPES,
     STEPS:            STEPS,
     STEP_MAP:         STEP_MAP,
     n:               n,
@@ -801,22 +845,51 @@ window.GoLabTradeEngine = (function () {
 /* 최초 로드 시 자동 마이그레이션 (v1 → v2, 멱등) */
 GoLabTradeEngine.migrateFromV1();
 
-/* v2→v2.8a 필드 보강 (extra_costs, tracking_number, affects_profit) */
+/* v2.8a→v2.9 마이그레이션 (direct→daesung, rebate_rate→commission_rate, payout_fee 제거) */
 (function () {
   var all = GoLabTradeEngine.loadAll();
   if (all.length === 0) return;
   var changed = false;
   all.forEach(function (t) {
+    /* 필드 보강 (v2.8 호환) */
     if (!t.extra_costs) { t.extra_costs = []; changed = true; }
     if (t.tracking_number === undefined) { t.tracking_number = ""; changed = true; }
-    /* v2.8a: extra_costs 에 affects_profit 기본값 보강 */
     (t.extra_costs || []).forEach(function (ec) {
       if (ec.affects_profit === undefined) { ec.affects_profit = true; changed = true; }
     });
+
+    /* v2.9: direct → daesung */
+    if (t.trade_type === "direct") {
+      t.trade_type = "daesung";
+      changed = true;
+    }
+
+    /* v2.9: channel — rebate_rate → commission_rate */
+    if (t.trade_type === "channel" && t.rates) {
+      if (t.rates.rebate_rate !== undefined && t.rates.commission_rate === undefined) {
+        t.rates.commission_rate = t.rates.rebate_rate;
+        delete t.rates.rebate_rate;
+        changed = true;
+      }
+    }
+
+    /* v2.9: settlement.payout_fee 제거 */
+    if (t.settlement && t.settlement.payout_fee !== undefined) {
+      delete t.settlement.payout_fee;
+      changed = true;
+    }
+
+    /* v2.9: channel_name 기본값 */
+    if (t.channel_name === undefined) { t.channel_name = ""; changed = true; }
+
+    /* v2.9: mine 유형에 불필요한 rates 정리 */
+    if (t.trade_type === "mine" && t.rates) {
+      /* mine은 rates 없어도 됨, 기존값은 보존 */
+    }
   });
   if (changed) {
     localStorage.setItem(GoLabTradeEngine.TRADE_KEY, JSON.stringify(all));
-    GoLabTradeEngine.emitAudit("UPGRADE_V2_TO_V28A", { count: all.length });
-    console.log("[TRADE ENGINE] v2→v2.8a 필드 보강 완료 (" + all.length + "건)");
+    GoLabTradeEngine.emitAudit("UPGRADE_V28A_TO_V29", { count: all.length });
+    console.log("[TRADE ENGINE] v2.8a→v2.9 마이그레이션 완료 (" + all.length + "건)");
   }
 })();

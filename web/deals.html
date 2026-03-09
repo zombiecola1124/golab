@@ -200,15 +200,20 @@
         <div>
           <label>거래 유형</label>
           <select id="inTradeType">
-            <option value="direct">내 거래 (직접)</option>
+            <option value="mine">내 거래</option>
+            <option value="daesung">대성 거래</option>
             <option value="channel">관리업체 거래</option>
           </select>
         </div>
         <div id="channelWrap" style="display:none">
-          <label>관리업체 *</label>
+          <label>관리업체</label>
           <select id="inChannel">
             <option value="">선택...</option>
           </select>
+        </div>
+        <div id="channelNameWrap" style="display:none">
+          <label>관리업체명 (집계용)</label>
+          <input id="inChannelName" placeholder="관리업체명 입력" />
         </div>
       </div>
       <div class="row r3" style="align-items:end">
@@ -281,11 +286,11 @@
         </div>
       </div>
 
-      <!-- Section 3: 비율 & 정산 -->
-      <div class="sec-header" style="margin-top:16px"><span class="sec-num">3</span><span class="sec-title">비율 · 정산</span></div>
+      <!-- Section 3: 비율 & 정산 (v2.9: 3유형 분리) -->
+      <div class="sec-header" id="secRatesHeader" style="margin-top:16px"><span class="sec-num">3</span><span class="sec-title">비율 · 정산</span></div>
 
-      <!-- 내 거래 비율 -->
-      <div id="directRates">
+      <!-- ② 대성 거래 비율 -->
+      <div id="daesungRates" style="display:none">
         <div class="row r4">
           <div>
             <label>SAVE율 (%)</label>
@@ -309,16 +314,12 @@
         </div>
       </div>
 
-      <!-- 관리업체 비율 -->
+      <!-- ③ 관리업체 거래 비율 (v2.9: commission_rate) -->
       <div id="channelRates" style="display:none">
         <div class="row r4">
           <div>
-            <label>리베이트율 (%)</label>
-            <input id="inRebateRate" type="number" step="0.1" min="0" max="100" value="30" />
-          </div>
-          <div>
-            <label>지급 수수료</label>
-            <input id="inPayoutFee" type="number" step="1" value="0" />
+            <label>수수료율 (%)</label>
+            <input id="inCommissionRate" type="number" step="0.1" min="0" max="100" value="30" />
           </div>
           <div>
             <label>S 배분 (%)</label>
@@ -328,8 +329,6 @@
             <label>내 배분 (%)</label>
             <input id="inMyRate_ch" type="number" step="1" min="0" max="100" value="40" />
           </div>
-        </div>
-        <div class="row r4">
           <div>
             <label>S 실제 지급액</label>
             <div style="display:flex;gap:4px;align-items:center">
@@ -337,15 +336,17 @@
               <button class="btn-apply-est" id="btnApplyEst_ch" title="예상 S몫을 복사">예상 몫 적용</button>
             </div>
           </div>
-          <div style="grid-column:span 3">
+        </div>
+        <div class="row r4">
+          <div style="grid-column:span 4">
             <label>정산 메모 <span class="opt">(선택)</span></label>
             <input id="inSettlementMemo_ch" placeholder="정산 관련 메모" />
           </div>
         </div>
       </div>
 
-      <!-- 정산 메모 (직접 거래) -->
-      <div id="directSettlementMemo">
+      <!-- 정산 메모 (대성 거래) -->
+      <div id="daesungSettlementMemo" style="display:none">
         <div class="row r4">
           <div style="grid-column:span 4">
             <label>정산 메모 <span class="opt">(선택)</span></label>
@@ -395,8 +396,10 @@
         <option value="active">진행</option><option value="completed">완료</option><option value="cancelled">취소</option>
       </select>
       <select id="fChannel">
-        <option value="">전체 채널</option>
-        <option value="direct">직접 거래</option>
+        <option value="">전체 유형</option>
+        <option value="mine">내 거래</option>
+        <option value="daesung">대성 거래</option>
+        <option value="channel">관리업체</option>
       </select>
     </div>
     <div class="tableWrap">
@@ -463,21 +466,35 @@ populateChannelDropdown();
   });
 })();
 
-/* ══════ 거래 유형 전환 ══════ */
+/* ══════ 거래 유형 전환 (v2.9: 3유형) ══════ */
 $("inTradeType").addEventListener("change", function() {
-  var isChannel = this.value === "channel";
-  $("channelWrap").style.display = isChannel ? "" : "none";
-  $("directRates").style.display = isChannel ? "none" : "";
-  $("channelRates").style.display = isChannel ? "" : "none";
-  $("directSettlementMemo").style.display = isChannel ? "none" : "";
-  $("costHeader").textContent = isChannel ? "원가" : "원가";
+  var tt = this.value;
+  var isMine    = (tt === "mine");
+  var isDaesung = (tt === "daesung");
+  var isChannel = (tt === "channel");
+
+  /* 관리업체 셀렉트/이름 표시 */
+  $("channelWrap").style.display     = isChannel ? "" : "none";
+  $("channelNameWrap").style.display = isChannel ? "" : "none";
+
+  /* 비율·정산 섹션 (mine이면 숨김) */
+  $("secRatesHeader").style.display     = isMine ? "none" : "";
+  $("daesungRates").style.display       = isDaesung ? "" : "none";
+  $("channelRates").style.display       = isChannel ? "" : "none";
+  $("daesungSettlementMemo").style.display = isDaesung ? "" : "none";
+
   updateCockpit();
 });
 
-/* 관리업체 선택 시 리베이트율 자동 세팅 */
+/* 관리업체 선택 시 수수료율 자동 세팅 */
 $("inChannel").addEventListener("change", function() {
   var ch = CM.getById(this.value);
-  if (ch) $("inRebateRate").value = ch.default_rebate_rate;
+  if (ch) {
+    $("inCommissionRate").value = ch.default_rebate_rate || 30;
+    if (ch.name && !$("inChannelName").value) {
+      $("inChannelName").value = ch.name;
+    }
+  }
   updateCockpit();
 });
 
@@ -712,9 +729,31 @@ $("btnAddExtra").addEventListener("click", function() { addExtraCostRow(); });
 
 /* ══════ 조종석 실시간 업데이트 ══════ */
 function _buildTempTrade() {
-  var isChannel = $("inTradeType").value === "channel";
+  var tt = $("inTradeType").value; /* mine / daesung / channel */
+  var rates, settlement;
+
+  if (tt === "channel") {
+    rates = {
+      commission_rate: TE.n($("inCommissionRate").value),
+      S_rate: TE.n($("inSRate_ch").value),
+      my_rate: TE.n($("inMyRate_ch").value)
+    };
+    settlement = { actual_S_amount: TE.n($("inActualS_ch").value) };
+  } else if (tt === "daesung") {
+    rates = {
+      save_rate: TE.n($("inSaveRate").value),
+      S_rate: TE.n($("inSRate").value),
+      my_rate: TE.n($("inMyRate").value)
+    };
+    settlement = { actual_S_amount: TE.n($("inActualS_direct").value) };
+  } else {
+    /* mine: 비율/정산 없음 */
+    rates = {};
+    settlement = {};
+  }
+
   return {
-    trade_type: isChannel ? "channel" : "direct",
+    trade_type: tt,
     items: _items.map(function(it) {
       return {
         qty: TE.n(it.qty),
@@ -722,35 +761,18 @@ function _buildTempTrade() {
         cost: (it.cost != null && it.cost !== "") ? TE.n(it.cost) : null
       };
     }),
-    /* 부대비용 (v2.8a: affects_profit 포함) */
     extra_costs: _extraCosts.map(function(ec) {
       return { type: ec.type, amount: TE.n(ec.amount), affects_profit: ec.affects_profit !== false, memo: ec.memo || "" };
     }),
-    rates: isChannel ? {
-      save_rate: 0,
-      rebate_rate: TE.n($("inRebateRate").value),
-      S_rate: TE.n($("inSRate_ch").value),
-      my_rate: TE.n($("inMyRate_ch").value)
-    } : {
-      save_rate: TE.n($("inSaveRate").value),
-      rebate_rate: 0,
-      S_rate: TE.n($("inSRate").value),
-      my_rate: TE.n($("inMyRate").value)
-    },
-    settlement: isChannel ? {
-      payout_fee: TE.n($("inPayoutFee").value),
-      actual_S_amount: TE.n($("inActualS_ch").value)
-    } : {
-      payout_fee: 0,
-      actual_S_amount: TE.n($("inActualS_direct").value)
-    }
+    rates: rates,
+    settlement: settlement
   };
 }
 
 function updateCockpit() {
   var temp = _buildTempTrade();
   var c = TE.calcTrade(temp);
-  var isChannel = temp.trade_type === "channel";
+  var tt = temp.trade_type;
   var body = $("cockpitBody");
 
   if (c.total_supply === 0) {
@@ -759,34 +781,41 @@ function updateCockpit() {
   }
 
   var html = "";
-  html += _cr("총 공급가", TE.fmt(c.total_supply));
-  html += _cr("VAT", TE.fmt(c.vat_amount));
-  html += _cr("합계 (공급가+VAT)", TE.fmt(c.total_amount));
-  html += '<div class="cockpit-divider"></div>';
+  html += _cr("매출 (총 공급가)", TE.fmt(c.total_supply));
 
-  if (isChannel) {
-    html += _cr("리베이트율", TE.n(temp.rates.rebate_rate) + "%");
-    html += _cr("리베이트 금액", TE.fmt(c.rebate_amount));
-    html += _cr("지급 수수료", TE.fmt(TE.n(temp.settlement.payout_fee)));
-    if (c.extra_cost_total > 0) {
-      html += _cr("부대비용 (차감)", TE.fmt(c.extra_cost_total));
-    }
-  } else {
-    html += _cr("품목 원가", TE.fmt(c.item_cost_total));
-    if (c.extra_cost_total > 0) {
-      html += _cr("부대비용", TE.fmt(c.extra_cost_total));
-    }
-    html += _cr("총 원가", TE.fmt(c.total_cost));
-    html += _cr("총수익 (매출-원가)", TE.fmt(c.gross_profit));
+  if (tt === "mine") {
+    /* ① 내 거래: 매출 → 비용 → 부대비용 → 순이익 */
+    if (c.item_cost_total > 0) html += _cr("비용 (품목 원가)", TE.fmt(c.item_cost_total));
+    if (c.extra_cost_total > 0) html += _cr("부대비용", TE.fmt(c.extra_cost_total));
+    html += '<div class="cockpit-divider"></div>';
+    html += '<div class="cockpit-row highlight"><span class="lbl">✨ 내 순익</span><span class="val">' + TE.fmt(c.final_my_amount) + '</span></div>';
+
+  } else if (tt === "daesung") {
+    /* ② 대성 거래: 매출 → 비용 → 부대비용 → 거래순이익 → SAVE → 배분 → S/나 */
+    if (c.item_cost_total > 0) html += _cr("비용 (품목 원가)", TE.fmt(c.item_cost_total));
+    if (c.extra_cost_total > 0) html += _cr("부대비용", TE.fmt(c.extra_cost_total));
+    html += _cr("거래순이익", "<b>" + TE.fmt(c.gross_profit) + "</b>");
+    html += '<div class="cockpit-divider"></div>';
     html += _cr("SAVE " + TE.n(temp.rates.save_rate) + "%", TE.fmt(c.save_amount));
+    html += _cr("배분대상", "<b>" + TE.fmt(c.distributable) + "</b>");
+    html += _cr("S 몫 (" + TE.n(temp.rates.S_rate) + "%)", TE.fmt(c.s_share));
+    html += _cr("내 몫 (" + TE.n(temp.rates.my_rate) + "%)", TE.fmt(c.final_my_amount));
+    html += '<div class="cockpit-divider"></div>';
+    html += '<div class="cockpit-row highlight"><span class="lbl">✨ 내 최종 몫</span><span class="val">' + TE.fmt(c.final_my_amount) + '</span></div>';
+
+  } else {
+    /* ③ 관리업체 거래: 매출 → 비용 → 부대비용 → 거래순이익 → 수수료 → 정산 → S/나 */
+    if (c.item_cost_total > 0) html += _cr("비용 (품목 원가)", TE.fmt(c.item_cost_total));
+    if (c.extra_cost_total > 0) html += _cr("부대비용", TE.fmt(c.extra_cost_total));
+    html += _cr("거래순이익", "<b>" + TE.fmt(c.gross_profit) + "</b>");
+    html += '<div class="cockpit-divider"></div>';
+    html += _cr("수수료율 " + TE.n(temp.rates.commission_rate) + "%", TE.fmt(c.commission_amount));
+    html += _cr("정산대상", "<b>" + TE.fmt(c.distributable) + "</b>");
+    html += _cr("S 몫 (" + TE.n(temp.rates.S_rate) + "%)", TE.fmt(c.s_share));
+    html += _cr("내 몫 (" + TE.n(temp.rates.my_rate) + "%)", TE.fmt(c.final_my_amount));
+    html += '<div class="cockpit-divider"></div>';
+    html += '<div class="cockpit-row highlight"><span class="lbl">✨ 내 최종 몫</span><span class="val">' + TE.fmt(c.final_my_amount) + '</span></div>';
   }
-  html += '<div class="cockpit-divider"></div>';
-  html += _cr("배분 대상 금액", "<b>" + TE.fmt(c.distributable) + "</b>");
-  html += _cr("S 예상몫 (" + TE.n(isChannel ? temp.rates.S_rate : temp.rates.S_rate) + "%)", TE.fmt(c.expected_S_amount));
-  html += _cr("내 예상몫 (" + TE.n(isChannel ? temp.rates.my_rate : temp.rates.my_rate) + "%)", TE.fmt(c.expected_my_amount));
-  html += '<div class="cockpit-divider"></div>';
-  html += _cr("S 실제 지급액", TE.fmt(TE.n(isChannel ? temp.settlement.actual_S_amount : temp.settlement.actual_S_amount)));
-  html += '<div class="cockpit-row highlight"><span class="lbl">✨ 내 최종 몫</span><span class="val">' + TE.fmt(c.final_my_amount) + '</span></div>';
 
   body.innerHTML = html;
 }
@@ -794,23 +823,23 @@ function _cr(label, value) {
   return '<div class="cockpit-row"><span class="lbl">' + label + '</span><span class="val">' + value + '</span></div>';
 }
 
-/* 비율 입력 변경 시 조종석 업데이트 */
+/* 비율 입력 변경 시 조종석 업데이트 (v2.9: inCommissionRate) */
 ["inSaveRate","inSRate","inMyRate","inActualS_direct",
- "inRebateRate","inPayoutFee","inSRate_ch","inMyRate_ch","inActualS_ch"].forEach(function(id) {
+ "inCommissionRate","inSRate_ch","inMyRate_ch","inActualS_ch"].forEach(function(id) {
   $(id).addEventListener("input", updateCockpit);
 });
 
-/* [예상 몫 적용] 버튼 */
+/* [예상 몫 적용] 버튼 (v2.9: s_share 사용) */
 $("btnApplyEst_direct").addEventListener("click", function() {
   var temp = _buildTempTrade();
   var c = TE.calcTrade(temp);
-  $("inActualS_direct").value = c.expected_S_amount;
+  $("inActualS_direct").value = c.s_share || 0;
   updateCockpit();
 });
 $("btnApplyEst_ch").addEventListener("click", function() {
   var temp = _buildTempTrade();
   var c = TE.calcTrade(temp);
-  $("inActualS_ch").value = c.expected_S_amount;
+  $("inActualS_ch").value = c.s_share || 0;
   updateCockpit();
 });
 
@@ -872,10 +901,13 @@ function render() {
   if (statusFilter) filtered = filtered.filter(function(t) { return t.status === statusFilter; });
   if (ownerFilter)  filtered = filtered.filter(function(t) { return t.deal_owner === ownerFilter; });
   if (dealStatusFilter) filtered = filtered.filter(function(t) { return t.deal_status === dealStatusFilter; });
-  if (channelFilter === "direct") {
-    filtered = filtered.filter(function(t) { return !t.channel_id; });
-  } else if (channelFilter) {
-    filtered = filtered.filter(function(t) { return t.channel_id === channelFilter; });
+  /* v2.9: 유형 필터 (mine/daesung/channel) */
+  if (channelFilter) {
+    filtered = filtered.filter(function(t) {
+      var tt = t.trade_type || "mine";
+      if (tt === "direct") tt = "daesung"; /* 레거시 호환 */
+      return tt === channelFilter;
+    });
   }
 
   $("listBadge").textContent = filtered.length;
@@ -893,9 +925,13 @@ function render() {
     html += '<tr '+rowStyle+' data-toggle="'+t.id+'">';
     html += '<td><b>'+esc(t.partner_name_snapshot)+'</b></td>';
     html += '<td>'+esc(dispName);
-    if (t.channel_id) {
+    /* v2.9: 유형 태그 */
+    var rowTT = t.trade_type || "mine";
+    if (rowTT === "direct") rowTT = "daesung";
+    if (rowTT === "daesung") html += ' <span class="tag" style="background:rgba(37,99,235,.1);color:#1d4ed8;font-size:9px;padding:1px 5px;border-radius:4px">대성</span>';
+    else if (rowTT === "channel") {
       var ch = CM.getById(t.channel_id);
-      html += ' <span class="tag tag-ch">' + esc(ch ? ch.code : "?") + '</span>';
+      html += ' <span class="tag tag-ch">' + esc(ch ? ch.code : (t.channel_name || "관리")) + '</span>';
     }
     html += '</td>';
     html += '<td>'+TE.fmt(calc.total_supply)+'</td>';
@@ -959,23 +995,24 @@ function render() {
         html += '</table></div>';
       }
 
-      /* 수익 분석 */
+      /* 수익 분석 (v2.9: 3유형) */
+      var detailTT = t.trade_type || "mine";
+      if (detailTT === "direct") detailTT = "daesung"; /* 레거시 호환 */
       html += '<div class="detail-section"><div class="detail-section-title">💰 수익 분석</div>';
       html += '<div class="amount-grid">';
-      html += '<span>총 공급가 <b>'+TE.fmt(calc.total_supply)+'</b></span>';
-      if (t.trade_type === "channel") {
-        html += '<span>리베이트 <b>'+TE.n(t.rates.rebate_rate)+'%</b> → '+TE.fmt(calc.rebate_amount)+'</span>';
-        html += '<span>지급수수료 '+TE.fmt(TE.n(t.settlement.payout_fee))+'</span>';
-        if (calc.extra_cost_total > 0) html += '<span>부대비용 (차감) −'+TE.fmt(calc.extra_cost_total)+'</span>';
-      } else {
-        html += '<span>품목원가 '+TE.fmt(calc.item_cost_total)+'</span>';
-        if (calc.extra_cost_total > 0) html += '<span>부대비용 '+TE.fmt(calc.extra_cost_total)+'</span>';
-        html += '<span>총원가 '+TE.fmt(calc.total_cost)+'</span>';
-        html += '<span>총수익 '+TE.fmt(calc.gross_profit)+'</span>';
-        html += '<span>SAVE '+TE.n(t.rates.save_rate)+'% → '+TE.fmt(calc.save_amount)+'</span>';
+      html += '<span>매출 <b>'+TE.fmt(calc.total_supply)+'</b></span>';
+      if (calc.item_cost_total > 0) html += '<span>비용 '+TE.fmt(calc.item_cost_total)+'</span>';
+      if (calc.extra_cost_total > 0) html += '<span>부대비용 '+TE.fmt(calc.extra_cost_total)+'</span>';
+      html += '<span>거래순이익 <b>'+TE.fmt(calc.gross_profit)+'</b></span>';
+      if (detailTT === "daesung") {
+        html += '<span>SAVE '+TE.n((t.rates||{}).save_rate)+'% → '+TE.fmt(calc.save_amount)+'</span>';
+        html += '<span>배분대상 <b>'+TE.fmt(calc.distributable)+'</b></span>';
+        html += '<span>S 몫 '+TE.fmt(calc.s_share)+'</span>';
+      } else if (detailTT === "channel") {
+        html += '<span>수수료 '+TE.n((t.rates||{}).commission_rate)+'% → '+TE.fmt(calc.commission_amount)+'</span>';
+        html += '<span>정산대상 <b>'+TE.fmt(calc.distributable)+'</b></span>';
+        html += '<span>S 몫 '+TE.fmt(calc.s_share)+'</span>';
       }
-      html += '<span>배분대상 <b>'+TE.fmt(calc.distributable)+'</b></span>';
-      html += '<span>S실제 '+TE.fmt(TE.n(t.settlement.actual_S_amount))+'</span>';
       html += '<span style="color:var(--deal);font-weight:800">내 최종 '+TE.fmt(calc.final_my_amount)+'</span>';
       html += '</div></div>';
 
@@ -1095,17 +1132,47 @@ function saveTrade() {
   if (validItems.length === 0) { alert("품목을 1개 이상 입력해주세요.\n(품목명, 수량, 단가 필수)"); return; }
 
   var partner = GoLabPartnerMaster.getById(partnerId);
-  var isChannel = $("inTradeType").value === "channel";
+  var tt = $("inTradeType").value; /* mine / daesung / channel */
+  var isChannel = (tt === "channel");
   var channelId = isChannel ? ($("inChannel").value || null) : null;
-
-  if (isChannel && !channelId) { alert("관리업체를 선택해주세요."); return; }
+  var channelName = isChannel ? ($("inChannelName").value || "").trim() : "";
 
   var ownerRadio = document.querySelector('input[name="dealOwner"]:checked');
+
+  /* 유형별 비율 조립 (v2.9) */
+  var rates, settlement;
+  if (tt === "channel") {
+    rates = {
+      commission_rate: TE.n($("inCommissionRate").value),
+      S_rate: TE.n($("inSRate_ch").value),
+      my_rate: TE.n($("inMyRate_ch").value)
+    };
+    settlement = {
+      actual_S_amount: TE.n($("inActualS_ch").value),
+      memo: ($("inSettlementMemo_ch").value || "").trim()
+    };
+  } else if (tt === "daesung") {
+    rates = {
+      save_rate: TE.n($("inSaveRate").value),
+      S_rate: TE.n($("inSRate").value),
+      my_rate: TE.n($("inMyRate").value)
+    };
+    settlement = {
+      actual_S_amount: TE.n($("inActualS_direct").value),
+      memo: ($("inSettlementMemo").value || "").trim()
+    };
+  } else {
+    /* mine: 비율/정산 없음 */
+    rates = {};
+    settlement = { actual_S_amount: 0, memo: "" };
+  }
 
   var fields = {
     partner_id: partnerId,
     partner_name_snapshot: partner ? (partner.display_name || partner.name) : "",
+    trade_type: tt,
     channel_id: channelId,
+    channel_name: channelName,
     deal_owner: ownerRadio ? ownerRadio.value : "mine",
     items: validItems.map(function(it) {
       return {
@@ -1117,18 +1184,7 @@ function saveTrade() {
         memo: (it.memo || "").trim()
       };
     }),
-    rates: isChannel ? {
-      save_rate: 0,
-      rebate_rate: TE.n($("inRebateRate").value),
-      S_rate: TE.n($("inSRate_ch").value),
-      my_rate: TE.n($("inMyRate_ch").value)
-    } : {
-      save_rate: TE.n($("inSaveRate").value),
-      rebate_rate: 0,
-      S_rate: TE.n($("inSRate").value),
-      my_rate: TE.n($("inMyRate").value)
-    },
-    /* 부대비용 (v2.8a: affects_profit 포함) */
+    rates: rates,
     extra_costs: _extraCosts.filter(function(ec) {
       return TE.n(ec.amount) > 0;
     }).map(function(ec) {
@@ -1139,17 +1195,8 @@ function saveTrade() {
         memo: (ec.memo || "").trim()
       };
     }),
-    /* 운송장 번호 (v2.8) */
     tracking_number: ($("inTrackingNumber").value || "").trim(),
-    settlement: isChannel ? {
-      payout_fee: TE.n($("inPayoutFee").value),
-      actual_S_amount: TE.n($("inActualS_ch").value),
-      memo: ($("inSettlementMemo_ch").value || "").trim()
-    } : {
-      payout_fee: 0,
-      actual_S_amount: TE.n($("inActualS_direct").value),
-      memo: ($("inSettlementMemo").value || "").trim()
-    },
+    settlement: settlement,
     memo: ($("inMemo").value || "").trim()
   };
 
@@ -1173,12 +1220,17 @@ function startEdit(tid) {
   editingId = t.id;
 
   if (t.partner_id) acPartner.setValue(t.partner_id);
-  $("inTradeType").value = t.trade_type || "direct";
+
+  /* v2.9: 레거시 호환 (direct → daesung) */
+  var tt = t.trade_type || "mine";
+  if (tt === "direct") tt = "daesung";
+  $("inTradeType").value = tt;
   $("inTradeType").dispatchEvent(new Event("change"));
 
   if (t.channel_id) {
     $("inChannel").value = t.channel_id;
   }
+  $("inChannelName").value = t.channel_name || "";
 
   $("inMemo").value = t.memo || "";
   var ownerRadio = document.querySelector('input[name="dealOwner"][value="'+(t.deal_owner||"mine")+'"]');
@@ -1214,22 +1266,22 @@ function startEdit(tid) {
   /* 운송장 번호 복원 (v2.8) */
   $("inTrackingNumber").value = t.tracking_number || "";
 
-  /* 비율 복원 */
+  /* 비율 복원 (v2.9: 3유형) */
   var r = t.rates || {};
-  if (t.trade_type === "channel") {
-    $("inRebateRate").value = r.rebate_rate || 30;
-    $("inPayoutFee").value = (t.settlement || {}).payout_fee || 0;
+  if (tt === "channel") {
+    $("inCommissionRate").value = r.commission_rate || r.rebate_rate || 30;
     $("inSRate_ch").value = r.S_rate || 60;
     $("inMyRate_ch").value = r.my_rate || 40;
     $("inActualS_ch").value = (t.settlement || {}).actual_S_amount || 0;
     $("inSettlementMemo_ch").value = (t.settlement || {}).memo || "";
-  } else {
+  } else if (tt === "daesung") {
     $("inSaveRate").value = r.save_rate || 30;
     $("inSRate").value = r.S_rate || 60;
     $("inMyRate").value = r.my_rate || 40;
     $("inActualS_direct").value = (t.settlement || {}).actual_S_amount || 0;
     $("inSettlementMemo").value = (t.settlement || {}).memo || "";
   }
+  /* mine: 비율 복원 불필요 */
 
   $("btnSave").textContent = "저장";
   $("btnCancel").style.display = "inline-block";
@@ -1249,9 +1301,10 @@ function deleteTrade(tid) {
 
 function clearForm() {
   acPartner.clear();
-  $("inTradeType").value = "direct";
+  $("inTradeType").value = "mine";
   $("inTradeType").dispatchEvent(new Event("change"));
   $("inChannel").value = "";
+  $("inChannelName").value = "";
   $("inMemo").value = "";
   var mineRadio = document.querySelector('input[name="dealOwner"][value="mine"]');
   if (mineRadio) mineRadio.checked = true;
@@ -1269,7 +1322,7 @@ function clearForm() {
 
   $("inSaveRate").value = 30; $("inSRate").value = 60; $("inMyRate").value = 40;
   $("inActualS_direct").value = 0; $("inSettlementMemo").value = "";
-  $("inRebateRate").value = 30; $("inPayoutFee").value = 0;
+  $("inCommissionRate").value = 30;
   $("inSRate_ch").value = 60; $("inMyRate_ch").value = 40;
   $("inActualS_ch").value = 0; $("inSettlementMemo_ch").value = "";
 

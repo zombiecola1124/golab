@@ -121,10 +121,18 @@
 
   <!-- SSoT 배지 -->
   <div class="ssot-badge" id="ssotBadge" style="display:none">
-    📑 거래 엔진 v2 기반 수익 성적표
+    📑 거래 엔진 v2.9 · 3유형 원장 분석
   </div>
 
-  <!-- 기간 필터 -->
+  <!-- 유형 필터 탭 (v2.9) -->
+  <div class="filter-bar" style="margin-bottom:10px">
+    <button class="fbtn active" data-type="" style="font-weight:700">전체</button>
+    <button class="fbtn" data-type="mine" style="color:#16a34a">내 거래</button>
+    <button class="fbtn" data-type="daesung" style="color:#2563eb">대성</button>
+    <button class="fbtn" data-type="channel" style="color:#d97706">관리업체</button>
+  </div>
+
+  <!-- 기간 + 거래처/관리업체 필터 -->
   <div class="filter-bar">
     <button class="fbtn active" data-range="month">이번 달</button>
     <button class="fbtn" data-range="lastMonth">지난 달</button>
@@ -134,64 +142,72 @@
     <input type="date" class="date-input" id="dateFrom" style="display:none" />
     <span class="date-sep" id="dateSep" style="display:none">~</span>
     <input type="date" class="date-input" id="dateTo" style="display:none" />
+    <select class="date-input" id="fPartner" style="min-width:110px">
+      <option value="">전체 거래처</option>
+    </select>
+    <select class="date-input" id="fChannelName" style="min-width:110px;display:none">
+      <option value="">전체 관리업체</option>
+    </select>
   </div>
 
-  <!-- KPI 5개 -->
+  <!-- KPI 5개 (v2.9) -->
   <div class="kpi-row">
     <div class="kpi">
       <div class="label">💰 내 순수익</div>
       <div class="value green" id="kMyProfit">—</div>
       <div class="sub" id="kMyProfitSub">0건</div>
-      <div class="delta neutral" id="kMyProfitDelta">—</div>
     </div>
     <div class="kpi">
       <div class="label">📊 총 매출액</div>
       <div class="value orange" id="kRevenue">—</div>
       <div class="sub" id="kRevenueSub">0건</div>
-      <div class="delta neutral" id="kRevenueDelta">—</div>
     </div>
     <div class="kpi">
-      <div class="label">✅ 실제 입금액</div>
-      <div class="value blue" id="kPaid">—</div>
+      <div class="label">📦 거래순이익 합계</div>
+      <div class="value blue" id="kGrossProfit">—</div>
+      <div class="sub" id="kGrossProfitSub"></div>
+    </div>
+    <div class="kpi">
+      <div class="label">✅ 입금 완료</div>
+      <div class="value" style="color:var(--accent)" id="kPaid">—</div>
       <div class="sub" id="kPaidSub">0건</div>
-      <div class="delta neutral" id="kPaidDelta">—</div>
     </div>
     <div class="kpi">
-      <div class="label">🤝 기타 거래 규모</div>
-      <div class="value purple" id="kFriend">—</div>
-      <div class="sub" id="kFriendSub">0건</div>
-      <div class="delta neutral" id="kFriendDelta">—</div>
-    </div>
-    <div class="kpi">
-      <div class="label">📋 미입금 잔액</div>
+      <div class="label">📋 미입금</div>
       <div class="value amber" id="kReceivable">—</div>
       <div class="sub" id="kReceivableSub">0건</div>
-      <div class="delta neutral" id="kReceivableDelta">—</div>
     </div>
   </div>
 
-  <!-- 상세 거래 리스트 -->
+  <!-- 원장 테이블 (v2.9: 14컬럼) -->
   <div class="detail-card">
     <div class="detail-header">
-      <h3>거래 상세 <span class="badge" id="detailCount">0</span></h3>
+      <h3>거래 원장 <span class="badge" id="detailCount">0</span></h3>
       <button class="csv-btn" id="btnCsv">💾 CSV 내보내기</button>
     </div>
+    <div style="overflow-x:auto">
     <table class="detail-table" id="detailTableWrap">
       <thead>
         <tr>
           <th>날짜</th>
+          <th>유형</th>
           <th>거래처</th>
-          <th>품목</th>
-          <th>채널</th>
+          <th>관리업체</th>
           <th class="r">매출</th>
-          <th class="r">원가/리베이트</th>
-          <th class="r">지급수수료</th>
-          <th class="r">내 최종 몫</th>
+          <th class="r">비용</th>
+          <th class="r">부대비용</th>
+          <th class="r">거래순이익</th>
+          <th class="r">SAVE</th>
+          <th class="r">수수료</th>
+          <th class="r">배분대상</th>
+          <th class="r">S 몫</th>
+          <th class="r">내 몫</th>
           <th>상태</th>
         </tr>
       </thead>
       <tbody id="detailBody"></tbody>
     </table>
+    </div>
     <div class="no-data" id="detailEmpty" style="display:none">해당 기간 거래 데이터 없음</div>
   </div>
 
@@ -204,13 +220,14 @@
 
 </div>
 
+<script src="./js/partner-master.js?v=3"></script>
 <script src="./js/channel-master.js"></script>
 <script src="./js/trade-engine.js"></script>
 <script>
 /* ======================================================
-   GoLab Profit Scorecard v2.8a
-   trade_v2 기반 수익 성적표
-   v2.8a: affects_profit 필터링 + channel 부대비용 차감
+   GoLab Profit Ledger v2.9
+   거래 엔진 v2.9 기반 원장 분석
+   3유형: mine / daesung / channel
    ====================================================== */
 
 var $ = function(id){ return document.getElementById(id); };
@@ -219,16 +236,13 @@ var $ = function(id){ return document.getElementById(id); };
 function n(v,fb){ if(fb===undefined) fb=0; var x=Number(v); return Number.isFinite(x)?x:fb; }
 function fmtW(v){ return "\u20a9"+Math.round(v).toLocaleString(); }
 function esc(s){ return (s||"").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+function dash(){ return '<span style="color:var(--muted)">\u2014</span>'; }
 
 /* -- 날짜 유틸 -- */
 function todayStr(){ return new Date().toISOString().substring(0,10); }
 function monthStart(){
   var d=new Date();
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-01";
-}
-function monthEnd(){
-  var d=new Date();
-  return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(new Date(d.getFullYear(),d.getMonth()+1,0).getDate()).padStart(2,"0");
 }
 function lastMonthStart(){
   var d=new Date(); d.setMonth(d.getMonth()-1);
@@ -242,27 +256,9 @@ function quarterStart(){
   var d=new Date(), q=Math.floor(d.getMonth()/3)*3;
   return d.getFullYear()+"-"+String(q+1).padStart(2,"0")+"-01";
 }
-function prevQuarterStart(){
-  var d=new Date(), q=Math.floor(d.getMonth()/3)*3;
-  var pd=new Date(d.getFullYear(), q-3, 1);
-  return pd.getFullYear()+"-"+String(pd.getMonth()+1).padStart(2,"0")+"-01";
-}
-function prevQuarterEnd(){
-  var d=new Date(), q=Math.floor(d.getMonth()/3)*3;
-  var pe=new Date(d.getFullYear(), q, 0);
-  return pe.getFullYear()+"-"+String(pe.getMonth()+1).padStart(2,"0")+"-"+String(pe.getDate()).padStart(2,"0");
-}
-function yearStart(){
-  return new Date().getFullYear()+"-01-01";
-}
-function prevYearStart(){
-  return (new Date().getFullYear()-1)+"-01-01";
-}
-function prevYearEnd(){
-  return (new Date().getFullYear()-1)+"-12-31";
-}
+function yearStart(){ return new Date().getFullYear()+"-01-01"; }
 
-/* -- 데이터 존재 감지 (v2 기반) -- */
+/* -- 데이터 존재 감지 -- */
 function checkDealsSSoT(){
   try{
     var trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]");
@@ -271,9 +267,12 @@ function checkDealsSSoT(){
 }
 
 /* ======================================================
-   기간 범위 계산
+   필터 상태
    ====================================================== */
 var currentRange = "month";
+var currentType = "";       /* "" = 전체, mine/daesung/channel */
+var currentPartner = "";    /* partner_id 필터 */
+var currentChannelName = ""; /* channel_name 필터 */
 var customFrom = "";
 var customTo = "";
 
@@ -287,46 +286,6 @@ function getDateRange(){
   return { from: monthStart(), to: today };
 }
 
-/* 전월 대비 기간 계산 */
-function getPrevDateRange(){
-  if(currentRange === "month") return { from: lastMonthStart(), to: lastMonthEnd() };
-  if(currentRange === "lastMonth"){
-    /* 전전달 */
-    var d=new Date(); d.setMonth(d.getMonth()-2);
-    var y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0");
-    var last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
-    return { from: y+"-"+m+"-01", to: y+"-"+m+"-"+String(last).padStart(2,"0") };
-  }
-  if(currentRange === "quarter") return { from: prevQuarterStart(), to: prevQuarterEnd() };
-  if(currentRange === "year") return { from: prevYearStart(), to: prevYearEnd() };
-  if(currentRange === "custom"){
-    /* 동일 기간 전 */
-    if(!customFrom || !customTo) return null;
-    var f=new Date(customFrom), t=new Date(customTo);
-    var diff = t - f;
-    var pf=new Date(f.getTime() - diff - 86400000);
-    var pt=new Date(f.getTime() - 86400000);
-    return { from: pf.toISOString().substring(0,10), to: pt.toISOString().substring(0,10) };
-  }
-  return null;
-}
-
-/* ======================================================
-   델타 계산 (전월 대비 ▲/▼)
-   ====================================================== */
-function renderDelta(cur, prev, inverse){
-  /* inverse=true 이면 감소가 좋은 것 (미입금 등) */
-  if(prev === 0 && cur === 0) return '<span class="delta neutral">\u2014</span>';
-  if(prev === 0) return '<span class="delta '+(inverse?'down':'up')+'">\u25b2 신규</span>';
-  var pct = ((cur - prev) / Math.abs(prev)) * 100;
-  var sign = pct >= 0 ? "\u25b2" : "\u25bc";
-  var abs = Math.abs(pct).toFixed(1);
-  var cls;
-  if(pct >= 0) cls = inverse ? "down" : "up";
-  else cls = inverse ? "up" : "down";
-  return '<span class="delta '+cls+'">'+sign+' '+abs+'%</span>';
-}
-
 /* ======================================================
    상태 배지
    ====================================================== */
@@ -338,70 +297,128 @@ function getStatusLabel(d){
   return '<span class="st quote">견적</span>';
 }
 
+/* 유형 배지 */
+function getTypeLabel(tt){
+  if(tt === "daesung") return '<span class="st" style="background:rgba(37,99,235,.1);color:#1d4ed8">대성</span>';
+  if(tt === "channel") return '<span class="st" style="background:rgba(217,119,6,.1);color:#92400e">관리</span>';
+  return '<span class="st" style="background:rgba(22,163,74,.1);color:#166534">내 거래</span>';
+}
+
+/* ======================================================
+   필터 드롭다운 초기화
+   ====================================================== */
+function initFilterDropdowns(){
+  var TE = window.GoLabTradeEngine;
+  var all = TE.loadAll();
+  var PM = window.GoLabPartnerMaster;
+
+  /* 거래처 */
+  var partnerIds = {};
+  var channelNames = {};
+  all.forEach(function(t){
+    if(t.deal_status === "cancelled") return;
+    if(t.partner_id) partnerIds[t.partner_id] = t.partner_name_snapshot || t.partner_id;
+    var tt = t.trade_type || "mine";
+    if(tt === "channel" && t.channel_name) channelNames[t.channel_name] = true;
+  });
+
+  var fP = $("fPartner");
+  fP.innerHTML = '<option value="">전체 거래처</option>';
+  Object.keys(partnerIds).forEach(function(pid){
+    var opt = document.createElement("option");
+    opt.value = pid;
+    opt.textContent = partnerIds[pid];
+    fP.appendChild(opt);
+  });
+
+  var fC = $("fChannelName");
+  fC.innerHTML = '<option value="">전체 관리업체</option>';
+  Object.keys(channelNames).sort().forEach(function(cn){
+    var opt = document.createElement("option");
+    opt.value = cn;
+    opt.textContent = cn;
+    fC.appendChild(opt);
+  });
+}
+
 /* ======================================================
    렌더링
    ====================================================== */
 function render(){
-  /* deals_v1 SSoT 확인 */
   var isSSoT = checkDealsSSoT();
   $("ssotBadge").style.display = isSSoT ? "inline-flex" : "none";
 
   if(!isSSoT){
-    /* 레거시 모드: 데이터 없음 안내 */
     $("emptyState").style.display = "block";
-    $("detailTableWrap").parentElement.querySelector(".detail-header").style.display = "none";
+    $("detailTableWrap").closest(".detail-card").querySelector(".detail-header").style.display = "none";
     $("detailTableWrap").style.display = "none";
     $("detailEmpty").style.display = "none";
     return;
   }
 
   $("emptyState").style.display = "none";
-  $("detailTableWrap").parentElement.querySelector(".detail-header").style.display = "flex";
+  $("detailTableWrap").closest(".detail-card").querySelector(".detail-header").style.display = "flex";
   $("detailTableWrap").style.display = "table";
 
   /* 기간 범위 */
   var range = getDateRange();
-  var prevRange = getPrevDateRange();
-
-  /* 집계 */
   var TE = window.GoLabTradeEngine;
   var cur = TE.getScorecard(range.from, range.to);
-  var prev = prevRange ? TE.getScorecard(prevRange.from, prevRange.to) : null;
 
-  /* -- KPI 카드 -- */
-  /* 1. 내 순수익 */
-  $("kMyProfit").textContent = fmtW(cur.myNetProfit);
-  $("kMyProfit").className = "value " + (cur.myNetProfit >= 0 ? "green" : "red");
-  var mineCount = cur.deals.filter(function(d){return d.deal_owner!=="friend"}).length;
-  $("kMyProfitSub").textContent = mineCount + "건 (내 거래)";
-  $("kMyProfitDelta").innerHTML = prev ? renderDelta(cur.myNetProfit, prev.myNetProfit, false) : '<span class="delta neutral">\u2014</span>';
+  /* -- 추가 필터 적용 -- */
+  var filtered = cur.deals.slice();
+  if(currentType) {
+    filtered = filtered.filter(function(d){
+      var tt = d.trade_type || "mine";
+      if(tt === "direct") tt = "daesung";
+      return tt === currentType;
+    });
+  }
+  if(currentPartner) {
+    filtered = filtered.filter(function(d){ return d.partner_id === currentPartner; });
+  }
+  if(currentChannelName) {
+    filtered = filtered.filter(function(d){ return (d.channel_name || "") === currentChannelName; });
+  }
 
-  /* 2. 총 매출액 */
-  $("kRevenue").textContent = fmtW(cur.totalRevenue);
-  $("kRevenueSub").textContent = cur.dealCount + "건";
-  $("kRevenueDelta").innerHTML = prev ? renderDelta(cur.totalRevenue, prev.totalRevenue, false) : '<span class="delta neutral">\u2014</span>';
+  /* 관리업체 필터 표시 토글 */
+  $("fChannelName").style.display = (currentType === "channel" || currentType === "") ? "" : "none";
 
-  /* 3. 실제 입금액 */
-  $("kPaid").textContent = fmtW(cur.paidRevenue);
-  $("kPaidSub").textContent = cur.paidCount + "건 입금 완료";
-  $("kPaidDelta").innerHTML = prev ? renderDelta(cur.paidRevenue, prev.paidRevenue, false) : '<span class="delta neutral">\u2014</span>';
+  /* -- KPI 재계산 (필터된 데이터 기준) -- */
+  var kRevenue = 0, kMyProfit = 0, kGrossProfit = 0;
+  var kPaid = 0, kPaidCount = 0;
+  var kReceivable = 0, kReceivableCount = 0;
 
-  /* 4. 기타 거래 규모 */
-  $("kFriend").textContent = fmtW(cur.friendRevenue);
-  var friendCount = cur.deals.filter(function(d){return d.deal_owner==="friend"}).length;
-  $("kFriendSub").textContent = friendCount + "건 (지인 거래)";
-  $("kFriendDelta").innerHTML = prev ? renderDelta(cur.friendRevenue, prev.friendRevenue, false) : '<span class="delta neutral">\u2014</span>';
+  filtered.forEach(function(d){
+    var calc = d._calc || TE.calcTrade(d);
+    kRevenue += calc.total_supply;
+    kMyProfit += calc.final_my_amount;
+    kGrossProfit += calc.gross_profit;
+    if(d.payment_at){ kPaid += calc.total_supply; kPaidCount++; }
+    if(d.invoice_at && !d.payment_at){ kReceivable += calc.total_supply; kReceivableCount++; }
+  });
 
-  /* 5. 미입금 잔액 */
-  $("kReceivable").textContent = fmtW(cur.receivableAmount);
-  $("kReceivableSub").textContent = cur.receivableCount + "건 대기 중";
-  $("kReceivableDelta").innerHTML = prev ? renderDelta(cur.receivableAmount, prev.receivableAmount, true) : '<span class="delta neutral">\u2014</span>';
+  $("kMyProfit").textContent = fmtW(kMyProfit);
+  $("kMyProfit").className = "value " + (kMyProfit >= 0 ? "green" : "red");
+  $("kMyProfitSub").textContent = filtered.length + "건";
 
-  /* -- 상세 테이블 -- */
-  var deals = cur.deals.slice().sort(function(a,b){
+  $("kRevenue").textContent = fmtW(kRevenue);
+  $("kRevenueSub").textContent = filtered.length + "건";
+
+  $("kGrossProfit").textContent = fmtW(kGrossProfit);
+  $("kGrossProfitSub").textContent = "";
+
+  $("kPaid").textContent = fmtW(kPaid);
+  $("kPaidSub").textContent = kPaidCount + "건";
+
+  $("kReceivable").textContent = fmtW(kReceivable);
+  $("kReceivableSub").textContent = kReceivableCount + "건";
+
+  /* -- 원장 테이블 -- */
+  var deals = filtered.sort(function(a,b){
     var da = a.quote_at || a.created_at || "";
     var db = b.quote_at || b.created_at || "";
-    return db.localeCompare(da); /* 최신 먼저 */
+    return db.localeCompare(da);
   });
 
   $("detailCount").textContent = deals.length;
@@ -418,71 +435,45 @@ function render(){
 
   var thisYear = new Date().getFullYear().toString();
 
-  var CM = window.GoLabChannelMaster;
-
   $("detailBody").innerHTML = deals.map(function(d){
     var dt = (d.quote_at || d.created_at || "").substring(0,10);
     var dtDisp = dt;
     if(dt.substring(0,4) === thisYear) dtDisp = dt.substring(5);
 
-    var partner = esc(d.partner_name_snapshot || "(미지정)");
-    if(d.deal_owner === "friend") partner += ' <span class="st friend">지인</span>';
-
-    /* v2.7: 계산 엔진 결과 사용 */
     var calc = d._calc || TE.calcTrade(d);
-    var amt = calc.total_supply;
-    var isChannel = d.trade_type === "channel";
+    var tt = d.trade_type || "mine";
+    if(tt === "direct") tt = "daesung";
     var rates = d.rates || {};
-    var settlement = d.settlement || {};
-    var fee = n(settlement.payout_fee);
-    var dispName = d._display_name || TE.itemDisplayName(d);
 
-    /* 채널 열 */
-    var channelDisp;
-    if(isChannel){
-      var ch = CM ? CM.getById(d.channel_id) : null;
-      channelDisp = '<span class="st" style="background:rgba(37,99,235,.08);color:#1d4ed8">' + esc(ch ? ch.code : "?") + '</span>';
-    } else {
-      channelDisp = '<span style="color:var(--muted);font-size:10px">직접</span>';
-    }
-
-    /* 원가/리베이트 열 (v2.8a: 부대비용 차감 표시) */
-    var costDisp;
-    if(isChannel){
-      costDisp = '<span style="color:#1d4ed8;font-weight:600">' + n(rates.rebate_rate) + '%</span>';
-      if(calc.extra_cost_total > 0) costDisp += ' <span style="font-size:9px;color:#92400e">(부대 −'+fmtW(calc.extra_cost_total)+')</span>';
-    } else if(calc.has_cost){
-      costDisp = fmtW(calc.total_cost);
-      if(calc.extra_cost_total > 0) costDisp += ' <span style="font-size:9px;color:#92400e">(부대 '+fmtW(calc.extra_cost_total)+')</span>';
-    } else {
-      costDisp = '<span style="color:var(--muted)">\u2014</span>';
-    }
-
-    /* 내 최종 몫 열 */
-    var profitDisp;
-    if(d.deal_owner === "friend"){
-      profitDisp = '<span style="color:var(--muted)">\u2014</span>';
-    } else {
-      var myFinal = calc.final_my_amount;
-      profitDisp = '<span style="color:'+(myFinal>=0?'var(--accent)':'var(--warn)')+'">'+fmtW(myFinal)+'</span>';
-    }
+    /* 유형별 표시 값 */
+    var saveDisp = (tt === "daesung") ? fmtW(calc.save_amount) : dash();
+    var commDisp = (tt === "channel") ? fmtW(calc.commission_amount) : dash();
+    var distDisp = (tt !== "mine") ? fmtW(calc.distributable) : dash();
+    var sShareDisp = (tt !== "mine") ? fmtW(calc.s_share) : dash();
+    var myDisp = '<span style="font-weight:700;color:'+(calc.final_my_amount>=0?'var(--accent)':'var(--warn)')+'">'+fmtW(calc.final_my_amount)+'</span>';
+    var channelDisp = (tt === "channel") ? esc(d.channel_name || "—") : dash();
 
     return '<tr>'
       + '<td class="date">'+dtDisp+'</td>'
-      + '<td class="name" title="'+esc(d.partner_name_snapshot)+'">'+partner+'</td>'
-      + '<td class="name" title="'+esc(dispName)+'">'+esc(dispName)+'</td>'
+      + '<td>'+getTypeLabel(tt)+'</td>'
+      + '<td class="name" title="'+esc(d.partner_name_snapshot)+'">'+esc(d.partner_name_snapshot || "(미지정)")+'</td>'
       + '<td>'+channelDisp+'</td>'
-      + '<td class="r">'+fmtW(amt)+'</td>'
-      + '<td class="r">'+costDisp+'</td>'
-      + '<td class="r">'+(fee > 0 ? fmtW(fee) : '<span style="color:var(--muted)">\u2014</span>')+'</td>'
-      + '<td class="r">'+profitDisp+'</td>'
+      + '<td class="r">'+fmtW(calc.total_supply)+'</td>'
+      + '<td class="r">'+(calc.item_cost_total > 0 ? fmtW(calc.item_cost_total) : dash())+'</td>'
+      + '<td class="r">'+(calc.extra_cost_total > 0 ? fmtW(calc.extra_cost_total) : dash())+'</td>'
+      + '<td class="r" style="font-weight:600">'+fmtW(calc.gross_profit)+'</td>'
+      + '<td class="r">'+saveDisp+'</td>'
+      + '<td class="r">'+commDisp+'</td>'
+      + '<td class="r">'+distDisp+'</td>'
+      + '<td class="r">'+sShareDisp+'</td>'
+      + '<td class="r">'+myDisp+'</td>'
       + '<td>'+getStatusLabel(d)+'</td>'
       + '</tr>';
   }).join("");
 }
 
 /* ======================================================
-   CSV 내보내기
+   CSV 내보내기 (v2.9: 15컬럼)
    ====================================================== */
 $("btnCsv").addEventListener("click", function(){
   var range = getDateRange();
@@ -492,40 +483,55 @@ $("btnCsv").addEventListener("click", function(){
     return (b.quote_at||b.created_at||"").localeCompare(a.quote_at||a.created_at||"");
   });
 
-  var CM2 = window.GoLabChannelMaster;
-  /* v2.8: 품목원가/부대비용/총원가 분리 컬럼 */
-  var rows = ["날짜,거래처,품목,채널,매출,품목원가,부대비용,총원가,리베이트율,지급수수료,내최종몫,상태,소유자"];
+  var rows = ["날짜,유형,거래처,관리업체,매출,비용,부대비용,거래순이익,SAVE,수수료,배분대상,S몫,내몫,상태"];
   deals.forEach(function(d){
     var dt = (d.quote_at || d.created_at || "").substring(0,10);
     var calc = d._calc || TE2.calcTrade(d);
-    var isChannel = d.trade_type === "channel";
-    var ch = isChannel && CM2 ? CM2.getById(d.channel_id) : null;
-    var chName = ch ? ch.code + " " + ch.name : "";
-    var rates = d.rates || {};
-    var settlement = d.settlement || {};
-    var rebateRate = isChannel ? n(rates.rebate_rate) : "";
-    var profit = d.deal_owner === "friend" ? "" : calc.final_my_amount;
-    var dispName = d._display_name || TE2.itemDisplayName(d);
+    var tt = d.trade_type || "mine";
+    if(tt === "direct") tt = "daesung";
+    var typeName = tt === "mine" ? "내거래" : tt === "daesung" ? "대성" : "관리업체";
+    var channelName = tt === "channel" ? (d.channel_name || "") : "";
     var status = d.payment_at ? "입금완료" : d.invoice_at ? "계산서" : d.delivery_note_at ? "명세서" : d.order_at ? "발주" : "견적";
-    var owner = d.deal_owner === "friend" ? "지인" : "내거래";
-    rows.push([dt, d.partner_name_snapshot||"", dispName, chName, calc.total_supply, calc.item_cost_total, calc.extra_cost_total, calc.total_cost, rebateRate, n(settlement.payout_fee), profit, status, owner].join(","));
+
+    rows.push([
+      dt, typeName, d.partner_name_snapshot||"", channelName,
+      calc.total_supply, calc.item_cost_total, calc.extra_cost_total, calc.gross_profit,
+      (tt==="daesung" ? calc.save_amount : ""),
+      (tt==="channel" ? calc.commission_amount : ""),
+      (tt!=="mine" ? calc.distributable : ""),
+      (tt!=="mine" ? calc.s_share : ""),
+      calc.final_my_amount,
+      status
+    ].join(","));
   });
 
   var blob = new Blob(["\ufeff"+rows.join("\n")], {type:"text/csv;charset=utf-8"});
   var url = URL.createObjectURL(blob);
   var a = document.createElement("a");
   a.href = url;
-  a.download = "golab_profit_"+range.from+"_"+range.to+".csv";
+  a.download = "golab_ledger_"+range.from+"_"+range.to+".csv";
   a.click();
   URL.revokeObjectURL(url);
 });
 
 /* ======================================================
-   기간 필터 이벤트
+   이벤트 바인딩
    ====================================================== */
-document.querySelectorAll(".fbtn").forEach(function(btn){
+
+/* 유형 필터 탭 */
+document.querySelectorAll("[data-type]").forEach(function(btn){
   btn.addEventListener("click", function(){
-    document.querySelectorAll(".fbtn").forEach(function(b){ b.classList.remove("active"); });
+    document.querySelectorAll("[data-type]").forEach(function(b){ b.classList.remove("active"); });
+    btn.classList.add("active");
+    currentType = btn.dataset.type;
+    render();
+  });
+});
+
+/* 기간 필터 */
+document.querySelectorAll("[data-range]").forEach(function(btn){
+  btn.addEventListener("click", function(){
+    document.querySelectorAll("[data-range]").forEach(function(b){ b.classList.remove("active"); });
     btn.classList.add("active");
     currentRange = btn.dataset.range;
 
@@ -548,12 +554,17 @@ document.querySelectorAll(".fbtn").forEach(function(btn){
 $("dateFrom").addEventListener("change", function(e){ customFrom = e.target.value; render(); });
 $("dateTo").addEventListener("change", function(e){ customTo = e.target.value; render(); });
 
-/* -- 크로스탭 동기화 -- */
+/* 거래처/관리업체 필터 */
+$("fPartner").addEventListener("change", function(){ currentPartner = this.value; render(); });
+$("fChannelName").addEventListener("change", function(){ currentChannelName = this.value; render(); });
+
+/* 크로스탭 동기화 */
 window.addEventListener("storage", function(e){
   if(e.key && e.key.startsWith("golab_")) render();
 });
 
 /* -- Init -- */
+initFilterDropdowns();
 render();
 </script>
 </body>
