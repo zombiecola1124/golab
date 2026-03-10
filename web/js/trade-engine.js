@@ -248,6 +248,10 @@ window.GoLabTradeEngine = (function () {
       id:                    generateId(all),
       partner_id:            fields.partner_id,
       partner_name_snapshot: (fields.partner_name_snapshot || "").trim(),
+      /* v2.9c: 장부 기준일 (YYYY-MM-DD) */
+      deal_date:             fields.deal_date || new Date().toISOString().substring(0, 10),
+      date_inferred:         false,   /* 사용자가 직접 지정 */
+
       channel_id:            fields.channel_id || null,
       trade_type:            fields.channel_id ? "channel" : "direct",
       deal_owner:            fields.deal_owner || DEAL_OWNER.MINE,
@@ -398,6 +402,11 @@ window.GoLabTradeEngine = (function () {
     }
 
     /* 날짜 필드 */
+    /* v2.9c: 장부 기준일 — 사용자 수정 시 date_inferred 해제 */
+    if (fields.deal_date        !== undefined) {
+      d.deal_date        = fields.deal_date;
+      d.date_inferred    = false;
+    }
     if (fields.quote_at         !== undefined) d.quote_at         = fields.quote_at || null;
     if (fields.order_at         !== undefined) d.order_at         = fields.order_at || null;
     if (fields.delivery_note_at !== undefined) d.delivery_note_at = fields.delivery_note_at || null;
@@ -521,8 +530,9 @@ window.GoLabTradeEngine = (function () {
           vatDueCount++;
           vatDueAmt += amt;
         }
-        var startDate = t.quote_at || t.created_at || "";
-        if (startDate && startDate.substring(0, 10) <= thirtyDaysAgo) {
+        /* v2.9c: deal_date 우선 사용 */
+        var startDate = t.deal_date || (t.quote_at || t.created_at || "").substring(0, 10);
+        if (startDate && startDate <= thirtyDaysAgo) {
           overdue30Count++;
           overdue30Amt += amt;
         }
@@ -564,7 +574,8 @@ window.GoLabTradeEngine = (function () {
     all.forEach(function (t) {
       if (t.deal_status === DEAL_STATUS.CANCELLED) return;
 
-      var dt = (t.quote_at || t.created_at || "").substring(0, 10);
+      /* v2.9c: deal_date 우선, fallback quote_at → created_at */
+      var dt = t.deal_date || (t.quote_at || t.created_at || "").substring(0, 10);
       if (!dt || dt < fromDate || dt > toDate) return;
 
       var calc = calcTrade(t);
@@ -700,6 +711,10 @@ window.GoLabTradeEngine = (function () {
           memo:            ""
         },
 
+        /* v2.9c: 장부 기준일 — v1의 quote_at 또는 created_at에서 파생 */
+        deal_date:        (d.quote_at || d.created_at || "").substring(0, 10) || null,
+        date_inferred:    true,   /* 마이그레이션 자동 추정 */
+
         quote_at:         d.quote_at || null,
         order_at:         d.order_at || null,
         delivery_note_at: d.delivery_note_at || null,
@@ -742,11 +757,24 @@ window.GoLabTradeEngine = (function () {
       (t.extra_costs || []).forEach(function (ec) {
         if (ec.affects_profit === undefined) { ec.affects_profit = true; changed = true; }
       });
+      /* v2.9c: deal_date (장부 기준일) 보강 — 기존 데이터는 quote_at → created_at fallback */
+      if (!t.deal_date) {
+        t.deal_date = t.quote_at
+          ? t.quote_at.substring(0, 10)
+          : (t.created_at ? t.created_at.substring(0, 10) : null);
+        t.date_inferred = true;   /* 자동 추정됨 — 사용자 확인 필요 */
+        changed = true;
+      }
+      /* v2.9c: date_inferred 필드 보강 (deal_date는 있지만 date_inferred 누락 시) */
+      if (t.deal_date && t.date_inferred === undefined) {
+        t.date_inferred = true;   /* 수동 확인 전까지 추정 상태 */
+        changed = true;
+      }
     });
     if (changed) {
       _save(all);
-      emitAudit("UPGRADE_V2_TO_V28A", { count: all.length });
-      console.log("[TRADE ENGINE] v2→v2.8a 필드 보강 완료 (" + all.length + "건)");
+      emitAudit("UPGRADE_V2_FIELDS", { count: all.length });
+      console.log("[TRADE ENGINE] v2 필드 보강 완료 (" + all.length + "건)");
     }
   }
 

@@ -549,7 +549,7 @@
 </div>
 
 <script src="js/channel-master.js"></script>
-<script src="js/trade-engine.js"></script>
+<script src="js/trade-engine.js?v=29c2"></script>
 <script src="js/partner-master.js"></script>
 <script>
 /* ══════════════════════════════════════════
@@ -1045,7 +1045,8 @@ function computeKPI(){
       /* deals_v1 기반 매출 집계 (cancelled 제외) */
       _deals.forEach(function(d){
         if(d.deal_status === "cancelled") return;
-        var dt = d.quote_at || d.created_at || "";
+        /* v2.9c: deal_date 우선 사용 */
+        var dt = d.deal_date || (d.quote_at || d.created_at || "").substring(0, 10);
         if(dt.substring(0,7) === mp){
           sT += Number(d.supply_amount) || 0;
           if(d.partner_id) allV.add(d.partner_id);
@@ -1206,7 +1207,7 @@ function openDrawer(nameOrId){
     ? deals.reduce(function(s,d){ return s + (Number(d.supply_amount)||0); }, 0)
     : sales.reduce((s,r)=>s+n(r.sellUnitPrice)*n(r.qty),0);
   const allDates = _drawerUseDeals
-    ? [...trades.map(r=>r.purchaseDate), ...deals.map(function(d){ return d.quote_at||d.created_at||""; })].filter(Boolean).sort()
+    ? [...trades.map(r=>r.purchaseDate), ...deals.map(function(d){ return d.deal_date||d.quote_at||d.created_at||""; })].filter(Boolean).sort()
     : [...trades.map(r=>r.purchaseDate),...sales.map(r=>r.salesDate)].filter(Boolean).sort();
   $("vpTotal").textContent=fmt(tTotal+sTotal);
   $("vpLatest").textContent=allDates.length?allDates[allDates.length-1]:"-";
