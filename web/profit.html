@@ -40,13 +40,14 @@
     .date-input:focus{border-color:var(--primary)}
     .date-sep{color:var(--muted);font-size:11px}
 
-    /* -- KPI 카드 4개 -- */
+    /* -- v3.0: 6셀 합계 바 -- */
     .kpi-row{display:grid;grid-template-columns:repeat(4,1fr);gap:14px;margin-bottom:20px}
-    .kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-    .kpi .label{font-size:11px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
-    .kpi .value{font-size:26px;font-weight:800;margin-top:6px;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
-    .kpi .sub{font-size:10px;color:var(--muted);margin-top:4px}
-    .kpi .delta{font-size:11px;margin-top:4px;font-weight:700}
+    .kpi-row.six{grid-template-columns:repeat(6,1fr);gap:10px}
+    .kpi{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px 16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .kpi .label{font-size:10px;color:var(--muted);font-weight:600;text-transform:uppercase;letter-spacing:.3px}
+    .kpi .value{font-size:20px;font-weight:800;margin-top:4px;letter-spacing:-.5px;font-variant-numeric:tabular-nums}
+    .kpi .sub{font-size:10px;color:var(--muted);margin-top:3px}
+    .kpi .delta{font-size:10px;margin-top:3px;font-weight:700}
     .kpi .delta.up{color:var(--accent)}
     .kpi .delta.down{color:var(--warn)}
     .kpi .delta.neutral{color:var(--muted)}
@@ -83,10 +84,11 @@
     .ledger-header .csv-btn:hover{color:var(--text);border-color:#94a3b8}
 
     .ledger-table{width:100%;border-collapse:collapse;font-size:12px}
-    .ledger-table thead th{text-align:left;padding:8px 10px;border-bottom:2px solid var(--border);color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+    /* v3.0: 컴팩트 원장 — 행간 축소 */
+    .ledger-table thead th{text-align:left;padding:6px 8px;border-bottom:2px solid var(--border);color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
     .ledger-table thead th.r{text-align:right}
     .ledger-table thead th.c{text-align:center}
-    .ledger-table tbody td{padding:8px 10px;border-bottom:1px solid var(--border);color:var(--text);font-variant-numeric:tabular-nums}
+    .ledger-table tbody td{padding:5px 8px;border-bottom:1px solid var(--border);color:var(--text);font-variant-numeric:tabular-nums;font-size:11px}
     .ledger-table tbody td.r{text-align:right;font-weight:600}
     .ledger-table tbody td.c{text-align:center}
     .ledger-table tbody td.name{font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
@@ -140,7 +142,7 @@
     .st.note{background:#fef3c7;color:#92400e}
     .st.order{background:#e0e7ff;color:#3730a3}
     .st.quote{background:#f1f5f9;color:#475569}
-    .st.friend{background:#faf5ff;color:#7c3aed}
+    /* v3.0: .st.friend 폐기 */
 
     /* -- 빈 상태 -- */
     .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
@@ -153,6 +155,7 @@
     /* -- Responsive -- */
     @media(max-width:900px){
       .kpi-row{grid-template-columns:repeat(2,1fr)}
+      .kpi-row.six{grid-template-columns:repeat(3,1fr)}
       .type-strip{grid-template-columns:1fr}
     }
     @media(max-width:700px){
@@ -182,7 +185,7 @@
 
   <!-- SSoT 배지 -->
   <div class="ssot-badge" id="ssotBadge" style="display:none">
-    📑 거래 엔진 v2 기반 · 월간 장부
+    📑 거래 엔진 v3 기반 · 경영 원장
   </div>
 
   <!-- 기간 필터 -->
@@ -191,7 +194,10 @@
     <button class="fbtn" data-range="lastMonth">지난 달</button>
     <button class="fbtn" data-range="quarter">이번 분기</button>
     <button class="fbtn" data-range="year">올해</button>
+    <button class="fbtn" data-range="pickMonth">월 선택</button>
     <button class="fbtn" data-range="custom">직접 선택</button>
+    <!-- v3.0: YYYY-MM 월 선택기 + 기존 날짜 범위 -->
+    <input type="month" class="date-input" id="monthPicker" style="display:none" />
     <input type="date" class="date-input" id="dateFrom" style="display:none" />
     <span class="date-sep" id="dateSep" style="display:none">~</span>
     <input type="date" class="date-input" id="dateTo" style="display:none" />
@@ -206,8 +212,29 @@
     <button class="fbtn" data-type="inferred" id="btnInferred" style="display:none">🔸 보정 필요 <span id="inferredCount" style="font-weight:800"></span></button>
   </div>
 
-  <!-- KPI 4개 -->
-  <div class="kpi-row">
+  <!-- v3.0: 6셀 월간 합계 바 -->
+  <div class="kpi-row six">
+    <div class="kpi">
+      <div class="label">📊 총 매출</div>
+      <div class="value orange" id="kRevenue">—</div>
+      <div class="sub" id="kRevenueSub">0건</div>
+      <div class="delta neutral" id="kRevenueDelta">—</div>
+    </div>
+    <div class="kpi">
+      <div class="label">📦 총 원가/리베이트</div>
+      <div class="value" id="kCostRebate">—</div>
+      <div class="sub" id="kCostRebateSub"></div>
+    </div>
+    <div class="kpi">
+      <div class="label">💎 총 SAVE</div>
+      <div class="value blue" id="kSave">—</div>
+      <div class="sub" id="kSaveSub"></div>
+    </div>
+    <div class="kpi">
+      <div class="label">📤 총 S지급액</div>
+      <div class="value" id="kSPaid">—</div>
+      <div class="sub" id="kSPaidSub"></div>
+    </div>
     <div class="kpi">
       <div class="label">💰 내 순수익</div>
       <div class="value green" id="kMyProfit">—</div>
@@ -215,22 +242,9 @@
       <div class="delta neutral" id="kMyProfitDelta">—</div>
     </div>
     <div class="kpi">
-      <div class="label">📊 총 매출액</div>
-      <div class="value orange" id="kRevenue">—</div>
-      <div class="sub" id="kRevenueSub">0건</div>
-      <div class="delta neutral" id="kRevenueDelta">—</div>
-    </div>
-    <div class="kpi">
-      <div class="label">✅ 입금 완료</div>
-      <div class="value blue" id="kPaid">—</div>
-      <div class="sub" id="kPaidSub">0건</div>
-      <div class="delta neutral" id="kPaidDelta">—</div>
-    </div>
-    <div class="kpi">
       <div class="label">📋 미입금 잔액</div>
       <div class="value amber" id="kReceivable">—</div>
       <div class="sub" id="kReceivableSub">0건</div>
-      <div class="delta neutral" id="kReceivableDelta">—</div>
     </div>
   </div>
 
@@ -272,13 +286,13 @@
 
 </div>
 
-<script src="./js/channel-master.js?v=29c"></script>
-<script src="./js/trade-engine.js?v=29c2"></script>
+<script src="./js/channel-master.js?v=30"></script>
+<script src="./js/trade-engine.js?v=30"></script>
 <script>
 /* ======================================================
-   GoLab Profit Ledger v2.9b
-   월간 장부/정산 원장 메인 화면
-   v2.9b: KPI 4개 + 유형별 소계 + 그룹 원장 + 확장 상세
+   GoLab Profit Ledger v3.0
+   경영 원장 중심 화면
+   v3.0: 6셀 합계 바, friend 제거, 컴팩트 원장, YYYY-MM
    ====================================================== */
 
 var $ = function(id){ return document.getElementById(id); };
@@ -353,7 +367,8 @@ function getDateRange(){
   if(currentRange === "lastMonth") return { from: lastMonthStart(), to: lastMonthEnd() };
   if(currentRange === "quarter") return { from: quarterStart(), to: today };
   if(currentRange === "year") return { from: yearStart(), to: today };
-  if(currentRange === "custom") return { from: customFrom || "0000-01-01", to: customTo || today };
+  /* v3.0: 월 선택기 & 직접 선택 모두 customFrom/customTo 사용 */
+  if(currentRange === "pickMonth" || currentRange === "custom") return { from: customFrom || "0000-01-01", to: customTo || today };
   return { from: monthStart(), to: today };
 }
 
@@ -368,6 +383,16 @@ function getPrevDateRange(){
   }
   if(currentRange === "quarter") return { from: prevQuarterStart(), to: prevQuarterEnd() };
   if(currentRange === "year") return { from: prevYearStart(), to: prevYearEnd() };
+  /* v3.0: 월 선택기 → 전월 자동 계산 */
+  if(currentRange === "pickMonth"){
+    var val = $("monthPicker").value;
+    if(!val) return null;
+    var pts = val.split("-");
+    var pd = new Date(parseInt(pts[0]), parseInt(pts[1])-2, 1); /* 전월 1일 */
+    var pLastDay = new Date(pd.getFullYear(), pd.getMonth()+1, 0).getDate();
+    return { from: pd.getFullYear()+"-"+String(pd.getMonth()+1).padStart(2,"0")+"-01",
+             to: pd.getFullYear()+"-"+String(pd.getMonth()+1).padStart(2,"0")+"-"+String(pLastDay).padStart(2,"0") };
+  }
   if(currentRange === "custom"){
     if(!customFrom || !customTo) return null;
     var f=new Date(customFrom), t=new Date(customTo);
@@ -408,50 +433,29 @@ function getStatusLabel(d){
   return '<span class="st quote">견적</span>';
 }
 
-/* ======================================================
-   거래 유형 분류 (3+1 그룹)
-   ====================================================== */
-function classifyTrade(t){
-  /* 관리업체 */
-  if(t.trade_type === "channel") return "channel";
-  /* 직접 거래 — 정산형 vs 단독형 */
-  var rates = t.rates || {};
-  if(n(rates.S_rate) > 0 || n(rates.save_rate) > 0) return "settle";
-  return "solo";
-}
+/* v3.0: classifyTrade() → 엔진에서 가져옴 (TE.classifyTrade) */
 
-/* 그룹 표시명/색상 매핑 */
+/* 그룹 표시명/색상 매핑 (v3.0: friend 제거) */
 var GROUP_META = {
   solo:    { label: "직접-단독",  color: "var(--accent)", cls: "solo" },
   settle:  { label: "직접-정산",  color: "var(--primary)", cls: "settle" },
-  channel: { label: "관리업체",   color: "var(--deal)",   cls: "channel" },
-  friend:  { label: "지인 거래",  color: "var(--purple)",  cls: "friend" }
+  channel: { label: "관리업체",   color: "var(--deal)",   cls: "channel" }
 };
 
 /* ======================================================
    그룹별 분류 + 소계 집계
    ====================================================== */
 function buildGroupedData(deals){
-  /* 4개 그룹 초기화 */
+  /* v3.0: 3개 그룹 (friend 제거) */
   var groups = {
     solo:    { deals:[], revenue:0, profit:0, count:0 },
     settle:  { deals:[], revenue:0, profit:0, count:0 },
-    channel: { deals:[], revenue:0, profit:0, count:0 },
-    friend:  { deals:[], revenue:0, profit:0, count:0 }
+    channel: { deals:[], revenue:0, profit:0, count:0 }
   };
 
   deals.forEach(function(d){
     var calc = d._calc || TE.calcTrade(d);
-
-    /* 지인 거래는 별도 그룹 */
-    if(d.deal_owner === "friend"){
-      groups.friend.deals.push(d);
-      groups.friend.revenue += calc.total_supply;
-      groups.friend.count++;
-      return;
-    }
-
-    var type = classifyTrade(d);
+    var type = TE.classifyTrade(d);
     groups[type].deals.push(d);
     groups[type].revenue += calc.total_supply;
     groups[type].profit += calc.final_my_amount;
@@ -632,27 +636,24 @@ var _expandedId = null;
 
 function renderGroupedTable(groups, thisYear){
   var html = "";
-  var groupOrder = ["solo","settle","channel","friend"];
+  /* v3.0: friend 제거, 3그룹만 */
+  var groupOrder = ["solo","settle","channel"];
 
   groupOrder.forEach(function(key){
     var g = groups[key];
-    if(g.count === 0) return; /* 빈 그룹 생략 */
+    if(!g || g.count === 0) return; /* 빈 그룹 생략 */
 
     var meta = GROUP_META[key];
-    var isFriend = (key === "friend");
 
     /* 그룹 헤더 행 */
     html += '<tr class="group-header">';
     html += '<td colspan="9">';
     html += '<span class="group-dot" style="background:'+meta.color+'"></span>';
     html += '<b>'+meta.label+'</b>';
-    html += '<span class="group-summary">'+g.count+'건 · 매출 '+fmtW(g.revenue);
-    if(!isFriend) html += ' · 순익 '+fmtW(g.profit);
-    else html += ' · 순익 —';
-    html += '</span>';
+    html += '<span class="group-summary">'+g.count+'건 · 매출 '+fmtW(g.revenue)+' · 순익 '+fmtW(g.profit)+'</span>';
     html += '</td></tr>';
 
-    /* 그룹 내 거래 행 (최신순 정렬, v2.9c: deal_date 우선) */
+    /* 그룹 내 거래 행 (최신순 정렬, deal_date 우선) */
     var sorted = g.deals.slice().sort(function(a,b){
       var da = a.deal_date || a.quote_at || a.created_at || "";
       var db = b.deal_date || b.quote_at || b.created_at || "";
@@ -660,22 +661,17 @@ function renderGroupedTable(groups, thisYear){
     });
 
     sorted.forEach(function(d){
-      /* v2.9c: deal_date 우선, fallback quote_at → created_at */
       var dt = d.deal_date || (d.quote_at || d.created_at || "").substring(0,10);
       var dtDisp = dt;
       if(dt.substring(0,4) === thisYear) dtDisp = dt.substring(5);
 
       var partner = esc(d.partner_name_snapshot || "(미지정)");
-      if(d.deal_owner === "friend") partner += ' <span class="st friend">지인</span>';
-
       var calc = d._calc || TE.calcTrade(d);
       var dispName = d._display_name || TE.itemDisplayName(d);
 
       /* 유형 배지 */
       var typeBadge;
-      if(isFriend){
-        typeBadge = '<span class="st friend">지인</span>';
-      } else if(key === "channel"){
+      if(key === "channel"){
         var ch = CM ? CM.getById(d.channel_id) : null;
         typeBadge = '<span class="type-badge channel">'+ esc(ch ? ch.code : "?") +'</span>';
       } else if(key === "settle"){
@@ -685,13 +681,8 @@ function renderGroupedTable(groups, thisYear){
       }
 
       /* 내 최종 몫 */
-      var profitDisp;
-      if(d.deal_owner === "friend"){
-        profitDisp = '<span style="color:var(--muted)">—</span>';
-      } else {
-        var myFinal = calc.final_my_amount;
-        profitDisp = '<span style="color:'+(myFinal>=0?'var(--accent)':'var(--warn)')+'">'+fmtW(myFinal)+'</span>';
-      }
+      var myFinal = calc.final_my_amount;
+      var profitDisp = '<span style="color:'+(myFinal>=0?'var(--accent)':'var(--warn)')+'">'+fmtW(myFinal)+'</span>';
 
       var isExpanded = (_expandedId === d.id);
 
@@ -724,10 +715,11 @@ function renderGroupedTable(groups, thisYear){
    tfoot 합계 행 렌더
    ====================================================== */
 function renderFooter(groups){
-  /* 내 거래만 집계 (지인 제외) */
+  /* v3.0: 모든 거래 집계 (friend 구분 없음) */
   var totalCount = 0, totalRevenue = 0, totalCost = 0, totalProfit = 0;
   ["solo","settle","channel"].forEach(function(key){
     var g = groups[key];
+    if(!g) return;
     totalCount += g.count;
     totalRevenue += g.revenue;
     g.deals.forEach(function(d){
@@ -738,7 +730,7 @@ function renderFooter(groups){
   });
 
   var html = '<tr>';
-  html += '<td colspan="4" style="text-align:right">합계 <b>'+totalCount+'</b>건 (내 거래)</td>';
+  html += '<td colspan="4" style="text-align:right">합계 <b>'+totalCount+'</b>건</td>';
   html += '<td class="r" style="font-variant-numeric:tabular-nums">'+fmtW(totalRevenue)+'</td>';
   html += '<td class="r" style="font-variant-numeric:tabular-nums">'+fmtW(totalCost)+'</td>';
   html += '<td class="r" style="color:'+(totalProfit>=0?'var(--accent)':'var(--warn)')+'">'+fmtW(totalProfit)+'</td>';
@@ -777,28 +769,48 @@ function render(){
   var cur = TE.getScorecard(range.from, range.to);
   var prev = prevRange ? TE.getScorecard(prevRange.from, prevRange.to) : null;
 
-  /* -- KPI 카드 4개 -- */
-  /* 1. 내 순수익 */
-  $("kMyProfit").textContent = fmtW(cur.myNetProfit);
-  $("kMyProfit").className = "value " + (cur.myNetProfit >= 0 ? "green" : "red");
-  var mineCount = cur.deals.filter(function(d){return d.deal_owner!=="friend"}).length;
-  $("kMyProfitSub").textContent = mineCount + "건 (내 거래)";
-  $("kMyProfitDelta").innerHTML = prev ? renderDelta(cur.myNetProfit, prev.myNetProfit, false) : '<span class="delta neutral">\u2014</span>';
+  /* -- v3.0: 6셀 합계 바 -- */
+  /* calcTrade 결과를 순회하며 6셀 집계 */
+  var totalSave = 0, totalSPaid = 0, totalCostOrRebate = 0;
+  cur.deals.forEach(function(d){
+    var c = d._calc || TE.calcTrade(d);
+    if(d.trade_type === "channel"){
+      totalCostOrRebate += c.rebate_amount || 0;
+    } else {
+      totalCostOrRebate += c.total_cost || 0;
+      totalSave += c.save_amount || 0;
+    }
+    totalSPaid += n((d.settlement || {}).actual_S_amount);
+  });
 
-  /* 2. 총 매출액 */
+  /* 1. 총 매출 */
   $("kRevenue").textContent = fmtW(cur.totalRevenue);
   $("kRevenueSub").textContent = cur.dealCount + "건";
   $("kRevenueDelta").innerHTML = prev ? renderDelta(cur.totalRevenue, prev.totalRevenue, false) : '<span class="delta neutral">\u2014</span>';
 
-  /* 3. 입금 완료 */
-  $("kPaid").textContent = fmtW(cur.paidRevenue);
-  $("kPaidSub").textContent = cur.paidCount + "건 입금";
-  $("kPaidDelta").innerHTML = prev ? renderDelta(cur.paidRevenue, prev.paidRevenue, false) : '<span class="delta neutral">\u2014</span>';
+  /* 2. 총 원가/리베이트 */
+  $("kCostRebate").textContent = fmtW(totalCostOrRebate);
+  $("kCostRebateSub").textContent = "";
 
-  /* 4. 미입금 잔액 */
+  /* 3. 총 SAVE */
+  $("kSave").textContent = fmtW(totalSave);
+  $("kSaveSub").textContent = "";
+
+  /* 4. 총 S지급액 */
+  $("kSPaid").textContent = fmtW(totalSPaid);
+  $("kSPaidSub").textContent = "";
+
+  /* 5. 내 순수익 */
+  $("kMyProfit").textContent = fmtW(cur.myNetProfit);
+  $("kMyProfit").className = "value " + (cur.myNetProfit >= 0 ? "green" : "red");
+  $("kMyProfitSub").textContent = cur.dealCount + "건";
+  $("kMyProfitDelta").innerHTML = prev ? renderDelta(cur.myNetProfit, prev.myNetProfit, false) : '<span class="delta neutral">\u2014</span>';
+
+  /* 6. 미입금 잔액 */
   $("kReceivable").textContent = fmtW(cur.receivableAmount);
+  var receivableHighlight = cur.receivableAmount > 0;
+  $("kReceivable").className = "value " + (receivableHighlight ? "red" : "amber");
   $("kReceivableSub").textContent = cur.receivableCount + "건 대기";
-  $("kReceivableDelta").innerHTML = prev ? renderDelta(cur.receivableAmount, prev.receivableAmount, true) : '<span class="delta neutral">\u2014</span>';
 
   /* -- 보정 필요 건수 (date_inferred) 표시 -- */
   var inferredCount = cur.deals.filter(function(d){ return d.date_inferred === true; }).length;
@@ -811,13 +823,12 @@ function render(){
     if(currentTypeFilter === "inferred") currentTypeFilter = "all";
   }
 
-  /* -- 유형 필터 적용 (v2.9c) -- */
+  /* -- v3.0: 유형 필터 적용 (TE.classifyTrade 사용) -- */
   var filteredDeals = cur.deals;
   if(currentTypeFilter !== "all"){
     filteredDeals = cur.deals.filter(function(d){
       if(currentTypeFilter === "inferred") return d.date_inferred === true;
-      if(d.deal_owner === "friend") return false; /* 지인은 유형필터에서 제외 */
-      return classifyTrade(d) === currentTypeFilter;
+      return TE.classifyTrade(d) === currentTypeFilter;
     });
   }
 
@@ -897,10 +908,9 @@ $("btnCsv").addEventListener("click", function(){
     return (b.deal_date||b.quote_at||b.created_at||"").localeCompare(a.deal_date||a.quote_at||a.created_at||"");
   });
 
-  /* 확장 CSV 헤더 (v2.9c) */
-  var rows = ["거래일,거래처,품목,거래유형,채널,매출,품목원가,부대비용,총원가,SAVE금액,리베이트율,지급수수료,배분대상,내최종몫,상태,소유자"];
+  /* v3.0: CSV 헤더 (소유자 컬럼 제거) */
+  var rows = ["거래일,거래처,품목,거래유형,채널,매출,품목원가,부대비용,총원가,SAVE금액,리베이트율,지급수수료,배분대상,내최종몫,상태"];
   deals.forEach(function(d){
-    /* v2.9c: deal_date 우선 */
     var dt = d.deal_date || (d.quote_at || d.created_at || "").substring(0,10);
     var calc = d._calc || TE.calcTrade(d);
     var isChannel = d.trade_type === "channel";
@@ -909,24 +919,18 @@ $("btnCsv").addEventListener("click", function(){
     var rates = d.rates || {};
     var settlement = d.settlement || {};
     var rebateRate = isChannel ? n(rates.rebate_rate) : "";
-    var profit = d.deal_owner === "friend" ? "" : calc.final_my_amount;
     var dispName = d._display_name || TE.itemDisplayName(d);
     var status = d.payment_at ? "입금완료" : d.invoice_at ? "계산서" : d.delivery_note_at ? "명세서" : d.order_at ? "발주" : "견적";
-    var owner = d.deal_owner === "friend" ? "지인" : "내거래";
-    /* 거래유형 분류 */
-    var typeLabel;
-    if(d.deal_owner === "friend") typeLabel = "지인";
-    else if(isChannel) typeLabel = "관리업체";
-    else if(n(rates.S_rate)>0 || n(rates.save_rate)>0) typeLabel = "직접-정산";
-    else typeLabel = "직접-단독";
-    /* SAVE금액, 배분대상 */
+    /* v3.0: classifyTrade으로 유형 결정 */
+    var tc = TE.classifyTrade(d);
+    var typeLabel = tc === "channel" ? "관리업체" : (tc === "settle" ? "직접-정산" : "직접-단독");
     var saveAmt = isChannel ? "" : (calc.save_amount || 0);
     var distributable = calc.distributable || 0;
 
     rows.push([dt, d.partner_name_snapshot||"", dispName, typeLabel, chName,
       calc.total_supply, calc.item_cost_total, calc.extra_cost_total, calc.total_cost,
-      saveAmt, rebateRate, n(settlement.payout_fee), distributable, profit,
-      status, owner].join(","));
+      saveAmt, rebateRate, n(settlement.payout_fee), distributable, calc.final_my_amount,
+      status].join(","));
   });
 
   var blob = new Blob(["\ufeff"+rows.join("\n")], {type:"text/csv;charset=utf-8"});
@@ -961,10 +965,21 @@ document.querySelectorAll(".filter-bar:not(#typeFilterBar) .fbtn").forEach(funct
     currentRange = btn.dataset.range;
 
     var isCustom = currentRange === "custom";
+    var isPickMonth = currentRange === "pickMonth";
     $("dateFrom").style.display = isCustom ? "inline-block" : "none";
     $("dateSep").style.display = isCustom ? "inline" : "none";
     $("dateTo").style.display = isCustom ? "inline-block" : "none";
+    /* v3.0: YYYY-MM 월 선택기 */
+    $("monthPicker").style.display = isPickMonth ? "inline-block" : "none";
 
+    if(isPickMonth){
+      if(!$("monthPicker").value){
+        var now = new Date();
+        $("monthPicker").value = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0");
+      }
+      /* 월 선택 → from/to 자동 계산 */
+      _applyMonthPicker();
+    }
     if(isCustom){
       if(!$("dateFrom").value) $("dateFrom").value = monthStart();
       if(!$("dateTo").value) $("dateTo").value = todayStr();
@@ -972,9 +987,25 @@ document.querySelectorAll(".filter-bar:not(#typeFilterBar) .fbtn").forEach(funct
       customTo = $("dateTo").value;
     }
 
-    _expandedId = null; /* 기간 전환 시 확장 초기화 */
+    _expandedId = null;
     render();
   });
+});
+
+/* v3.0: 월 선택기 change 이벤트 */
+function _applyMonthPicker(){
+  var val = $("monthPicker").value; /* "YYYY-MM" */
+  if(!val) return;
+  var parts = val.split("-");
+  var y = parseInt(parts[0]), m = parseInt(parts[1]);
+  var lastDay = new Date(y, m, 0).getDate();
+  customFrom = y + "-" + String(m).padStart(2,"0") + "-01";
+  customTo = y + "-" + String(m).padStart(2,"0") + "-" + String(lastDay).padStart(2,"0");
+}
+$("monthPicker").addEventListener("change", function(){
+  _applyMonthPicker();
+  _expandedId = null;
+  render();
 });
 
 $("dateFrom").addEventListener("change", function(e){ customFrom = e.target.value; _expandedId = null; render(); });

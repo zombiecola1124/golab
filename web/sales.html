@@ -1500,11 +1500,11 @@ function render_deals(){
     if(d.payment_at){ stLabel = "\uc785\uae08 (" + d.payment_at.substring(5) + ")"; stClass = "paid"; }
     else if(d.invoice_at){ stLabel = "\ubbf8\uc785\uae08"; stClass = "unpaid"; }
     else { stLabel = "\uc9c4\ud589\uc911"; stClass = ""; }
-    var ownerTag = d.deal_owner === "friend" ? '<span style="color:#7c3aed;font-size:10px" title="\uc9c0\uc778 \uac70\ub798">\uD83E\uDD1D</span> ' : '';
+    /* v3.0: ownerTag 제거 */
     var tr = document.createElement("tr");
     tr.innerHTML =
       '<td class="muted">' + esc(dt) + '</td>' +
-      '<td><b>' + ownerTag + esc(d.partner_name_snapshot || "") + '</b></td>' +
+      '<td><b>' + esc(d.partner_name_snapshot || "") + '</b></td>' +
       '<td class="muted">-</td><td class="muted">-</td>' +
       '<td>' + esc(d.item_name || "") + '</td>' +
       '<td class="num">' + (Number(d.qty)||0).toLocaleString() + '</td>' +
