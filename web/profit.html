@@ -97,10 +97,24 @@
     .ledger-table tbody tr[data-toggle]{cursor:pointer;transition:background .1s}
     .ledger-table tbody tr[data-toggle]:hover{background:rgba(37,99,235,.03)}
 
-    /* -- 그룹 헤더 행 -- */
-    .group-header td{background:var(--chip);padding:10px 12px!important;font-size:12px;font-weight:600;border-bottom:1px solid var(--border);color:var(--text);letter-spacing:-.2px}
-    .group-dot{display:inline-block;width:8px;height:8px;border-radius:50%;margin-right:8px;vertical-align:middle}
-    .group-header .group-summary{font-weight:400;color:var(--muted);font-size:11px;margin-left:6px}
+    /* -- v3.2: 검색 입력 -- */
+    .search-input{padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;font-family:inherit;outline:none;min-width:160px;flex:0 1 200px;transition:border-color .15s}
+    .search-input:focus{border-color:var(--primary)}
+    .search-input::placeholder{color:var(--muted);font-size:11px}
+
+    /* -- v3.2: 미입금 토글 -- */
+    .unpaid-toggle.active{color:#b45309;background:rgba(217,119,6,.1);border-color:rgba(217,119,6,.3)}
+
+    /* -- v3.2: 정렬 구분/라벨/버튼 -- */
+    .sort-sep{color:var(--border);margin:0 4px;font-size:11px}
+    .sort-label{font-size:10px;color:var(--muted);font-weight:600}
+    .sort-btn.active{color:var(--primary);background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3)}
+
+    /* -- v3.2: 정렬 화살표 (thead) -- */
+    .sortable{cursor:pointer;user-select:none;transition:color .15s}
+    .sortable:hover{color:var(--primary)}
+    .sort-arrow{font-size:9px;color:var(--primary);margin-left:2px;opacity:0;transition:opacity .15s}
+    .sort-arrow.active{opacity:1}
 
     /* -- 확장 상세 행 -- */
     .expand-row td{background:rgba(8,145,178,.02);padding:16px 20px!important;border-bottom:2px solid var(--line)}
@@ -211,6 +225,18 @@
     <button class="fbtn" data-type="settle">정산</button>
     <button class="fbtn" data-type="solo">단독</button>
     <button class="fbtn" data-type="inferred" id="btnInferred" style="display:none">🔸 보정 필요 <span id="inferredCount" style="font-weight:800"></span></button>
+  </div>
+
+  <!-- v3.2: 검색 + 미입금 필터 + 정렬 -->
+  <div class="filter-bar" id="searchSortBar" style="gap:8px;align-items:center;flex-wrap:wrap">
+    <input type="text" class="search-input" id="profitSearch" placeholder="거래처명 검색..." />
+    <button class="fbtn unpaid-toggle" id="btnUnpaidOnly">📋 미입금만</button>
+    <span class="sort-sep">|</span>
+    <span class="sort-label">정렬:</span>
+    <button class="fbtn sort-btn active" data-sort="date">거래일 ↓</button>
+    <button class="fbtn sort-btn" data-sort="revenue">매출</button>
+    <button class="fbtn sort-btn" data-sort="myProfit">내몫</button>
+    <button class="fbtn sort-btn" data-sort="unpaid">미입금 우선</button>
   </div>
 
   <!-- v3.0: 6셀 월간 합계 바 -->
