@@ -70,10 +70,11 @@
     .type-strip-cell .ts-line .ts-val{font-weight:700;font-variant-numeric:tabular-nums}
 
     /* -- 유형 배지 -- */
-    .type-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap}
+    .type-badge{display:inline-flex;align-items:center;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap;max-width:180px}
     .type-badge.solo{background:rgba(22,163,74,.08);color:#15803d}
     .type-badge.settle{background:rgba(37,99,235,.08);color:#1d4ed8}
     .type-badge.channel{background:rgba(8,145,178,.08);color:#0e7490}
+    .type-badge .ch-name{font-weight:400;opacity:.65;font-size:.9em;overflow:hidden;text-overflow:ellipsis;max-width:90px;display:inline-block;vertical-align:bottom}
 
     /* -- 원장 테이블 -- */
     .ledger-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
@@ -669,15 +670,16 @@ function renderGroupedTable(groups, thisYear){
       var calc = d._calc || TE.calcTrade(d);
       var dispName = d._display_name || TE.itemDisplayName(d);
 
-      /* 유형 배지 */
+      /* v3.0: 유형 배지 — 관리업체는 실명 표시 */
       var typeBadge;
       if(key === "channel"){
         var ch = CM ? CM.getById(d.channel_id) : null;
-        typeBadge = '<span class="type-badge channel">'+ esc(ch ? ch.code : "?") +'</span>';
+        var chName = ch ? ch.name : "알 수 없음";
+        typeBadge = '<span class="type-badge channel">관리업체 (<span class="ch-name" title="'+esc(chName)+'">'+esc(chName)+'</span>)</span>';
       } else if(key === "settle"){
-        typeBadge = '<span class="type-badge settle">정산</span>';
+        typeBadge = '<span class="type-badge settle">직접-정산</span>';
       } else {
-        typeBadge = '<span class="type-badge solo">단독</span>';
+        typeBadge = '<span class="type-badge solo">직접-단독</span>';
       }
 
       /* 내 최종 몫 */
