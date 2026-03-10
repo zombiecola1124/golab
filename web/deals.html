@@ -303,7 +303,7 @@
             <label>S 실제 지급액</label>
             <div style="display:flex;gap:4px;align-items:center">
               <input id="inActualS_direct" type="number" step="1" value="0" style="flex:1" />
-              <button class="btn-apply-est" id="btnApplyEst_direct" title="예상 S몫을 복사">예상 몫 적용</button>
+              <button class="btn-apply-est" id="btnApplyEst_direct" title="예상값을 다시 반영합니다">예상값 다시 넣기</button>
             </div>
           </div>
         </div>
@@ -437,6 +437,7 @@ var CM = GoLabChannelMaster;
 var editingId = null;
 var _expandedId = null;
 var _restoreId = null; /* v2.9: 현재 리플레이 중인 거래 ID */
+var _sManuallyEdited = false; /* v3.0: S 실제 지급액 수동 편집 플래그 */
 
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
@@ -761,6 +762,10 @@ function _buildTempTrade() {
 function updateCockpit(savedTrade) {
   /* Event 객체가 인자로 들어올 수 있으므로 trade_type 존재 여부로 판별 */
   var isReplay = !!(savedTrade && savedTrade.trade_type);
+
+  /* v3.0: 정산형 자동 S지급액 반영 (라이브 모드, _buildTempTrade 전에 실행) */
+  if (!isReplay) _autoSyncSettleS();
+
   var trade = isReplay ? savedTrade : _buildTempTrade();
   var c = TE.calcTrade(trade);
   var isChannel = trade.trade_type === "channel";
@@ -880,19 +885,36 @@ function _cr(label, value) {
   return '<div class="cockpit-row"><span class="lbl">' + label + '</span><span class="val">' + value + '</span></div>';
 }
 
-/* 비율 입력 변경 시 조종석 업데이트 */
-["inSaveRate","inSRate","inMyRate","inActualS_direct",
+/* 비율 입력 변경 시 조종석 업데이트 + 자동 S지급액 반영 */
+["inSaveRate","inSRate","inMyRate",
  "inRebateRate","inPayoutFee","inSRate_ch","inMyRate_ch","inActualS_ch"].forEach(function(id) {
   $(id).addEventListener("input", updateCockpit);
 });
 
-/* [예상 몫 적용] 버튼 */
+/* v3.0: S 실제 지급액(직접-정산) 수동 편집 감지 */
+$("inActualS_direct").addEventListener("input", function() {
+  _sManuallyEdited = true;
+  updateCockpit();
+});
+
+/* v3.0: 정산형 자동 S지급액 반영 (수동 편집 전까지) */
+function _autoSyncSettleS() {
+  if (_sManuallyEdited) return;
+  if ($("inTradeType").value !== "settle") return;
+  var temp = _buildTempTrade();
+  var c = TE.calcTrade(temp);
+  $("inActualS_direct").value = c.expected_S_amount;
+}
+
+/* [예상값 다시 넣기] 버튼 (직접-정산) */
 $("btnApplyEst_direct").addEventListener("click", function() {
+  _sManuallyEdited = false;
   var temp = _buildTempTrade();
   var c = TE.calcTrade(temp);
   $("inActualS_direct").value = c.expected_S_amount;
   updateCockpit();
 });
+/* 관리업체 [예상 몫 적용] 버튼 */
 $("btnApplyEst_ch").addEventListener("click", function() {
   var temp = _buildTempTrade();
   var c = TE.calcTrade(temp);
@@ -1274,6 +1296,8 @@ function startEdit(tid) {
   var t = TE.getById(tid);
   if (!t) return;
   editingId = t.id;
+  /* v3.0: 기존 거래 편집 시 S지급액이 이미 입력된 상태 → 수동 편집 모드 */
+  _sManuallyEdited = true;
 
   if (t.partner_id) acPartner.setValue(t.partner_id);
   /* v3.0: trade_type + rates로 UI 셀렉터 결정 */
@@ -1358,6 +1382,7 @@ function deleteTrade(tid) {
 
 function clearForm() {
   acPartner.clear();
+  _sManuallyEdited = false; /* v3.0: S지급액 자동 반영 모드 복원 */
   /* v3.0: 기본 유형 = solo */
   $("inTradeType").value = "solo";
   $("inTradeType").dispatchEvent(new Event("change"));
