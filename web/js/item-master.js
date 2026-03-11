@@ -1,14 +1,23 @@
 /**
- * GoLab v2.0 — 품목 마스터 + 자동완성 공유 모듈
+ * GoLab v2.0+ — 품목 마스터 + 자동완성 공유 모듈
  *
  * 사용법: <script src="js/item-master.js"></script>
  *         GoLabItemMaster.loadAll()
  *         GoLabItemMaster.createAutocomplete(container, options)
  *         GoLabItemMaster.migrateFromExisting()
+ *         GoLabItemMaster.calcItemStats(itemId)
+ *         GoLabItemMaster.extractUnlinkedItems()
+ *         GoLabItemMaster.linkItemToTrades(itemId, namePattern)
  *
  * localStorage 키:
  *   golab_item_master_v1  — 품목 마스터 배열
  *   golab_item_master_audit — 감사 로그
+ *
+ * Phase 1 확장 (v3.6):
+ *   - 필드 추가: aliases[], unit, updated_at
+ *   - calcItemStats(): 품목별 거래 통계 (매입처/매출처 집계)
+ *   - extractUnlinkedItems(): 미연결 거래 품목 추출
+ *   - linkItemToTrades(): 미연결 거래에 item_id 일괄 연결
  */
 window.GoLabItemMaster = (function () {
   "use strict";
@@ -50,7 +59,7 @@ window.GoLabItemMaster = (function () {
     return loadAll().find(x => x.item_id === itemId) || null;
   }
 
-  /** 이름으로 검색 (부분 매칭, 대소문자 무시) */
+  /** 이름으로 검색 (부분 매칭, 대소문자 무시, aliases 포함) */
   function search(query) {
     if (!query || !query.trim()) return loadAll();
     const q = query.trim().toLowerCase();
@@ -62,15 +71,18 @@ window.GoLabItemMaster = (function () {
       const name = (item.item_name || "").toLowerCase();
       const spec = (item.spec || "").toLowerCase();
       const supplier = (item.supplier || "").toLowerCase();
-      const combined = name + " " + spec + " " + supplier;
+      /* v3.6: aliases 배열도 검색 대상에 포함 */
+      const aliasStr = (item.aliases || []).join(" ").toLowerCase();
+      const combined = name + " " + spec + " " + supplier + " " + aliasStr;
       if (name.startsWith(q)) prefix.push(item);
       else if (combined.includes(q)) contains.push(item);
     });
     return prefix.concat(contains);
   }
 
-  /** 품목 생성 */
+  /** 품목 생성 (v3.6: aliases, unit, updated_at 추가) */
   function create(fields) {
+    const now = new Date().toISOString();
     const item = {
       item_id:    crypto.randomUUID(),
       item_name:  (fields.item_name || "").trim(),
@@ -78,7 +90,10 @@ window.GoLabItemMaster = (function () {
       spec:       (fields.spec || "").trim(),
       supplier:   (fields.supplier || "").trim(),
       note:       (fields.note || "").trim(),
-      created_at: new Date().toISOString()
+      aliases:    Array.isArray(fields.aliases) ? fields.aliases : [],
+      unit:       (fields.unit || "").trim(),
+      created_at: now,
+      updated_at: now
     };
     if (!item.item_name) throw new Error("품목명은 필수입니다.");
     const all = loadAll();
@@ -88,7 +103,7 @@ window.GoLabItemMaster = (function () {
     return item;
   }
 
-  /** 품목 수정 */
+  /** 품목 수정 (v3.6: aliases, unit, updated_at 추가) */
   function update(itemId, fields) {
     const all = loadAll();
     const idx = all.findIndex(x => x.item_id === itemId);
@@ -99,6 +114,9 @@ window.GoLabItemMaster = (function () {
     if (fields.spec      !== undefined) all[idx].spec      = fields.spec.trim();
     if (fields.supplier  !== undefined) all[idx].supplier  = fields.supplier.trim();
     if (fields.note      !== undefined) all[idx].note      = fields.note.trim();
+    if (fields.aliases   !== undefined) all[idx].aliases   = Array.isArray(fields.aliases) ? fields.aliases : [];
+    if (fields.unit      !== undefined) all[idx].unit      = (fields.unit || "").trim();
+    all[idx].updated_at = new Date().toISOString();
     _save(all);
     emitAudit("UPDATE", { item_id: itemId, before, after: { ...all[idx] } });
     return all[idx];
@@ -725,6 +743,281 @@ window.GoLabItemMaster = (function () {
   }
 
   /* ══════════════════════════════════════
+     v3.6: 필드 자동 보강 (_upgradeRecords)
+     ══════════════════════════════════════ */
+
+  /** 기존 레코드에 aliases/unit/updated_at 필드 자동 추가 */
+  function _upgradeRecords() {
+    const all = loadAll();
+    let changed = false;
+    all.forEach(function(item) {
+      if (!Array.isArray(item.aliases)) { item.aliases = []; changed = true; }
+      if (item.unit === undefined)      { item.unit = ""; changed = true; }
+      if (!item.updated_at)             { item.updated_at = item.created_at || ""; changed = true; }
+    });
+    if (changed) _save(all);
+  }
+
+  /* ══════════════════════════════════════
+     v3.6: 품목별 거래 통계 (calcItemStats)
+     ══════════════════════════════════════ */
+
+  /** 거래처 타입 조회 헬퍼 */
+  function _lookupPartnerType(partnerId) {
+    if (!partnerId) return "매출처";
+    try {
+      if (window.GoLabPartnerMaster) {
+        const all = GoLabPartnerMaster.loadAll();
+        const p = all.find(function(x) { return x.partner_id === partnerId; });
+        if (p) return p.type || "매출처";
+      }
+    } catch(e) { /* silent */ }
+    return "매출처";
+  }
+
+  /**
+   * 품목별 거래 통계 집계
+   * golab_trade_v2를 스캔하여 해당 item_id 관련 거래를 분석
+   * @param {string} itemId
+   * @returns {Object} { buyers:[], sellers:[], recentTrades:[], totalTxCount,
+   *                     firstDate, lastDate, totalRevenue, totalCost, totalProfit,
+   *                     totalMyShare, totalSPaid }
+   */
+  function calcItemStats(itemId) {
+    const empty = {
+      buyers: [], sellers: [], recentTrades: [], totalTxCount: 0,
+      firstDate: "", lastDate: "", totalRevenue: 0, totalCost: 0,
+      totalProfit: 0, totalMyShare: 0, totalSPaid: 0
+    };
+    if (!itemId) return empty;
+
+    let trades = [];
+    try { trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
+
+    /* 거래처별 집계 맵 */
+    const buyerMap = {};   // partner_id → { name, lastDate, lastPrice, totalQty, txCount }
+    const sellerMap = {};  // partner_id → { name, lastDate, lastPrice, totalQty, txCount }
+    const allMatched = []; // 매칭된 거래 (최근 이력용)
+
+    let totalRevenue = 0, totalCost = 0, totalMyShare = 0, totalSPaid = 0;
+    let firstDate = "", lastDate = "";
+
+    trades.forEach(function(deal) {
+      if (deal.deal_status === "cancelled") return;
+      const items = deal.items || [];
+      /* 해당 품목이 포함된 거래만 */
+      const matched = items.filter(function(it) { return it.item_id === itemId; });
+      if (matched.length === 0) return;
+
+      const dt = deal.deal_date || (deal.quote_at || deal.created_at || "").substring(0, 10);
+      const partnerName = deal.partner_name_snapshot || deal.partner_id || "";
+      const pType = _lookupPartnerType(deal.partner_id);
+
+      /* 날짜 범위 추적 */
+      if (!firstDate || dt < firstDate) firstDate = dt;
+      if (!lastDate || dt > lastDate) lastDate = dt;
+
+      /* 거래별 계산 (trade-engine 사용 가능하면 활용) */
+      let calc = deal._calc;
+      if (!calc && window.TE && TE.calcTrade) {
+        try { calc = TE.calcTrade(deal); } catch(e) {}
+      }
+
+      /* 매칭 품목의 수량/금액 집계 */
+      matched.forEach(function(it) {
+        const qty = Number(it.qty) || 0;
+        const unitPrice = Number(it.unit_price) || 0;
+        const cost = Number(it.cost) || 0;
+        const supplyAmt = Number(it.supply_amount) || (qty * unitPrice);
+
+        /* 거래처 분류: 매입처 → 원재료를 사는 곳, 매출처 → 제품을 파는 곳 */
+        if (pType === "매입처") {
+          if (!buyerMap[deal.partner_id]) {
+            buyerMap[deal.partner_id] = { partner_id: deal.partner_id, name: partnerName, lastDate: "", lastPrice: 0, totalQty: 0, txCount: 0 };
+          }
+          const b = buyerMap[deal.partner_id];
+          b.txCount++;
+          b.totalQty += qty;
+          if (dt > b.lastDate) { b.lastDate = dt; b.lastPrice = unitPrice || cost; }
+        } else {
+          /* 매출처 또는 겸용 → sellers */
+          if (!sellerMap[deal.partner_id]) {
+            sellerMap[deal.partner_id] = { partner_id: deal.partner_id, name: partnerName, lastDate: "", lastPrice: 0, totalQty: 0, txCount: 0 };
+          }
+          const s = sellerMap[deal.partner_id];
+          s.txCount++;
+          s.totalQty += qty;
+          if (dt > s.lastDate) { s.lastDate = dt; s.lastPrice = unitPrice; }
+        }
+
+        totalRevenue += supplyAmt;
+        totalCost += cost * qty;
+      });
+
+      /* 거래 단위 집계 (내 몫, S 지급액) — 품목 비율이 아닌 거래 전체 기준 */
+      if (calc) {
+        totalMyShare += Number(calc.final_my_amount) || 0;
+        const sAmt = Number((deal.settlement || {}).actual_S_amount);
+        totalSPaid += (sAmt > 0) ? sAmt : (Number(calc.expected_S_amount) || 0);
+      }
+
+      /* 최근 거래 이력용 */
+      allMatched.push({
+        deal_id: deal.id,
+        date: dt,
+        partner_name: partnerName,
+        partner_type: pType,
+        items: matched,
+        deal_status: deal.deal_status,
+        payment_at: deal.payment_at,
+        supply_amount: Number(deal.total_supply) || 0
+      });
+    });
+
+    /* 정렬: 최신순 */
+    allMatched.sort(function(a, b) { return (b.date || "").localeCompare(a.date || ""); });
+
+    /* 맵 → 배열 (txCount 내림차순) */
+    const buyers = Object.values(buyerMap).sort(function(a, b) { return b.txCount - a.txCount; });
+    const sellers = Object.values(sellerMap).sort(function(a, b) { return b.txCount - a.txCount; });
+
+    return {
+      buyers: buyers,
+      sellers: sellers,
+      recentTrades: allMatched.slice(0, 10),
+      totalTxCount: allMatched.length,
+      firstDate: firstDate,
+      lastDate: lastDate,
+      totalRevenue: totalRevenue,
+      totalCost: totalCost,
+      totalProfit: totalRevenue - totalCost,
+      totalMyShare: totalMyShare,
+      totalSPaid: totalSPaid
+    };
+  }
+
+  /* ══════════════════════════════════════
+     v3.6: 품목ID + 텍스트 기반 이중 조회
+     ══════════════════════════════════════ */
+
+  /**
+   * item_id 기반 거래 조회
+   * @param {string} itemId
+   * @returns {Array} 매칭된 deal 배열
+   */
+  function getDealsByItem(itemId) {
+    if (!itemId) return [];
+    let trades = [];
+    try { trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
+    return trades.filter(function(deal) {
+      if (deal.deal_status === "cancelled") return false;
+      return (deal.items || []).some(function(it) { return it.item_id === itemId; });
+    });
+  }
+
+  /**
+   * 텍스트 기반 거래 조회 (item_id 미연결 거래 포함)
+   * aliases 포함 매칭
+   * @param {string} itemName - 품목명 (또는 별칭)
+   * @returns {Array} 매칭된 deal 배열
+   */
+  function getDealsByText(itemName) {
+    if (!itemName) return [];
+    const q = itemName.trim().toLowerCase();
+    let trades = [];
+    try { trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
+    return trades.filter(function(deal) {
+      if (deal.deal_status === "cancelled") return false;
+      return (deal.items || []).some(function(it) {
+        return (it.name || "").trim().toLowerCase() === q;
+      });
+    });
+  }
+
+  /* ══════════════════════════════════════
+     v3.6: 미연결 거래 품목 추출/연결
+     ══════════════════════════════════════ */
+
+  /**
+   * golab_trade_v2에서 item_id가 null인 거래 품목 추출
+   * name 기준 그룹화 + 마스터에서 유사 후보 검색
+   * @returns {Array} [{ name, count, dealIds:[], candidates:[] }]
+   */
+  function extractUnlinkedItems() {
+    let trades = [];
+    try { trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
+
+    const groups = {}; // nameKey → { name, count, dealIds:Set }
+    trades.forEach(function(deal) {
+      if (deal.deal_status === "cancelled") return;
+      (deal.items || []).forEach(function(it) {
+        if (it.item_id) return; // 이미 연결됨
+        const name = (it.name || "").trim();
+        if (!name) return;
+        const key = name.toLowerCase();
+        if (!groups[key]) {
+          groups[key] = { name: name, count: 0, dealIds: [] };
+        }
+        groups[key].count++;
+        if (groups[key].dealIds.indexOf(deal.id) < 0) {
+          groups[key].dealIds.push(deal.id);
+        }
+      });
+    });
+
+    /* 각 그룹에 마스터 후보 추가 + count 내림차순 정렬 */
+    const result = Object.values(groups).map(function(g) {
+      g.candidates = search(g.name);
+      return g;
+    });
+    result.sort(function(a, b) { return b.count - a.count; });
+    return result;
+  }
+
+  /**
+   * 미연결 거래에 item_id 일괄 연결 (사용자 확인 후 호출)
+   * @param {string} itemId - 연결할 품목 마스터 ID
+   * @param {string} namePattern - 매칭할 품목명 (대소문자 무시, 정확 매칭)
+   * @returns {{ linked: number }} 연결된 건수
+   */
+  function linkItemToTrades(itemId, namePattern) {
+    if (!itemId || !namePattern) return { linked: 0 };
+    const pattern = namePattern.trim().toLowerCase();
+
+    let trades = [];
+    try { trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
+
+    let linked = 0;
+    trades.forEach(function(deal) {
+      if (deal.deal_status === "cancelled") return;
+      let dealChanged = false;
+      (deal.items || []).forEach(function(it) {
+        if (it.item_id) return; // 이미 연결됨
+        if ((it.name || "").trim().toLowerCase() === pattern) {
+          it.item_id = itemId;
+          linked++;
+          dealChanged = true;
+        }
+      });
+      if (dealChanged) {
+        deal.updated_at = new Date().toISOString();
+      }
+    });
+
+    if (linked > 0) {
+      localStorage.setItem("golab_trade_v2", JSON.stringify(trades));
+      emitAudit("LINK_TRADES", { item_id: itemId, namePattern: namePattern, linked: linked });
+    }
+
+    return { linked: linked };
+  }
+
+  /* ══════════════════════════════════════
+     v3.6: 필드 자동 보강 실행
+     ══════════════════════════════════════ */
+  _upgradeRecords();
+
+  /* ══════════════════════════════════════
      Public API
      ══════════════════════════════════════ */
 
@@ -737,7 +1030,13 @@ window.GoLabItemMaster = (function () {
     createAutocomplete,
     lookupLastDeals,
     renderLastDealCard,
-    migrateFromExisting
+    migrateFromExisting,
+    /* v3.6 신규 */
+    calcItemStats,
+    getDealsByItem,
+    getDealsByText,
+    extractUnlinkedItems,
+    linkItemToTrades
   };
 
 })();
