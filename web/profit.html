@@ -35,6 +35,7 @@
     .filter-bar{display:flex;align-items:center;gap:8px;margin-bottom:20px;flex-wrap:wrap}
     .fbtn{padding:7px 14px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
     .fbtn:hover{color:var(--text);border-color:#cbd5e1}
+    .fbtn:active{transform:scale(.97)}
     .fbtn.active{color:var(--primary);background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3)}
     .date-input{padding:6px 10px;border-radius:8px;border:1px solid var(--border);font-size:11px;font-family:inherit;color:var(--text);background:var(--chip);outline:none}
     .date-input:focus{border-color:var(--primary)}
@@ -83,6 +84,7 @@
     .ledger-header .badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700;background:#dbeafe;color:var(--primary)}
     .ledger-header .csv-btn{padding:5px 12px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:10px;font-weight:600;cursor:pointer;transition:all .15s}
     .ledger-header .csv-btn:hover{color:var(--text);border-color:#94a3b8}
+    .ledger-header .csv-btn:active{transform:scale(.97)}
 
     .ledger-table{width:100%;border-collapse:collapse;font-size:12px}
     /* v3.0: 컴팩트 원장 — 행간 축소 */
@@ -95,7 +97,7 @@
     .ledger-table tbody td.name{font-weight:600;max-width:140px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
     .ledger-table tbody td.date{color:var(--muted);white-space:nowrap;font-size:11px}
     .ledger-table tbody tr[data-toggle]{cursor:pointer;transition:background .1s}
-    .ledger-table tbody tr[data-toggle]:hover{background:rgba(37,99,235,.03)}
+    .ledger-table tbody tr[data-toggle]:hover{background:rgba(37,99,235,.06)}
 
     /* -- v3.2: 검색 입력 -- */
     .search-input{padding:7px 12px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;font-family:inherit;outline:none;min-width:160px;flex:0 1 200px;transition:border-color .15s}
@@ -123,6 +125,7 @@
     .expand-section-title{font-size:11px;font-weight:700;color:var(--deal);margin-bottom:8px;display:flex;align-items:center;gap:6px}
     .expand-btn{padding:2px 10px;border-radius:6px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:10px;cursor:pointer;transition:all .1s;font-weight:600}
     .expand-btn:hover{color:var(--text);border-color:#94a3b8}
+    .expand-btn:active{transform:scale(.97)}
 
     /* 계산식 한 줄 요약 */
     .cockpit-formula{font-size:10px;color:var(--muted);background:var(--chip);border:1px solid var(--line);border-radius:6px;padding:6px 8px;line-height:1.6;word-break:keep-all}
@@ -171,6 +174,7 @@
     .view-tabs{display:flex;gap:4px;margin-bottom:16px}
     .vtab{padding:8px 18px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s}
     .vtab:hover{color:var(--text);border-color:#cbd5e1}
+    .vtab:active{transform:scale(.97)}
     .vtab.active{color:#fff;background:var(--primary);border-color:var(--primary)}
 
     /* -- v3.5: 섹션 비교 카드 -- */
@@ -184,6 +188,8 @@
 
     /* -- v3.5: 월별 요약 테이블 -- */
     .summary-table tbody td{font-variant-numeric:tabular-nums}
+    .summary-table tbody tr{transition:background .1s}
+    .summary-table tbody tr:hover{background:rgba(37,99,235,.06)}
 
     /* -- 빈 상태 -- */
     .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
@@ -387,6 +393,38 @@ var CM = window.GoLabChannelMaster;
 function n(v,fb){ if(fb===undefined) fb=0; var x=Number(v); return Number.isFinite(x)?x:fb; }
 function fmtW(v){ return "\u20a9"+Math.round(v).toLocaleString(); }
 function esc(s){ return (s||"").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
+
+/* -- v3.5a: KPI 카운트 애니메이션 (rAF 기반, 300ms ease-out) -- */
+var _kpiAnimMap = {};  /* el.id → rAF id (중복 방지) */
+function animateKPI(el, target, dur) {
+  if (!el) return;
+  if (!dur) dur = 300;
+  /* 현재 표시값 파싱 (₩1,230,000 → 1230000) */
+  var cur = parseInt((el.textContent || "0").replace(/[^\d\-]/g, ""), 10) || 0;
+  var tgt = Math.round(target);
+  /* 같은 값이면 스킵 */
+  if (cur === tgt) { el.textContent = fmtW(tgt); return; }
+  /* 기존 애니메이션 취소 */
+  if (_kpiAnimMap[el.id]) cancelAnimationFrame(_kpiAnimMap[el.id]);
+  var start = null;
+  var diff = tgt - cur;
+  function step(ts) {
+    if (!start) start = ts;
+    var elapsed = ts - start;
+    var progress = Math.min(elapsed / dur, 1);
+    /* ease-out cubic: 1 - (1-t)^3 */
+    var eased = 1 - Math.pow(1 - progress, 3);
+    var val = Math.round(cur + diff * eased);
+    el.textContent = fmtW(val);
+    if (progress < 1) {
+      _kpiAnimMap[el.id] = requestAnimationFrame(step);
+    } else {
+      el.textContent = fmtW(tgt); /* 정확한 최종값 보장 */
+      delete _kpiAnimMap[el.id];
+    }
+  }
+  _kpiAnimMap[el.id] = requestAnimationFrame(step);
+}
 
 /* -- 날짜 유틸 -- */
 function todayStr(){ return new Date().toISOString().substring(0,10); }
@@ -824,21 +862,21 @@ function renderSummary(cur) {
   });
   totProfit = totRevenue - totCost;
 
-  /* KPI 6카드 */
-  $("sKRevenue").textContent = fmtW(totRevenue);
+  /* KPI 6카드 (애니메이션 적용) */
+  animateKPI($("sKRevenue"), totRevenue);
   $("sKRevenueSub").textContent = deals.length + "건";
-  $("sKCost").textContent = fmtW(totCost);
+  animateKPI($("sKCost"), totCost);
   $("sKCostSub").textContent = "";
-  $("sKProfit").textContent = fmtW(totProfit);
   $("sKProfit").className = "value " + (totProfit >= 0 ? "green" : "red");
+  animateKPI($("sKProfit"), totProfit);
   $("sKProfitSub").textContent = "";
-  $("sKMyShare").textContent = fmtW(totMyShare);
   $("sKMyShare").className = "value " + (totMyShare >= 0 ? "green" : "red");
+  animateKPI($("sKMyShare"), totMyShare);
   $("sKMyShareSub").textContent = "";
-  $("sKSPaid").textContent = fmtW(totSPaid);
+  animateKPI($("sKSPaid"), totSPaid);
   $("sKSPaidSub").textContent = "";
-  $("sKReceivable").textContent = fmtW(totReceivable);
   $("sKReceivable").className = "value " + (totReceivable > 0 ? "red" : "amber");
+  animateKPI($("sKReceivable"), totReceivable);
   $("sKReceivableSub").textContent = receivableCount > 0 ? receivableCount + "건 대기" : "";
 
   /* 섹션 비교 */
@@ -1172,36 +1210,36 @@ function render(){
   /* Delta 표시 조건: 유형=전체 + 검색없음 + 미입금OFF → 전월비 표시 */
   var showDelta = (currentTypeFilter === "all" && !currentSearchQuery && !unpaidOnly);
 
-  /* 1. 총 매출 */
-  $("kRevenue").textContent = fmtW(vis.revenue);
+  /* 1. 총 매출 (애니메이션 적용) */
+  animateKPI($("kRevenue"), vis.revenue);
   $("kRevenueSub").textContent = vis.count + "건";
   $("kRevenueDelta").innerHTML = (showDelta && prev)
     ? renderDelta(vis.revenue, prev.totalRevenue, false)
     : '<span class="delta neutral">\u2014</span>';
 
   /* 2. 총 원가/리베이트 */
-  $("kCostRebate").textContent = fmtW(vis.costOrRebate);
+  animateKPI($("kCostRebate"), vis.costOrRebate);
   $("kCostRebateSub").textContent = "";
 
   /* 3. 총 SAVE */
-  $("kSave").textContent = fmtW(vis.save);
+  animateKPI($("kSave"), vis.save);
   $("kSaveSub").textContent = "";
 
   /* 4. 총 S지급액 */
-  $("kSPaid").textContent = fmtW(vis.sPaid);
+  animateKPI($("kSPaid"), vis.sPaid);
   $("kSPaidSub").textContent = "";
 
   /* 5. 내 순수익 */
-  $("kMyProfit").textContent = fmtW(vis.profit);
   $("kMyProfit").className = "value " + (vis.profit >= 0 ? "green" : "red");
+  animateKPI($("kMyProfit"), vis.profit);
   $("kMyProfitSub").textContent = vis.count + "건";
   $("kMyProfitDelta").innerHTML = (showDelta && prev)
     ? renderDelta(vis.profit, prev.myNetProfit, false)
     : '<span class="delta neutral">\u2014</span>';
 
   /* 6. 미입금 잔액 */
-  $("kReceivable").textContent = fmtW(vis.receivable);
   $("kReceivable").className = "value " + (vis.receivable > 0 ? "red" : "amber");
+  animateKPI($("kReceivable"), vis.receivable);
   $("kReceivableSub").textContent = vis.receivableCount + "건 대기";
 
   /* -- 유형별 소계 스트립 (항상 전체 기준) -- */
