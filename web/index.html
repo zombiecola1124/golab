@@ -78,12 +78,20 @@
     .addWrap{display:flex;justify-content:flex-end;align-items:stretch}
     .addWrap button{min-width:90px}
     .mini{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
-    .tableWrap{overflow:auto;border-radius:10px 10px 0 0;border:1px solid var(--line);border-bottom:none;margin-top:10px}
-    /* 스크롤 영역 하단 = 테이블 바로 아래 (border-radius 0, border-bottom은 table-tip이 이어받음) */
-    .table-tip{font-size:10px;color:#94a3b8;line-height:1.5;padding:8px 10px 10px;border:1px solid var(--line);border-top:none;border-radius:0 0 10px 10px;background:var(--card)}
-    /* scroll-sticky: 필요 시 tableWrap에 이 클래스를 추가하면 스크롤바가 뷰포트 하단에 고정 */
-    .scroll-sticky{overflow:visible}
-    .scroll-sticky .table-inner{overflow-x:auto;position:sticky;bottom:0;z-index:1}
+    /* v3.4b: 테이블 프레임 — 데이터 영역만 감싸는 보더 */
+    .table-frame{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:10px}
+    .table-inner{overflow-x:hidden}
+    /* 독립 스크롤 레일 — 테이블 프레임 바깥, 바로 아래 밀착 */
+    .scroll-rail{overflow-x:auto;margin-top:2px;margin-bottom:0}
+    .scroll-rail::-webkit-scrollbar{height:10px}
+    .scroll-rail::-webkit-scrollbar-track{background:#f1f5f9;border-radius:5px}
+    .scroll-rail::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:5px}
+    .scroll-rail::-webkit-scrollbar-thumb:hover{background:#94a3b8}
+    .scroll-spacer{height:1px}
+    /* TIP 안내문 */
+    .table-tip{font-size:10px;color:#94a3b8;line-height:1.5;padding:8px 10px 10px;border-radius:0 0 10px 10px;background:transparent}
+    /* scroll-sticky: 필요 시 .scroll-rail에 이 클래스를 추가 */
+    .scroll-sticky{position:sticky;bottom:0;z-index:1;background:var(--bg)}
     table{width:100%;border-collapse:collapse;min-width:980px;font-size:12px}
     th{background:#f8fafc;color:var(--muted);text-align:left;padding:12px;position:sticky;top:0;border-bottom:1px solid var(--line)}
     td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
@@ -190,24 +198,31 @@
       <div id="saveStatus" class="mini"></div>
       <div class="inv-main">
         <div class="table-col">
-          <div class="tableWrap">
-            <table>
-              <thead>
-                <tr>
-                  <th>품목명</th>
-                  <th>규격</th>
-                  <th>매입처</th>
-                  <th>매입단가</th>
-                  <th>수량</th>
-                  <th>최소수량</th>
-                  <th>재고총액</th>
-                  <th>상태</th>
-                  <th>비고</th>
-                  <th style="text-align:right">작업</th>
-                </tr>
-              </thead>
-              <tbody id="tbody"></tbody>
-            </table>
+          <!-- 테이블 프레임: 데이터 영역만 보더로 감싸고, 스크롤바는 바깥 -->
+          <div class="table-frame">
+            <div class="table-inner" id="tableInner">
+              <table>
+                <thead>
+                  <tr>
+                    <th>품목명</th>
+                    <th>규격</th>
+                    <th>매입처</th>
+                    <th>매입단가</th>
+                    <th>수량</th>
+                    <th>최소수량</th>
+                    <th>재고총액</th>
+                    <th>상태</th>
+                    <th>비고</th>
+                    <th style="text-align:right">작업</th>
+                  </tr>
+                </thead>
+                <tbody id="tbody"></tbody>
+              </table>
+            </div>
+          </div>
+          <!-- 독립 스크롤 레일 -->
+          <div class="scroll-rail" id="scrollRail">
+            <div class="scroll-spacer" id="scrollSpacer"></div>
           </div>
           <div class="table-tip">TIP: 수량/단가는 숫자만 입력하세요. "입고/원가"에서 전송된 품목은 매입단가가 <b>실단가(KRW)</b> 기준으로 자동 업데이트됩니다.</div>
         </div>
@@ -494,7 +509,25 @@
       };
     });
     updateRowSelection();
+    syncScrollRail();
   }
+
+  /* ── 독립 스크롤 레일 동기화 ── */
+  function syncScrollRail(){
+    var inner = $("tableInner");
+    var rail  = $("scrollRail");
+    var spacer = $("scrollSpacer");
+    if(!inner || !rail || !spacer) return;
+    var table = inner.querySelector("table");
+    if(!table) return;
+    /* 스페이서 너비 = 테이블 실제 너비 (min-width 포함) */
+    spacer.style.width = table.scrollWidth + "px";
+    /* 레일 스크롤 → 테이블 동기 */
+    rail.onscroll = function(){ inner.scrollLeft = rail.scrollLeft; };
+    /* 테이블 영역에서 직접 스크롤(터치 등)할 경우 역동기 */
+    inner.onscroll = function(){ rail.scrollLeft = inner.scrollLeft; };
+  }
+
   function upsert(){
     /* 품목 마스터에서 선택 필수 */
     const masterItemId = acName ? acName.getValue() : null;
@@ -765,6 +798,8 @@
     validateForm();
     // [CSV PATCH] 버튼 바인딩
     try{ $("btnCsv").onclick = exportCsvInv; }catch(e){}
+    /* 리사이즈 시 스크롤 레일 재동기화 */
+    window.addEventListener("resize", syncScrollRail);
   });
 </script>
 </body>
