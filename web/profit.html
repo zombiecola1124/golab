@@ -159,6 +159,14 @@
     .st.quote{background:#f1f5f9;color:#475569}
     /* v3.0: .st.friend 폐기 */
 
+    /* -- v3.4: 섹션 분리 -- */
+    .section-header-row td{padding:14px 10px 10px;font-weight:700;font-size:13px;border-bottom:2px solid var(--line);background:var(--bg)}
+    .section-header-row:first-child td{padding-top:10px}
+    .section-header-row .section-stats{font-weight:400;font-size:11px;color:var(--muted);margin-left:12px}
+    .section-header-row .section-stats b{color:var(--text);font-weight:600}
+    .section-header-row .section-stats .profit-pos{color:var(--accent);font-weight:700}
+    .section-header-row .section-stats .profit-neg{color:var(--warn);font-weight:700}
+
     /* -- 빈 상태 -- */
     .empty-state{text-align:center;padding:60px 20px;color:var(--muted)}
     .empty-state .icon{font-size:48px;margin-bottom:12px}
@@ -314,7 +322,7 @@
 </div>
 
 <script src="./js/channel-master.js?v=32"></script>
-<script src="./js/trade-engine.js?v=32"></script>
+<script src="./js/trade-engine.js?v=34"></script>
 <script>
 /* ======================================================
    GoLab Profit Ledger v3.0
@@ -646,6 +654,64 @@ function renderExpansion(t, calc){
   return html;
 }
 
+/* ══════════════════════════════════════════════════════
+   v3.4: 섹션 분류 — 대성금속 vs 기타
+   판별 기준: partner_name_snapshot에 SECTION_KEYWORD 포함 여부
+   일반화 시 이 블록만 교체 (partner_master 태그 기반)
+   ══════════════════════════════════════════════════════ */
+var SECTION_KEYWORD = "대성금속";
+
+var SECTIONS = [
+  { key: "daesung", label: "🏭 대성금속 관련 거래",          color: "var(--primary)" },
+  { key: "other",   label: "💼 기타 개인 사업 / 기타 수익",  color: "var(--muted)"   }
+];
+
+/* 거래 → 섹션키 (교체 가능 지점) */
+function classifySection(deal) {
+  return (deal.partner_name_snapshot || "").indexOf(SECTION_KEYWORD) >= 0
+    ? "daesung" : "other";
+}
+
+/* filteredDeals → { daesung: [...], other: [...] } */
+function splitBySection(deals) {
+  var map = {};
+  SECTIONS.forEach(function(s) { map[s.key] = []; });
+  deals.forEach(function(d) { map[classifySection(d)].push(d); });
+  return map;
+}
+
+/* 섹션별 소계 계산 */
+function calcSectionStats(deals) {
+  var count = deals.length, revenue = 0, cost = 0, profit = 0;
+  deals.forEach(function(d) {
+    var c = d._calc || TE.calcTrade(d);
+    revenue += c.total_supply;
+    cost += (d.trade_type === "channel") ? (c.rebate_amount || 0) : (c.total_cost || 0);
+    profit += c.final_my_amount;
+  });
+  return { count: count, revenue: revenue, cost: cost, profit: profit };
+}
+
+/* 섹션 헤더 행 HTML 반환 */
+function renderSectionHeader(section, stats) {
+  var profitClass = stats.profit >= 0 ? "profit-pos" : "profit-neg";
+  var html = '<tr class="section-header-row ' + section.key + '">';
+  html += '<td colspan="9" style="border-left:4px solid ' + section.color + '">';
+  html += '<span>' + section.label + '</span>';
+  if (stats.count > 0) {
+    html += '<span class="section-stats">';
+    html += '<b>' + stats.count + '</b>건';
+    html += ' · 매출 <b>' + fmtW(stats.revenue) + '</b>';
+    html += ' · 비용 <b>' + fmtW(stats.cost) + '</b>';
+    html += ' · 내 최종 몫 <span class="' + profitClass + '">' + fmtW(stats.profit) + '</span>';
+    html += '</span>';
+  } else {
+    html += '<span class="section-stats">해당 기간 거래 없음</span>';
+  }
+  html += '</td></tr>';
+  return html;
+}
+
 /* ======================================================
    v3.2: 정렬 함수
    ====================================================== */
@@ -924,27 +990,48 @@ function render(){
   $("ledgerEmpty").style.display = "none";
   $("ledgerTable").style.display = "table";
 
-  /* v3.2: 정렬 → 플랫 테이블 렌더 */
-  var sorted = sortDeals(filteredDeals);
-  $("ledgerBody").innerHTML = renderFlatTable(sorted, thisYear);
+  /* v3.4: 섹션별 분리 렌더 */
+  var sectionMap = splitBySection(filteredDeals);
+  var bodyHtml = "";
+  var allSorted = [];
+
+  SECTIONS.forEach(function(sec) {
+    var sDeals = sectionMap[sec.key];
+    var stats = calcSectionStats(sDeals);
+    bodyHtml += renderSectionHeader(sec, stats);
+    if (sDeals.length) {
+      var sorted = sortDeals(sDeals);
+      bodyHtml += renderFlatTable(sorted, thisYear);
+      allSorted = allSorted.concat(sorted);
+    }
+  });
+
+  $("ledgerBody").innerHTML = bodyHtml;
   $("ledgerFoot").innerHTML = renderFlatFooter(filteredDeals);
-  bindFlatToggleEvents(sorted, thisYear);
+  bindFlatToggleEvents(allSorted, thisYear);
   updateSortUI();
 }
 
 /* ======================================================
    v3.2: 토글 이벤트 바인딩 (플랫 테이블)
    ====================================================== */
-function bindFlatToggleEvents(deals, thisYear){
+function bindFlatToggleEvents(allSorted, thisYear){
   $("ledgerBody").querySelectorAll("[data-toggle]").forEach(function(tr){
     tr.addEventListener("click", function(e){
       if(e.target.closest("a")) return;
       var tid = tr.dataset.toggle;
       _expandedId = (_expandedId === tid) ? null : tid;
-      /* 테이블만 다시 렌더 (KPI/소계 유지) */
-      $("ledgerBody").innerHTML = renderFlatTable(deals, thisYear);
-      $("ledgerFoot").innerHTML = renderFlatFooter(deals);
-      bindFlatToggleEvents(deals, thisYear);
+      /* v3.4: 섹션 구조 유지하며 테이블만 다시 렌더 */
+      var sMap = splitBySection(allSorted);
+      var html = "";
+      SECTIONS.forEach(function(sec) {
+        var sDeals = sMap[sec.key];
+        html += renderSectionHeader(sec, calcSectionStats(sDeals));
+        if (sDeals.length) html += renderFlatTable(sDeals, thisYear);
+      });
+      $("ledgerBody").innerHTML = html;
+      $("ledgerFoot").innerHTML = renderFlatFooter(allSorted);
+      bindFlatToggleEvents(allSorted, thisYear);
       /* 확장된 행으로 스크롤 */
       if(_expandedId){
         var expRow = $("ledgerBody").querySelector(".expand-row");
@@ -990,8 +1077,8 @@ $("btnCsv").addEventListener("click", function(){
     return (b.deal_date||b.quote_at||b.created_at||"").localeCompare(a.deal_date||a.quote_at||a.created_at||"");
   });
 
-  /* v3.0: CSV 헤더 (소유자 컬럼 제거) */
-  var rows = ["거래일,거래처,품목,거래유형,채널,매출,품목원가,부대비용,총원가,SAVE금액,리베이트율,지급수수료,배분대상,내최종몫,상태"];
+  /* v3.4: CSV 헤더 (섹션 컬럼 추가) */
+  var rows = ["섹션,거래일,거래처,품목,거래유형,채널,매출,품목원가,부대비용,총원가,SAVE금액,리베이트율,지급수수료,배분대상,내최종몫,상태"];
   deals.forEach(function(d){
     var dt = d.deal_date || (d.quote_at || d.created_at || "").substring(0,10);
     var calc = d._calc || TE.calcTrade(d);
@@ -1009,7 +1096,9 @@ $("btnCsv").addEventListener("click", function(){
     var saveAmt = isChannel ? "" : (calc.save_amount || 0);
     var distributable = calc.distributable || 0;
 
-    rows.push([dt, d.partner_name_snapshot||"", dispName, typeLabel, chName,
+    /* v3.4: 섹션 컬럼 추가 */
+    var sectionLabel = classifySection(d) === "daesung" ? SECTION_KEYWORD : "기타";
+    rows.push([sectionLabel, dt, d.partner_name_snapshot||"", dispName, typeLabel, chName,
       calc.total_supply, calc.item_cost_total, calc.extra_cost_total, calc.total_cost,
       saveAmt, rebateRate, n(settlement.payout_fee), distributable, calc.final_my_amount,
       status].join(","));
