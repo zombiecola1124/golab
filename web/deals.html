@@ -166,16 +166,62 @@
     .item-dd-row{padding:8px 12px;cursor:pointer;border-bottom:1px solid var(--line)}
     .item-dd-row:hover{background:rgba(8,145,178,.06)}
 
+    /* v3.7 상태 칩 */
+    .status-chip{display:inline-block;border-radius:12px;font-size:11px;padding:2px 8px;font-weight:600;margin-right:4px;white-space:nowrap}
+    .status-chip.no-cost{background:rgba(217,119,6,.12);color:#b45309}
+    .status-chip.unsettled{background:rgba(37,99,235,.1);color:#1d4ed8}
+    .status-chip.todo{background:rgba(220,38,38,.1);color:#dc2626}
+    .status-chip.todo-urgent{background:rgba(220,38,38,.18);color:#991b1b}
+
+    /* v3.7 칩 필터 바 */
+    .chip-filter-bar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+    .chip-filter{padding:5px 12px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+    .chip-filter:hover{border-color:#cbd5e1}
+    .chip-filter.active{color:#fff;border-color:transparent}
+    .chip-filter[data-chip-filter=""].active{background:var(--deal)}
+    .chip-filter[data-chip-filter="no-cost"].active{background:#d97706}
+    .chip-filter[data-chip-filter="unsettled"].active{background:#2563eb}
+    .chip-filter[data-chip-filter="todo"].active{background:#dc2626}
+    .chip-filter .cf-count{margin-left:4px;font-weight:800;font-size:10px;opacity:.85}
+
+    /* v3.7 비용 빠른입력 */
+    .cost-quick{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    .cost-quick>div>label{display:block;font-size:10px;color:var(--muted);margin-bottom:3px;font-weight:700}
+    .cost-quick input{padding:7px 8px;border-radius:6px;font-size:12px;text-align:right;font-variant-numeric:tabular-nums}
+    .cost-quick input[readonly]{background:#f1f5f9;font-weight:700;color:var(--deal);border-color:var(--line)}
+    .cost-live{font-size:12px;margin-top:6px;font-weight:600}
+    .cost-live .profit{color:var(--accent)}
+    .cost-live .loss{color:var(--bad)}
+
+    /* v3.7 Todo */
+    .todo-list{margin-bottom:8px}
+    .todo-item{display:flex;align-items:center;gap:8px;padding:5px 0;border-bottom:1px solid var(--line);font-size:12px}
+    .todo-item:last-child{border-bottom:none}
+    .todo-item input[type="checkbox"]{accent-color:var(--deal);width:16px;height:16px;flex-shrink:0;cursor:pointer}
+    .todo-item .t-title{flex:1;min-width:0}
+    .todo-item .done{text-decoration:line-through;color:var(--muted)}
+    .todo-due{font-size:10px;color:var(--muted);white-space:nowrap}
+    .todo-due.overdue{color:var(--bad);font-weight:700}
+    .todo-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 4px;line-height:1;border-radius:4px}
+    .todo-del:hover{color:var(--bad);background:rgba(220,38,38,.08)}
+    .todo-add{display:flex;gap:6px;align-items:center}
+    .todo-add input[type="text"]{flex:1;padding:6px 8px;font-size:11px;border-radius:6px}
+    .todo-add input[type="date"]{width:130px;padding:6px 8px;font-size:11px;border-radius:6px}
+    .todo-add button{padding:6px 10px;font-size:11px}
+    .todo-empty{font-size:11px;color:var(--muted);padding:4px 0}
+
     @media(max-width:900px){
       .kpi-grid{grid-template-columns:1fr 1fr}
       .reg-layout{grid-template-columns:1fr}
       .cockpit{position:static}
       .r4{grid-template-columns:1fr 1fr}
       .pb-dot{width:24px;height:24px;font-size:10px}
+      .cost-quick{grid-template-columns:1fr 1fr}
     }
     @media(max-width:600px){
       .r4,.r3,.r2{grid-template-columns:1fr}
       .kpi-grid{grid-template-columns:1fr}
+      .cost-quick{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -392,6 +438,13 @@
   <!-- ═══ 거래 목록 ═══ -->
   <div class="card">
     <h2>📋 거래 목록 <span class="badge" id="listBadge">0</span></h2>
+    <!-- v3.7 퀵 필터 바 -->
+    <div class="chip-filter-bar" id="chipFilterBar">
+      <button class="chip-filter active" data-chip-filter="">전체</button>
+      <button class="chip-filter" data-chip-filter="no-cost">🟡 비용미입력 <span class="cf-count" id="cfNoCost">0</span></button>
+      <button class="chip-filter" data-chip-filter="unsettled">🔵 정산대기 <span class="cf-count" id="cfUnsettled">0</span></button>
+      <button class="chip-filter" data-chip-filter="todo">🔴 할일있음 <span class="cf-count" id="cfTodo">0</span></button>
+    </div>
     <div class="filter-row">
       <input id="fSearch" placeholder="거래처/품목/메모 검색..." style="flex:2" />
       <select id="fStatus">
@@ -441,9 +494,10 @@
 <script src="js/trade-engine.js?v=33"></script>
 <script>
 /* ══════════════════════════════════════════════════
-   GoLab v3.0 전술 통제 시스템
+   GoLab v3.7 전술 통제 시스템
    의사결정 조종석: 거래 등록 시 실시간 수익 판단
    v3.0: 3-way 유형(solo/settle/channel), friend 분리 제거
+   v3.7: 상태 칩 + 퀵 필터 + 비용 빠른입력 + 거래별 Todo
    ══════════════════════════════════════════════════ */
 var $ = function(id){ return document.getElementById(id); };
 var TE = GoLabTradeEngine;
@@ -453,6 +507,67 @@ var editingId = null;
 var _expandedId = null;
 var _restoreId = null; /* v2.9: 현재 리플레이 중인 거래 ID */
 var _sManuallyEdited = false; /* v3.0: S 실제 지급액 수동 편집 플래그 */
+var chipFilter = ""; /* v3.7: 상태 칩 필터 (""|"no-cost"|"unsettled"|"todo") */
+
+/* ══════ v3.7 DealTodo 모듈 ══════ */
+var DealTodo = (function() {
+  var KEY = "golab_deal_todos_v1";
+  function _load() { return JSON.parse(localStorage.getItem(KEY) || "[]"); }
+  function _save(all) { localStorage.setItem(KEY, JSON.stringify(all)); }
+  function getByDeal(dealId) {
+    return _load().filter(function(t) { return t.deal_id === dealId; });
+  }
+  function create(fields) {
+    var all = _load();
+    var todo = {
+      id: "TODO-" + Date.now(),
+      deal_id: fields.deal_id,
+      title: (fields.title || "").trim(),
+      due_date: fields.due_date || null,
+      status: "pending",
+      memo: fields.memo || "",
+      created_at: new Date().toISOString()
+    };
+    all.push(todo);
+    _save(all);
+    return todo;
+  }
+  function toggle(todoId) {
+    var all = _load();
+    var idx = all.findIndex(function(t) { return t.id === todoId; });
+    if (idx < 0) return;
+    all[idx].status = all[idx].status === "completed" ? "pending" : "completed";
+    all[idx].updated_at = new Date().toISOString();
+    _save(all);
+  }
+  function remove(todoId) {
+    var all = _load();
+    _save(all.filter(function(t) { return t.id !== todoId; }));
+  }
+  return { KEY: KEY, getByDeal: getByDeal, create: create, toggle: toggle, remove: remove };
+})();
+
+/* v3.7 상태 칩 판정 — 취소 거래는 칩 없음 */
+function _getStatusChips(deal) {
+  var chips = [];
+  if (deal.deal_status === "cancelled") return chips;
+  /* 🟡 비용미입력: 아이템 중 cost가 null/0 인 것이 있으면 */
+  var hasMissingCost = (deal.items || []).some(function(it) {
+    return it.cost == null || it.cost === 0;
+  });
+  if (hasMissingCost) chips.push({ type: "no-cost", label: "비용미입력" });
+  /* 🔵 정산대기: payment_at 미설정 (= 입금 미완료) */
+  if (!deal.payment_at) chips.push({ type: "unsettled", label: "정산대기" });
+  /* 🔴 할일있음: 미완료 todo 존재 */
+  var todos = DealTodo.getByDeal(deal.id);
+  var pending = todos.filter(function(t) { return t.status !== "completed"; });
+  if (pending.length > 0) {
+    var today = new Date().toISOString().substring(0,10);
+    var hasOverdue = pending.some(function(t) { return t.due_date && t.due_date <= today; });
+    chips.push({ type: hasOverdue ? "todo-urgent" : "todo", label: "할일있음" });
+  }
+  return chips;
+}
 
 /* v3.3: 정렬 상태 */
 var currentSortKey = "date";   // "date"|"supply"|"profit"
@@ -1047,6 +1162,34 @@ function render() {
     filtered = filtered.filter(function(t) { return t.channel_id === channelFilter; });
   }
 
+  /* v3.7: 칩 카운트 (전체 기준, 필터 전) */
+  var _cfNoCost = 0, _cfUnsettled = 0, _cfTodo = 0;
+  all.forEach(function(t) {
+    if (t.deal_status === "cancelled") return;
+    if ((t.items||[]).some(function(it){ return it.cost == null || it.cost === 0; })) _cfNoCost++;
+    if (!t.payment_at) _cfUnsettled++;
+    if (DealTodo.getByDeal(t.id).some(function(td){ return td.status !== "completed"; })) _cfTodo++;
+  });
+  $("cfNoCost").textContent = _cfNoCost;
+  $("cfUnsettled").textContent = _cfUnsettled;
+  $("cfTodo").textContent = _cfTodo;
+
+  /* v3.7: 칩 필터 적용 */
+  if (chipFilter === "no-cost") {
+    filtered = filtered.filter(function(t) {
+      return t.deal_status !== "cancelled" &&
+             (t.items||[]).some(function(it){ return it.cost == null || it.cost === 0; });
+    });
+  } else if (chipFilter === "unsettled") {
+    filtered = filtered.filter(function(t) {
+      return t.deal_status !== "cancelled" && !t.payment_at;
+    });
+  } else if (chipFilter === "todo") {
+    filtered = filtered.filter(function(t) {
+      return DealTodo.getByDeal(t.id).some(function(td){ return td.status !== "completed"; });
+    });
+  }
+
   /* v3.3: 정렬 적용 */
   filtered = sortTrades(filtered);
 
@@ -1094,7 +1237,15 @@ function render() {
     html += '<tr '+rowStyle+' data-id="'+t.id+'" data-toggle="'+t.id+'">';
     /* v3.3: 등록일 컬럼 */
     html += '<td style="white-space:nowrap;color:var(--muted);font-size:11px">'+(t.created_at ? t.created_at.substring(0,10) : '—')+'</td>';
-    html += '<td><b>'+esc(t.partner_name_snapshot)+'</b></td>';
+    /* v3.7: 거래처 셀 + 상태 칩 */
+    var _chips = _getStatusChips(t);
+    var _chipHtml = "";
+    if (_chips.length) {
+      _chipHtml = '<div style="margin-top:3px">';
+      _chips.forEach(function(c) { _chipHtml += '<span class="status-chip '+c.type+'">'+c.label+'</span>'; });
+      _chipHtml += '</div>';
+    }
+    html += '<td><b>'+esc(t.partner_name_snapshot)+'</b>'+_chipHtml+'</td>';
     html += '<td>'+esc(dispName)+'</td>';
     html += '<td>'+TE.fmt(calc.total_supply)+'</td>';
     html += '<td>'+renderProgressBar(t, false)+'</td>';
@@ -1160,6 +1311,28 @@ function render() {
         html += '</table></div>';
       }
 
+      /* v3.7: 💸 비용 빠른입력 */
+      html += '<div class="detail-section"><div class="detail-section-title">💸 비용 빠른입력</div>';
+      var _qPurchase = 0;
+      (t.items||[]).forEach(function(it){ _qPurchase += (it.cost||0); });
+      var _qShipping = 0, _qOther = 0;
+      (t.extra_costs||[]).forEach(function(ec) {
+        if (ec.affects_profit === false) return;
+        if (ec.type === "shipping") _qShipping += ec.amount;
+        else _qOther += ec.amount;
+      });
+      var _qTotal = _qPurchase + _qShipping + _qOther;
+      var _qProfit = calc.total_supply - _qTotal;
+      var _qProfitCls = _qProfit >= 0 ? "profit" : "loss";
+      html += '<div class="cost-quick">';
+      html += '<div><label>구매비</label><input type="number" data-qcost="purchase" data-qcost-tid="'+t.id+'" value="'+_qPurchase+'"></div>';
+      html += '<div><label>운송비</label><input type="number" data-qcost="shipping" data-qcost-tid="'+t.id+'" value="'+_qShipping+'"></div>';
+      html += '<div><label>기타비용</label><input type="number" data-qcost="other" data-qcost-tid="'+t.id+'" value="'+_qOther+'"></div>';
+      html += '<div><label>최종원가</label><input type="number" data-qcost-total="'+t.id+'" value="'+_qTotal+'" readonly></div>';
+      html += '</div>';
+      html += '<div class="cost-live">순이익: <span class="'+_qProfitCls+'" data-qcost-profit="'+t.id+'">'+TE.fmt(_qProfit)+'</span></div>';
+      html += '</div>';
+
       /* 수익 분석 — v2.9 리플레이 버튼 */
       html += '<div class="detail-section">';
       html += '<div class="detail-section-title" style="display:flex;align-items:center;gap:8px">';
@@ -1200,6 +1373,35 @@ function render() {
       html += '<div class="detail-section"><div class="detail-section-title">📝 메모</div>';
       html += '<textarea class="memo-edit" data-memo-tid="'+t.id+'" rows="3">'+esc(t.memo||"")+'</textarea>';
       html += '<button class="secondary memo-save" data-memo-save="'+t.id+'" style="margin-top:6px;padding:5px 14px;font-size:11px">저장</button>';
+      html += '</div>';
+
+      /* v3.7: ✅ 할일 */
+      html += '<div class="detail-section"><div class="detail-section-title">✅ 할일</div>';
+      var _todos = DealTodo.getByDeal(t.id);
+      var _today = new Date().toISOString().substring(0,10);
+      if (_todos.length > 0) {
+        html += '<div class="todo-list">';
+        _todos.forEach(function(td) {
+          var isDone = td.status === "completed";
+          var isOverdue = !isDone && td.due_date && td.due_date <= _today;
+          html += '<div class="todo-item">';
+          html += '<input type="checkbox" data-todo-toggle="'+td.id+'"'+(isDone?' checked':'')+'>';
+          html += '<span class="t-title '+(isDone?'done':'')+'">'+esc(td.title)+'</span>';
+          if (td.due_date) {
+            html += '<span class="todo-due'+(isOverdue?' overdue':'')+'">'+td.due_date.substring(5)+'</span>';
+          }
+          html += '<button class="todo-del" data-todo-del="'+td.id+'" title="삭제">×</button>';
+          html += '</div>';
+        });
+        html += '</div>';
+      } else {
+        html += '<div class="todo-empty">등록된 할일이 없습니다.</div>';
+      }
+      html += '<div class="todo-add">';
+      html += '<input type="text" placeholder="할일 추가..." data-todo-input="'+t.id+'">';
+      html += '<input type="date" data-todo-date="'+t.id+'">';
+      html += '<button class="secondary" data-todo-add="'+t.id+'">추가</button>';
+      html += '</div>';
       html += '</div>';
 
       /* 타임라인 */
@@ -1312,11 +1514,141 @@ function render() {
     };
   });
 
+  /* v3.7: 비용 빠른입력 이벤트 — debounce 로 즉시 저장 */
+  var _costTimer = null;
+  tb.querySelectorAll("[data-qcost]").forEach(function(inp) {
+    inp.addEventListener("input", function(e) {
+      e.stopPropagation();
+      var tid = inp.dataset.qcostTid;
+      var field = inp.dataset.qcost;
+      clearTimeout(_costTimer);
+      _costTimer = setTimeout(function() {
+        _saveQuickCost(tid, field, Number(inp.value) || 0);
+      }, 400);
+    });
+  });
+
+  /* v3.7: Todo 토글 (체크박스) */
+  tb.querySelectorAll("[data-todo-toggle]").forEach(function(chk) {
+    chk.onchange = function(e) {
+      e.stopPropagation();
+      DealTodo.toggle(chk.dataset.todoToggle);
+      render();
+    };
+  });
+  /* v3.7: Todo 삭제 */
+  tb.querySelectorAll("[data-todo-del]").forEach(function(btn) {
+    btn.onclick = function(e) {
+      e.stopPropagation();
+      DealTodo.remove(btn.dataset.todoDel);
+      render();
+    };
+  });
+  /* v3.7: Todo 추가 */
+  tb.querySelectorAll("[data-todo-add]").forEach(function(btn) {
+    btn.onclick = function(e) {
+      e.stopPropagation();
+      var tid = btn.dataset.todoAdd;
+      var titleInput = tb.querySelector('[data-todo-input="'+tid+'"]');
+      var dateInput = tb.querySelector('[data-todo-date="'+tid+'"]');
+      if (!titleInput || !titleInput.value.trim()) return;
+      DealTodo.create({
+        deal_id: tid,
+        title: titleInput.value.trim(),
+        due_date: dateInput ? dateInput.value || null : null
+      });
+      render();
+    };
+  });
+  /* v3.7: Todo 입력에서 Enter 키로 추가 */
+  tb.querySelectorAll("[data-todo-input]").forEach(function(inp) {
+    inp.onkeydown = function(e) {
+      if (e.key === "Enter") {
+        e.preventDefault();
+        var addBtn = tb.querySelector('[data-todo-add="'+inp.dataset.todoInput+'"]');
+        if (addBtn) addBtn.click();
+      }
+    };
+  });
+
   /* v3.3: 정렬 UI 동기화 */
   updateSortUI();
 
   /* v2.9: 현재 리플레이 중인 행 하이라이트 유지 */
   if (_restoreId) _applyReplayHighlight(_restoreId);
+}
+
+/* v3.7: 비용 빠른입력 저장 함수 */
+function _saveQuickCost(tid, field, value) {
+  var trade = TE.getById(tid);
+  if (!trade) return;
+  if (field === "purchase") {
+    /* 구매비 → items[].cost에 분배 */
+    var items = trade.items || [];
+    if (items.length === 1) {
+      /* 단일 품목: 직접 설정 */
+      items[0].cost = value;
+    } else if (items.length > 1) {
+      /* 복수 품목: 공급가 비율로 분배 */
+      var totalSupply = 0;
+      items.forEach(function(it) { totalSupply += (it.supply_amount || 0); });
+      items.forEach(function(it) {
+        var ratio = totalSupply > 0 ? (it.supply_amount || 0) / totalSupply : 1 / items.length;
+        it.cost = Math.round(value * ratio);
+      });
+    }
+    TE.update(tid, { items: items });
+  } else if (field === "shipping") {
+    /* 운송비 → extra_costs type=shipping 갱신/생성 */
+    var extras = (trade.extra_costs || []).slice();
+    var found = false;
+    extras.forEach(function(ec) {
+      if (ec.type === "shipping" && ec.affects_profit !== false) { ec.amount = value; found = true; }
+    });
+    if (!found && value > 0) {
+      extras.push({ type: "shipping", label: "운송비", amount: value, affects_profit: true, memo: "" });
+    }
+    TE.update(tid, { extra_costs: extras });
+  } else if (field === "other") {
+    /* 기타비용 → extra_costs type=misc 갱신/생성 */
+    var extras = (trade.extra_costs || []).slice();
+    var found = false;
+    extras.forEach(function(ec) {
+      if (ec.type === "misc" && ec.affects_profit !== false) { ec.amount = value; found = true; }
+    });
+    if (!found && value > 0) {
+      extras.push({ type: "misc", label: "기타", amount: value, affects_profit: true, memo: "" });
+    }
+    TE.update(tid, { extra_costs: extras });
+  }
+  /* 라이브 재계산: 최종원가 + 순이익 갱신 */
+  _updateQuickCostUI(tid);
+}
+
+/* v3.7: 비용 UI 라이브 갱신 (full re-render 없이) */
+function _updateQuickCostUI(tid) {
+  var trade = TE.getById(tid);
+  if (!trade) return;
+  var calc = TE.calcTrade(trade);
+  var _qPurchase = 0;
+  (trade.items||[]).forEach(function(it) { _qPurchase += (it.cost||0); });
+  var _qShipping = 0, _qOther = 0;
+  (trade.extra_costs||[]).forEach(function(ec) {
+    if (ec.affects_profit === false) return;
+    if (ec.type === "shipping") _qShipping += ec.amount;
+    else _qOther += ec.amount;
+  });
+  var _qTotal = _qPurchase + _qShipping + _qOther;
+  var _qProfit = calc.total_supply - _qTotal;
+  /* 최종원가 필드 갱신 */
+  var totalEl = document.querySelector('[data-qcost-total="'+tid+'"]');
+  if (totalEl) totalEl.value = _qTotal;
+  /* 순이익 라이브 갱신 */
+  var profitEl = document.querySelector('[data-qcost-profit="'+tid+'"]');
+  if (profitEl) {
+    profitEl.textContent = TE.fmt(_qProfit);
+    profitEl.className = _qProfit >= 0 ? "profit" : "loss";
+  }
 }
 
 /* v2.9: 리플레이 하이라이트 적용 */
@@ -1571,6 +1903,18 @@ document.querySelectorAll(".list-table thead .sortable").forEach(function(th) {
     _expandedId = null;
     render();
   });
+});
+
+/* v3.7: 칩 필터 바 클릭 이벤트 */
+$("chipFilterBar").addEventListener("click", function(e) {
+  var btn = e.target.closest("[data-chip-filter]");
+  if (!btn) return;
+  chipFilter = btn.dataset.chipFilter;
+  $("chipFilterBar").querySelectorAll(".chip-filter").forEach(function(b) {
+    b.classList.toggle("active", b.dataset.chipFilter === chipFilter);
+  });
+  _expandedId = null;
+  render();
 });
 
 /* 크로스탭 동기화 */
