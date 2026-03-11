@@ -78,7 +78,12 @@
     .addWrap{display:flex;justify-content:flex-end;align-items:stretch}
     .addWrap button{min-width:90px}
     .mini{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
-    .tableWrap{overflow:auto;border-radius:10px;border:1px solid var(--line);margin-top:10px}
+    .tableWrap{overflow:auto;border-radius:10px 10px 0 0;border:1px solid var(--line);border-bottom:none;margin-top:10px}
+    /* 스크롤 영역 하단 = 테이블 바로 아래 (border-radius 0, border-bottom은 table-tip이 이어받음) */
+    .table-tip{font-size:10px;color:#94a3b8;line-height:1.5;padding:8px 10px 10px;border:1px solid var(--line);border-top:none;border-radius:0 0 10px 10px;background:var(--card)}
+    /* scroll-sticky: 필요 시 tableWrap에 이 클래스를 추가하면 스크롤바가 뷰포트 하단에 고정 */
+    .scroll-sticky{overflow:visible}
+    .scroll-sticky .table-inner{overflow-x:auto;position:sticky;bottom:0;z-index:1}
     table{width:100%;border-collapse:collapse;min-width:980px;font-size:12px}
     th{background:#f8fafc;color:var(--muted);text-align:left;padding:12px;position:sticky;top:0;border-bottom:1px solid var(--line)}
     td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
@@ -184,24 +189,27 @@
       </div>
       <div id="saveStatus" class="mini"></div>
       <div class="inv-main">
-        <div class="tableWrap">
-          <table>
-            <thead>
-              <tr>
-                <th>품목명</th>
-                <th>규격</th>
-                <th>매입처</th>
-                <th>매입단가</th>
-                <th>수량</th>
-                <th>최소수량</th>
-                <th>재고총액</th>
-                <th>상태</th>
-                <th>비고</th>
-                <th style="text-align:right">작업</th>
-              </tr>
-            </thead>
-            <tbody id="tbody"></tbody>
-          </table>
+        <div class="table-col">
+          <div class="tableWrap">
+            <table>
+              <thead>
+                <tr>
+                  <th>품목명</th>
+                  <th>규격</th>
+                  <th>매입처</th>
+                  <th>매입단가</th>
+                  <th>수량</th>
+                  <th>최소수량</th>
+                  <th>재고총액</th>
+                  <th>상태</th>
+                  <th>비고</th>
+                  <th style="text-align:right">작업</th>
+                </tr>
+              </thead>
+              <tbody id="tbody"></tbody>
+            </table>
+          </div>
+          <div class="table-tip">TIP: 수량/단가는 숫자만 입력하세요. "입고/원가"에서 전송된 품목은 매입단가가 <b>실단가(KRW)</b> 기준으로 자동 업데이트됩니다.</div>
         </div>
         <aside class="detailCard" id="detailPanel">
           <h3>📄 품목 디테일</h3>
@@ -248,9 +256,7 @@
           </div>
         </aside>
       </div>
-      <div class="mini">
-        TIP: 수량/단가는 숫자만 입력하세요. "입고/원가"에서 전송된 품목은 매입단가가 <b>실단가(KRW)</b> 기준으로 자동 업데이트됩니다.
-      </div>
+      <!-- TIP은 .table-col 안으로 이동됨 (v3.4) -->
       <!-- [CSV PATCH] 저장 상태 표시 -->
       <div id="csvSaveStatus" style="text-align:center;padding:8px;font-size:11px;color:var(--point);font-weight:600;opacity:0;transition:opacity .3s">💾 저장됨</div>
     </div>
