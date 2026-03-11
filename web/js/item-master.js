@@ -80,7 +80,20 @@ window.GoLabItemMaster = (function () {
     return prefix.concat(contains);
   }
 
-  /** 품목 생성 (v3.6: aliases, unit, updated_at 추가) */
+  /** 가격 파싱 헬퍼: 유효한 숫자면 number, 아니면 null */
+  function _parsePrice(v) {
+    if (v === null || v === undefined || v === "") return null;
+    const n = Number(v);
+    return isNaN(n) ? null : n;
+  }
+
+  /* ── 기준 가격 필드 목록 (v3.6a) ── */
+  const PRICE_FIELDS = [
+    "consumer_price", "dealer_price", "target_buy_price",
+    "internet_low_price", "distributor_price"
+  ];
+
+  /** 품목 생성 (v3.6a: 기준 가격 + 택배 조건 추가) */
   function create(fields) {
     const now = new Date().toISOString();
     const item = {
@@ -92,6 +105,15 @@ window.GoLabItemMaster = (function () {
       note:       (fields.note || "").trim(),
       aliases:    Array.isArray(fields.aliases) ? fields.aliases : [],
       unit:       (fields.unit || "").trim(),
+      /* v3.6a: 기준 가격 (선택 입력, null = 미입력) */
+      consumer_price:     _parsePrice(fields.consumer_price),
+      dealer_price:       _parsePrice(fields.dealer_price),
+      target_buy_price:   _parsePrice(fields.target_buy_price),
+      internet_low_price: _parsePrice(fields.internet_low_price),
+      distributor_price:  _parsePrice(fields.distributor_price),
+      /* v3.6a: 택배 조건 */
+      shipping_included_default: !!fields.shipping_included_default,
+      shipping_note:      (fields.shipping_note || "").trim(),
       created_at: now,
       updated_at: now
     };
@@ -103,7 +125,7 @@ window.GoLabItemMaster = (function () {
     return item;
   }
 
-  /** 품목 수정 (v3.6: aliases, unit, updated_at 추가) */
+  /** 품목 수정 (v3.6a: 기준 가격 + 택배 조건 추가) */
   function update(itemId, fields) {
     const all = loadAll();
     const idx = all.findIndex(x => x.item_id === itemId);
@@ -116,6 +138,13 @@ window.GoLabItemMaster = (function () {
     if (fields.note      !== undefined) all[idx].note      = fields.note.trim();
     if (fields.aliases   !== undefined) all[idx].aliases   = Array.isArray(fields.aliases) ? fields.aliases : [];
     if (fields.unit      !== undefined) all[idx].unit      = (fields.unit || "").trim();
+    /* v3.6a: 기준 가격 필드 */
+    PRICE_FIELDS.forEach(function(f) {
+      if (fields[f] !== undefined) all[idx][f] = _parsePrice(fields[f]);
+    });
+    /* v3.6a: 택배 조건 */
+    if (fields.shipping_included_default !== undefined) all[idx].shipping_included_default = !!fields.shipping_included_default;
+    if (fields.shipping_note !== undefined) all[idx].shipping_note = (fields.shipping_note || "").trim();
     all[idx].updated_at = new Date().toISOString();
     _save(all);
     emitAudit("UPDATE", { item_id: itemId, before, after: { ...all[idx] } });
@@ -746,7 +775,7 @@ window.GoLabItemMaster = (function () {
      v3.6: 필드 자동 보강 (_upgradeRecords)
      ══════════════════════════════════════ */
 
-  /** 기존 레코드에 aliases/unit/updated_at 필드 자동 추가 */
+  /** 기존 레코드에 v3.6/v3.6a 필드 자동 추가 */
   function _upgradeRecords() {
     const all = loadAll();
     let changed = false;
@@ -754,6 +783,13 @@ window.GoLabItemMaster = (function () {
       if (!Array.isArray(item.aliases)) { item.aliases = []; changed = true; }
       if (item.unit === undefined)      { item.unit = ""; changed = true; }
       if (!item.updated_at)             { item.updated_at = item.created_at || ""; changed = true; }
+      /* v3.6a: 기준 가격 필드 (null = 미입력) */
+      PRICE_FIELDS.forEach(function(f) {
+        if (item[f] === undefined) { item[f] = null; changed = true; }
+      });
+      /* v3.6a: 택배 조건 */
+      if (item.shipping_included_default === undefined) { item.shipping_included_default = false; changed = true; }
+      if (item.shipping_note === undefined) { item.shipping_note = ""; changed = true; }
     });
     if (changed) _save(all);
   }
@@ -1023,7 +1059,7 @@ window.GoLabItemMaster = (function () {
 
   return {
     MASTER_KEY, AUDIT_KEY,
-    CATEGORY_MAP, CATEGORY_REVERSE, CATEGORIES,
+    CATEGORY_MAP, CATEGORY_REVERSE, CATEGORIES, PRICE_FIELDS,
     loadAll, getById, search,
     create, update, remove,
     emitAudit,
