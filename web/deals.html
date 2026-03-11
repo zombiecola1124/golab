@@ -125,8 +125,20 @@
     table.list-table{width:100%;border-collapse:collapse;font-size:12px;min-width:800px}
     table.list-table th{background:#f8fafc;color:var(--muted);text-align:left;padding:10px 12px;position:sticky;top:0;white-space:nowrap;z-index:2;border-bottom:1px solid var(--line)}
     table.list-table td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
-    table.list-table tr:hover{background:rgba(8,145,178,.02)}
+    table.list-table tr:hover{background:rgba(8,145,178,.04);transition:background .1s}
     .muted{color:var(--muted)}
+
+    /* v3.3: 정렬 가능 컬럼 */
+    table.list-table th.sortable{cursor:pointer;user-select:none;transition:color .15s}
+    table.list-table th.sortable:hover{color:var(--deal)}
+    .sort-arrow{font-size:10px;color:var(--deal);margin-left:2px;opacity:0;transition:opacity .15s}
+    .sort-arrow.active{opacity:1}
+
+    /* v3.3: 메모 편집 */
+    .memo-edit{width:100%;min-height:60px;resize:vertical;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--text);padding:8px 10px;font-size:12px;font-family:inherit;outline:none;transition:border-color .2s}
+    .memo-edit:focus{border-color:var(--deal)}
+    .memo-save{transition:all .2s}
+    .memo-save.saved{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important}
 
     /* 필터 */
     .filter-row{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
@@ -174,8 +186,8 @@
     <nav class="tabs">
       <a class="tab" href="./console.html">🏠 메인</a>
       <a class="tab active" href="./deals.html">🔥 거래</a>
-      <a class="tab" href="./index.html">📦 재고</a>
       <a class="tab" href="./profit.html">💰 수익</a>
+      <a class="tab" href="./index.html">📦 재고</a>
       <a class="tab" href="./partner-master.html">👥 거래처</a>
     </nav>
   </div>
@@ -405,11 +417,12 @@
       <table class="list-table">
         <thead>
           <tr>
+            <th class="sortable" data-sort="date" style="width:100px">등록일 <span class="sort-arrow active">↓</span></th>
             <th>거래처</th>
             <th>품목</th>
-            <th>공급가</th>
+            <th class="sortable" data-sort="supply">공급가 <span class="sort-arrow"></span></th>
             <th style="min-width:280px">진행 상태</th>
-            <th>내 최종 몫</th>
+            <th class="sortable" data-sort="profit">내 최종 몫 <span class="sort-arrow"></span></th>
             <th>유형</th>
             <th style="text-align:right">관리</th>
           </tr>
@@ -424,7 +437,7 @@
 <script src="js/partner-master.js?v=3"></script>
 <script src="js/item-master.js"></script>
 <script src="js/channel-master.js"></script>
-<script src="js/trade-engine.js?v=30"></script>
+<script src="js/trade-engine.js?v=33"></script>
 <script>
 /* ══════════════════════════════════════════════════
    GoLab v3.0 전술 통제 시스템
@@ -439,6 +452,10 @@ var editingId = null;
 var _expandedId = null;
 var _restoreId = null; /* v2.9: 현재 리플레이 중인 거래 ID */
 var _sManuallyEdited = false; /* v3.0: S 실제 지급액 수동 편집 플래그 */
+
+/* v3.3: 정렬 상태 */
+var currentSortKey = "date";   // "date"|"supply"|"profit"
+var currentSortDir = "desc";   // "desc"|"asc"
 
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
@@ -960,6 +977,47 @@ function renderProgressBar(d, interactive) {
   return html;
 }
 
+/* ══════ v3.3: 정렬 함수 ══════ */
+function sortTrades(deals) {
+  var key = currentSortKey;
+  var dir = currentSortDir === "desc" ? 1 : -1;
+
+  return deals.slice().sort(function(a, b) {
+    if (key === "date") {
+      var da = a.created_at || "";
+      var db = b.created_at || "";
+      /* null은 맨 아래 */
+      if (!da && !db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+      return dir * db.localeCompare(da);
+    }
+    if (key === "supply") {
+      var ca = TE.calcTrade(a).total_supply;
+      var cb = TE.calcTrade(b).total_supply;
+      return dir * (cb - ca);
+    }
+    if (key === "profit") {
+      var ca = TE.calcTrade(a).final_my_amount;
+      var cb = TE.calcTrade(b).final_my_amount;
+      return dir * (cb - ca);
+    }
+    return 0;
+  });
+}
+
+/* v3.3: 정렬 UI 동기화 */
+function updateSortUI() {
+  var arrow = currentSortDir === "desc" ? "↓" : "↑";
+  document.querySelectorAll(".list-table thead .sortable").forEach(function(th) {
+    var arrowEl = th.querySelector(".sort-arrow");
+    if (!arrowEl) return;
+    var isActive = th.dataset.sort === currentSortKey;
+    arrowEl.classList.toggle("active", isActive);
+    arrowEl.textContent = isActive ? arrow : "";
+  });
+}
+
 /* ══════ 렌더링 ══════ */
 function render() {
   var all = TE.loadAll();
@@ -988,7 +1046,39 @@ function render() {
     filtered = filtered.filter(function(t) { return t.channel_id === channelFilter; });
   }
 
+  /* v3.3: 정렬 적용 */
+  filtered = sortTrades(filtered);
+
   $("listBadge").textContent = filtered.length;
+
+  /* v3.3: filtered 기준 KPI 재계산 */
+  var kTotalN = filtered.length;
+  var kActiveN = 0, kCompleteN = 0, kPaymentN = 0, kPaymentAmtN = 0;
+  filtered.forEach(function(t) {
+    if (t.deal_status === "cancelled") return;
+    if (t.payment_at) { kCompleteN++; }
+    else {
+      kActiveN++;
+      if (t.invoice_at && !t.payment_at) {
+        kPaymentN++;
+        kPaymentAmtN += (TE.calcTrade(t)).total_amount;
+      }
+    }
+  });
+  $("kTotal").textContent = kTotalN;
+  $("kActive").textContent = kActiveN;
+  $("kComplete").textContent = kCompleteN;
+  $("kPayment").textContent = kPaymentN + "건";
+  /* v3.3: 미입금 금액 강조 */
+  var _kpEl = $("kPaymentAmt");
+  if (kPaymentAmtN > 0) {
+    _kpEl.textContent = TE.fmt(kPaymentAmtN);
+    _kpEl.style.color = "var(--bad)";
+  } else {
+    _kpEl.textContent = "✅ 전액 수금";
+    _kpEl.style.color = "var(--accent)";
+  }
+
   var tb = $("tbody");
   if (!filtered.length) { tb.innerHTML = ""; $("emptyMsg").style.display = "block"; return; }
   $("emptyMsg").style.display = "none";
@@ -1001,6 +1091,8 @@ function render() {
     var dispName = TE.itemDisplayName(t);
 
     html += '<tr '+rowStyle+' data-id="'+t.id+'" data-toggle="'+t.id+'">';
+    /* v3.3: 등록일 컬럼 */
+    html += '<td style="white-space:nowrap;color:var(--muted);font-size:11px">'+(t.created_at ? t.created_at.substring(0,10) : '—')+'</td>';
     html += '<td><b>'+esc(t.partner_name_snapshot)+'</b></td>';
     html += '<td>'+esc(dispName)+'</td>';
     html += '<td>'+TE.fmt(calc.total_supply)+'</td>';
@@ -1028,7 +1120,7 @@ function render() {
 
     /* 상세 행 */
     if (_expandedId === t.id) {
-      html += '<tr class="detail-row"><td colspan="7">';
+      html += '<tr class="detail-row"><td colspan="8">';
 
       /* 진행 바 (인터랙티브) */
       html += '<div class="detail-section"><div class="detail-section-title">⏱ 거래 진행</div>';
@@ -1102,6 +1194,12 @@ function render() {
       if (t.deal_date) html += '<span>거래일: '+t.deal_date+'</span>';
       if (t.source==="migrated") html += '<span><span class="tag" style="background:rgba(217,119,6,.15);color:#92400e">v1 이전</span></span>';
       html += '</div></div>';
+
+      /* v3.3: 📝 메모 수정 */
+      html += '<div class="detail-section"><div class="detail-section-title">📝 메모</div>';
+      html += '<textarea class="memo-edit" data-memo-tid="'+t.id+'" rows="3">'+esc(t.memo||"")+'</textarea>';
+      html += '<button class="secondary memo-save" data-memo-save="'+t.id+'" style="margin-top:6px;padding:5px 14px;font-size:11px">저장</button>';
+      html += '</div>';
 
       /* 타임라인 */
       if (t.timeline && t.timeline.length > 0) {
@@ -1188,6 +1286,33 @@ function render() {
       document.getElementById("cockpit").scrollIntoView({ behavior:"smooth", block:"start" });
     };
   });
+
+  /* v3.3: 메모 저장 이벤트 */
+  tb.querySelectorAll("[data-memo-save]").forEach(function(btn) {
+    btn.onclick = function(e) {
+      e.stopPropagation();
+      var tid = btn.dataset.memoSave;
+      var textarea = tb.querySelector('[data-memo-tid="'+tid+'"]');
+      if (!textarea) return;
+      var val = textarea.value.trim();
+      /* 기존 메모가 있는데 전부 비운 경우 — 확인 1회 */
+      var trade = TE.getById(tid);
+      if (trade && trade.memo && !val) {
+        if (!confirm("메모를 비우시겠습니까?")) return;
+      }
+      TE.update(tid, { memo: val });
+      /* 저장 피드백: 버튼 텍스트 변경 1초 */
+      btn.textContent = "저장됨 ✓";
+      btn.classList.add("saved");
+      setTimeout(function() {
+        btn.textContent = "저장";
+        btn.classList.remove("saved");
+      }, 1000);
+    };
+  });
+
+  /* v3.3: 정렬 UI 동기화 */
+  updateSortUI();
 
   /* v2.9: 현재 리플레이 중인 행 하이라이트 유지 */
   if (_restoreId) _applyReplayHighlight(_restoreId);
@@ -1431,6 +1556,21 @@ $("fStatus").addEventListener("change", render);
 $("fTradeClass").addEventListener("change", render);
 $("fDealStatus").addEventListener("change", render);
 $("fChannel").addEventListener("change", render);
+
+/* v3.3: thead 정렬 클릭 */
+document.querySelectorAll(".list-table thead .sortable").forEach(function(th) {
+  th.addEventListener("click", function() {
+    var key = th.dataset.sort;
+    if (currentSortKey === key) {
+      currentSortDir = currentSortDir === "desc" ? "asc" : "desc";
+    } else {
+      currentSortKey = key;
+      currentSortDir = "desc";
+    }
+    _expandedId = null;
+    render();
+  });
+});
 
 /* 크로스탭 동기화 */
 window.addEventListener("storage", function(e) {
