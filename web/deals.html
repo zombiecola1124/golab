@@ -449,10 +449,6 @@
             <input id="inRebateRate" type="number" step="0.1" min="0" max="100" value="30" />
           </div>
           <div>
-            <label>지급 수수료</label>
-            <input id="inPayoutFee" type="number" step="1" value="0" />
-          </div>
-          <div>
             <label>S 배분 (%)</label>
             <input id="inSRate_ch" type="number" step="1" min="0" max="100" value="60" />
           </div>
@@ -518,6 +514,10 @@
       <button class="chip-filter" data-chip-filter="todo">🔴 할일있음 <span class="cf-count" id="cfTodo">0</span></button>
     </div>
     <div class="filter-row">
+      <!-- v3.15: 월별 필터 드롭다운 -->
+      <select id="fMonth" style="min-width:110px">
+        <option value="">전체</option>
+      </select>
       <input id="fSearch" placeholder="거래처/품목/메모 검색..." style="flex:2" />
       <select id="fStatus">
         <option value="">전체 상태</option>
@@ -543,7 +543,7 @@
       <table class="list-table">
         <thead>
           <tr>
-            <th class="sortable" data-sort="date" style="width:100px">등록일 <span class="sort-arrow active">↓</span></th>
+            <th class="sortable" data-sort="date" style="width:100px">거래일 <span class="sort-arrow active">↓</span></th>
             <th>거래처</th>
             <th>품목</th>
             <th class="sortable" data-sort="supply">공급가 <span class="sort-arrow"></span></th>
@@ -1133,12 +1133,10 @@ function _buildTempTrade() {
       my_rate: TE.n($("inMyRate").value)
     },
     settlement: isChannel ? {
-      payout_fee: TE.n($("inPayoutFee").value),
       actual_S_amount: TE.n($("inActualS_ch").value)
     } : isSolo ? {
-      payout_fee: 0, actual_S_amount: 0
+      actual_S_amount: 0
     } : {
-      payout_fee: 0,
       actual_S_amount: TE.n($("inActualS_direct").value)
     }
   };
@@ -1196,18 +1194,20 @@ function updateCockpit(savedTrade) {
   html += '<div class="cockpit-divider"></div>';
 
   if (isChannel) {
-    html += _cr("리베이트율", TE.n(trade.rates.rebate_rate) + "%");
-    html += _cr("리베이트 금액", TE.fmt(c.rebate_amount));
-    html += _cr("지급 수수료", TE.fmt(TE.n(trade.settlement.payout_fee)));
+    /* v3.14: 관리업체 — 비용→순이익→배분 순서 */
+    html += _cr("총 공급가", TE.fmt(c.total_supply));
+    html += _cr("품목 원가", TE.fmt(c.item_cost_total));
     if (c.extra_cost_total > 0) {
-      html += _cr("부대비용 (차감)", TE.fmt(c.extra_cost_total));
+      html += _cr("부대비용", TE.fmt(c.extra_cost_total));
     }
+    html += _cr("총 원가", TE.fmt(c.item_cost_total + c.extra_cost_total));
+    html += _cr("순이익", "<b>" + TE.fmt(c.gross_profit) + "</b>");
     html += '<div class="cockpit-divider"></div>';
-    html += _cr("배분 대상 금액", "<b>" + TE.fmt(c.distributable) + "</b>");
-    html += _cr("S 예상몫 (" + TE.n(trade.rates.S_rate) + "%)", TE.fmt(c.expected_S_amount));
-    html += _cr("내 예상몫 (" + TE.n(trade.rates.my_rate) + "%)", TE.fmt(c.expected_my_amount));
+    html += _cr("관리업체 몫 <small style='color:#64748b'>(" + TE.n(trade.rates.rebate_rate) + "%)</small>", TE.fmt(c.rebate_amount));
+    html += _cr("배분 대상", "<b>" + TE.fmt(c.distributable) + "</b>");
     html += '<div class="cockpit-divider"></div>';
     html += _cr("S 실제 지급액", TE.fmt(TE.n(trade.settlement.actual_S_amount)));
+    html += '<div class="cockpit-row highlight"><span class="lbl">내 최종 몫</span><span class="val">' + TE.fmt(c.final_my_amount) + '</span></div>';
   } else if (tradeClass === "solo") {
     /* 단독형: 원가 → 바로 내 순익 */
     html += _cr("품목 원가", TE.fmt(c.item_cost_total));
@@ -1244,10 +1244,11 @@ function updateCockpit(savedTrade) {
 function _buildFormulaLine(trade, c, isChannel) {
   var f = '<div class="cockpit-formula">';
   if (isChannel) {
-    /* 채널형 */
-    f += '리베이트 <b>' + TE.fmt(c.rebate_amount) + '</b>';
-    f += ' − 지급수수료 <b>' + TE.fmt(TE.n(trade.settlement.payout_fee)) + '</b>';
-    if (c.extra_cost_total > 0) f += ' − 차감성 부대비용 <b>' + TE.fmt(c.extra_cost_total) + '</b>';
+    /* v3.14: 채널형 — gross_profit 기반 */
+    f += '매출 <b>' + TE.fmt(c.total_supply) + '</b>';
+    f += ' − 원가 <b>' + TE.fmt(c.item_cost_total + c.extra_cost_total) + '</b>';
+    f += ' = 순익 <b>' + TE.fmt(c.gross_profit) + '</b>';
+    f += ' − 관리업체 <b>' + TE.fmt(c.rebate_amount) + '</b>';
     f += ' = 배분대상 <b>' + TE.fmt(c.distributable) + '</b>';
     f += ' → 내 최종 몫 <b>' + TE.fmt(c.final_my_amount) + '</b>';
   } else if (TE.n(trade.rates.S_rate) > 0 || TE.n(trade.rates.save_rate) > 0) {
@@ -1275,7 +1276,7 @@ function _cr(label, value) {
 
 /* 비율 입력 변경 시 조종석 업데이트 + 자동 S지급액 반영 */
 ["inSaveRate","inSRate","inMyRate",
- "inRebateRate","inPayoutFee","inSRate_ch","inMyRate_ch","inActualS_ch"].forEach(function(id) {
+ "inRebateRate","inSRate_ch","inMyRate_ch","inActualS_ch"].forEach(function(id) {
   $(id).addEventListener("input", updateCockpit);
 });
 
@@ -1354,8 +1355,9 @@ function sortTrades(deals) {
 
   return deals.slice().sort(function(a, b) {
     if (key === "date") {
-      var da = a.created_at || "";
-      var db = b.created_at || "";
+      /* v3.15: deal_date 우선, fallback: quote_at → created_at */
+      var da = a.deal_date || a.quote_at || a.created_at || "";
+      var db = b.deal_date || b.quote_at || b.created_at || "";
       /* null은 맨 아래 */
       if (!da && !db) return 0;
       if (!da) return 1;
@@ -1388,15 +1390,52 @@ function updateSortUI() {
   });
 }
 
+/* v3.15: 월 드롭다운 옵션 빌더 — 전체 거래 배열에서 YYYY-MM 추출 */
+var _prevMonthKey = "";  /* 불필요한 DOM 갱신 방지용 */
+function _buildMonthOptions(all) {
+  /* deal_date 우선, fallback: quote_at → created_at */
+  var monthSet = {};
+  all.forEach(function(t) {
+    var dt = t.deal_date || t.quote_at || t.created_at || "";
+    var ym = dt.substring(0, 7);
+    if (ym && ym.length === 7) monthSet[ym] = true;
+  });
+  var months = Object.keys(monthSet).sort().reverse(); /* 최신 월부터 */
+  var key = months.join(",");
+  if (key === _prevMonthKey) return; /* 같으면 스킵 */
+  _prevMonthKey = key;
+
+  var sel = $("fMonth");
+  var curVal = sel.value; /* 현재 선택값 보존 */
+  var html = '<option value="">전체</option>';
+  months.forEach(function(m) {
+    html += '<option value="' + m + '"' + (m === curVal ? ' selected' : '') + '>' + m + '</option>';
+  });
+  sel.innerHTML = html;
+}
+
 /* ══════ 렌더링 ══════ */
 function render() {
   var all = TE.loadAll();
+
+  /* v3.15: 월 드롭다운 항목 동적 생성 (all 기준) */
+  _buildMonthOptions(all);
+
+  var monthFilter = $("fMonth").value;   /* "" = 전체, "YYYY-MM" = 해당 월 */
   var q = ($("fSearch").value || "").trim().toLowerCase();
   var statusFilter = $("fStatus").value;
   var tradeClassFilter = $("fTradeClass").value;
   var dealStatusFilter = $("fDealStatus").value;
   var channelFilter = $("fChannel").value;
   var filtered = all;
+
+  /* v3.15: 월 필터 (deal_date 우선, fallback: quote_at → created_at) */
+  if (monthFilter) {
+    filtered = filtered.filter(function(t) {
+      var dt = t.deal_date || t.quote_at || t.created_at || "";
+      return dt.substring(0, 7) === monthFilter;
+    });
+  }
 
   if (q) {
     filtered = filtered.filter(function(t) {
@@ -1489,8 +1528,9 @@ function render() {
     var dispName = TE.itemDisplayName(t);
 
     html += '<tr '+rowStyle+' data-id="'+t.id+'" data-toggle="'+t.id+'">';
-    /* v3.3: 등록일 컬럼 */
-    html += '<td style="white-space:nowrap;color:var(--muted);font-size:11px">'+(t.created_at ? t.created_at.substring(0,10) : '—')+'</td>';
+    /* v3.15: 날짜 컬럼 — deal_date 우선, fallback: quote_at → created_at */
+    var _dtDisp = (t.deal_date || t.quote_at || t.created_at || "").substring(0,10) || "—";
+    html += '<td style="white-space:nowrap;color:var(--muted);font-size:11px">'+_dtDisp+'</td>';
     /* v3.7: 거래처 셀 + 상태 칩 */
     var _chips = _getStatusChips(t);
     var _chipHtml = "";
@@ -2119,13 +2159,11 @@ function saveTrade() {
       };
     }),
     settlement: isChannel ? {
-      payout_fee: TE.n($("inPayoutFee").value),
       actual_S_amount: TE.n($("inActualS_ch").value),
       memo: ($("inSettlementMemo_ch").value || "").trim()
     } : isSolo ? {
-      payout_fee: 0, actual_S_amount: 0, memo: ""
+      actual_S_amount: 0, memo: ""
     } : {
-      payout_fee: 0,
       actual_S_amount: TE.n($("inActualS_direct").value),
       memo: ($("inSettlementMemo").value || "").trim()
     },
@@ -2209,7 +2247,6 @@ function startEdit(tid) {
   /* 비율 복원 — r은 이미 위에서 선언 */
   if (t.trade_type === "channel") {
     $("inRebateRate").value = r.rebate_rate || 30;
-    $("inPayoutFee").value = (t.settlement || {}).payout_fee || 0;
     $("inSRate_ch").value = r.S_rate || 60;
     $("inMyRate_ch").value = r.my_rate || 40;
     $("inActualS_ch").value = (t.settlement || {}).actual_S_amount || 0;
@@ -2259,7 +2296,7 @@ function clearForm() {
 
   $("inSaveRate").value = 30; $("inSRate").value = 60; $("inMyRate").value = 40;
   $("inActualS_direct").value = 0; $("inSettlementMemo").value = "";
-  $("inRebateRate").value = 30; $("inPayoutFee").value = 0;
+  $("inRebateRate").value = 30;
   $("inSRate_ch").value = 60; $("inMyRate_ch").value = 40;
   $("inActualS_ch").value = 0; $("inSettlementMemo_ch").value = "";
 
@@ -2275,6 +2312,7 @@ $("btnCancel").addEventListener("click", clearForm);
 
 var _searchTimer = null;
 $("fSearch").addEventListener("input", function() { clearTimeout(_searchTimer); _searchTimer = setTimeout(render, 200); });
+$("fMonth").addEventListener("change", render);   /* v3.15: 월 필터 */
 $("fStatus").addEventListener("change", render);
 $("fTradeClass").addEventListener("change", render);
 $("fDealStatus").addEventListener("change", render);
