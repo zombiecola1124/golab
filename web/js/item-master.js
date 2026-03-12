@@ -59,21 +59,21 @@ window.GoLabItemMaster = (function () {
     return loadAll().find(x => x.item_id === itemId) || null;
   }
 
-  /** 이름으로 검색 (부분 매칭, 대소문자 무시, aliases 포함) */
+  /** 이름으로 검색 (부분 매칭, 대소문자 무시, aliases/메모/매입처/판매처 포함) */
   function search(query) {
     if (!query || !query.trim()) return loadAll();
     const q = query.trim().toLowerCase();
     const all = loadAll();
-    // 정확한 prefix 매칭 우선 → contains 매칭 후순위
+    /* v3.10: 검색 범위 확장 — 품목명, 별칭, 규격, 매입처(참고), 메모 */
     const prefix = [];
     const contains = [];
     all.forEach(item => {
       const name = (item.item_name || "").toLowerCase();
       const spec = (item.spec || "").toLowerCase();
       const supplier = (item.supplier || "").toLowerCase();
-      /* v3.6: aliases 배열도 검색 대상에 포함 */
       const aliasStr = (item.aliases || []).join(" ").toLowerCase();
-      const combined = name + " " + spec + " " + supplier + " " + aliasStr;
+      const note = (item.note || "").toLowerCase();
+      const combined = name + " " + spec + " " + supplier + " " + aliasStr + " " + note;
       if (name.startsWith(q)) prefix.push(item);
       else if (combined.includes(q)) contains.push(item);
     });
@@ -87,10 +87,11 @@ window.GoLabItemMaster = (function () {
     return isNaN(n) ? null : n;
   }
 
-  /* ── 기준 가격 필드 목록 (v3.6a) ── */
+  /* ── 기준 가격 필드 목록 (v3.12: 전략 가격 3종으로 정리) ── */
   const PRICE_FIELDS = [
-    "consumer_price", "dealer_price", "target_buy_price",
-    "internet_low_price", "distributor_price"
+    "rrp_price",          /* 소비자가 (RRP) — 구 consumer_price */
+    "dealer_price",       /* 딜러가 (B2B 기준) */
+    "target_buy_price"    /* 목표매입가 */
   ];
 
   /** 품목 생성 (v3.6a: 기준 가격 + 택배 조건 추가) */
@@ -105,12 +106,10 @@ window.GoLabItemMaster = (function () {
       note:       (fields.note || "").trim(),
       aliases:    Array.isArray(fields.aliases) ? fields.aliases : [],
       unit:       (fields.unit || "").trim(),
-      /* v3.6a: 기준 가격 (선택 입력, null = 미입력) */
-      consumer_price:     _parsePrice(fields.consumer_price),
+      /* v3.12: 전략 가격 3종 (선택 입력, null = 미입력) */
+      rrp_price:          _parsePrice(fields.rrp_price),
       dealer_price:       _parsePrice(fields.dealer_price),
       target_buy_price:   _parsePrice(fields.target_buy_price),
-      internet_low_price: _parsePrice(fields.internet_low_price),
-      distributor_price:  _parsePrice(fields.distributor_price),
       /* v3.6a: 택배 조건 */
       shipping_included_default: !!fields.shipping_included_default,
       shipping_note:      (fields.shipping_note || "").trim(),
@@ -837,9 +836,13 @@ window.GoLabItemMaster = (function () {
 
     let totalRevenue = 0, totalCost = 0, totalMyShare = 0, totalSPaid = 0;
     let firstDate = "", lastDate = "";
+    /* v3.12: 최근 판매가/매입가 추적 */
+    let lastSellPrice = null, lastSellDate = "";
+    let lastBuyPrice  = null, lastBuyDate  = "";
 
     trades.forEach(function(deal) {
-      if (deal.deal_status === "cancelled") return;
+      /* v3.12: 취소 거래 필터 (is_canceled !== true) */
+      if (deal.deal_status === "cancelled" || deal.is_canceled === true) return;
       const items = deal.items || [];
       /* 해당 품목이 포함된 거래만 */
       const matched = items.filter(function(it) { return it.item_id === itemId; });
@@ -875,6 +878,9 @@ window.GoLabItemMaster = (function () {
           b.txCount++;
           b.totalQty += qty;
           if (dt > b.lastDate) { b.lastDate = dt; b.lastPrice = unitPrice || cost; }
+          /* v3.12: 최근 매입가 추적 */
+          var _bp = unitPrice || cost;
+          if (_bp > 0 && dt > lastBuyDate) { lastBuyPrice = _bp; lastBuyDate = dt; }
         } else {
           /* 매출처 또는 겸용 → sellers */
           if (!sellerMap[deal.partner_id]) {
@@ -884,6 +890,8 @@ window.GoLabItemMaster = (function () {
           s.txCount++;
           s.totalQty += qty;
           if (dt > s.lastDate) { s.lastDate = dt; s.lastPrice = unitPrice; }
+          /* v3.12: 최근 판매가 추적 */
+          if (unitPrice > 0 && dt > lastSellDate) { lastSellPrice = unitPrice; lastSellDate = dt; }
         }
 
         totalRevenue += supplyAmt;
@@ -928,7 +936,10 @@ window.GoLabItemMaster = (function () {
       totalCost: totalCost,
       totalProfit: totalRevenue - totalCost,
       totalMyShare: totalMyShare,
-      totalSPaid: totalSPaid
+      totalSPaid: totalSPaid,
+      /* v3.12: 파생 가격 (거래 데이터 기반) */
+      lastSellPrice: lastSellPrice,
+      lastBuyPrice:  lastBuyPrice
     };
   }
 
@@ -1049,6 +1060,69 @@ window.GoLabItemMaster = (function () {
   }
 
   /* ══════════════════════════════════════
+     v3.8: 최근 구매 단가(KRW) 조회
+     golab_purchases_v2 배치 + golab_price_history_v1 에서
+     해당 item_id의 최신 기록 → 품목단가×환율 반환
+     ══════════════════════════════════════ */
+
+  /**
+   * 품목의 최근 구매 단가(KRW) 조회
+   * @param {string} itemId — 품목 마스터 item_id
+   * @returns {{ cost:number, date:string, batchName:string, currency:string, rawPrice:number, exchangeRate:number }|null}
+   */
+  function getLatestPurchaseCost(itemId) {
+    if (!itemId) return null;
+
+    var latest = null; /* { cost, date, batchName, currency, rawPrice, exchangeRate } */
+
+    /* 1) golab_purchases_v2 배치 스캔 → item_id 매칭 → price×exchangeRate */
+    try {
+      var batches = JSON.parse(localStorage.getItem("golab_purchases_v2") || "[]");
+      batches.forEach(function(batch) {
+        var batchDate = batch.date || "";
+        var ex = Number(batch.exchangeRate) || 1;
+        (batch.items || []).forEach(function(item) {
+          if (item.item_id !== itemId) return;
+          var rawPrice = Number(item.price) || 0;
+          var krwUnitCost = Math.round(rawPrice * ex);
+          if (!latest || batchDate > latest.date) {
+            latest = {
+              cost: krwUnitCost,
+              date: batchDate,
+              batchName: batch.batchName || "",
+              currency: batch.currency || "KRW",
+              rawPrice: rawPrice,
+              exchangeRate: ex
+            };
+          }
+        });
+      });
+    } catch(e) { /* silent */ }
+
+    /* 2) golab_price_history_v1 스캔 → item_id 매칭 → price×fxRef */
+    try {
+      var ph = JSON.parse(localStorage.getItem("golab_price_history_v1") || "[]");
+      ph.forEach(function(rec) {
+        if (rec.item_id !== itemId) return;
+        var dt = rec.date || "";
+        if (!latest || dt > latest.date) {
+          var fxRef = Number(rec.fxRef) || 1;
+          latest = {
+            cost: Math.round((Number(rec.price) || 0) * fxRef),
+            date: dt,
+            batchName: "(가격기록)",
+            currency: rec.currency || "KRW",
+            rawPrice: Number(rec.price) || 0,
+            exchangeRate: fxRef
+          };
+        }
+      });
+    } catch(e) { /* silent */ }
+
+    return latest;
+  }
+
+  /* ══════════════════════════════════════
      v3.6: 필드 자동 보강 실행
      ══════════════════════════════════════ */
   _upgradeRecords();
@@ -1072,7 +1146,59 @@ window.GoLabItemMaster = (function () {
     getDealsByItem,
     getDealsByText,
     extractUnlinkedItems,
-    linkItemToTrades
+    linkItemToTrades,
+    /* v3.8 신규 */
+    getLatestPurchaseCost
   };
 
+})();
+
+/* ══════════════════════════════════════
+   v3.12: 가격 필드 마이그레이션 (Soft-delete)
+   consumer_price → rrp_price
+   distributor_price → distributor_price_legacy
+   internet_low_price → internet_low_price_legacy
+   ══════════════════════════════════════ */
+(function _migratePriceFields() {
+  var KEY = GoLabItemMaster.MASTER_KEY;
+  var all;
+  try { all = JSON.parse(localStorage.getItem(KEY) || "[]"); }
+  catch(e) { return; }
+  if (all.length === 0) return;
+  var changed = false;
+  all.forEach(function(item) {
+    /* consumer_price → rrp_price (값 이관) */
+    if (item.rrp_price === undefined || item.rrp_price === null) {
+      if (item.consumer_price != null) {
+        item.rrp_price = item.consumer_price;
+        changed = true;
+      }
+    }
+    /* consumer_price 제거 (rrp_price로 이관 완료) */
+    if (item.consumer_price !== undefined) {
+      delete item.consumer_price;
+      changed = true;
+    }
+    /* distributor_price → distributor_price_legacy */
+    if (item.distributor_price !== undefined) {
+      if (item.distributor_price != null && item.distributor_price !== 0) {
+        item.distributor_price_legacy = item.distributor_price;
+      }
+      delete item.distributor_price;
+      changed = true;
+    }
+    /* internet_low_price → internet_low_price_legacy */
+    if (item.internet_low_price !== undefined) {
+      if (item.internet_low_price != null && item.internet_low_price !== 0) {
+        item.internet_low_price_legacy = item.internet_low_price;
+      }
+      delete item.internet_low_price;
+      changed = true;
+    }
+  });
+  if (changed) {
+    localStorage.setItem(KEY, JSON.stringify(all));
+    GoLabItemMaster.emitAudit("MIGRATE_PRICE_V312", { count: all.length });
+    console.log("[ITEM-MASTER] v3.12 가격 필드 마이그레이션 완료 (" + all.length + "건)");
+  }
 })();

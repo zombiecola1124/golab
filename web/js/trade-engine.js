@@ -218,6 +218,38 @@ window.GoLabTradeEngine = (function () {
   }
 
   /* ══════════════════════════════════════
+     v3.9: 입금 상태 엔진 (공급가/VAT 분리)
+     ══════════════════════════════════════ */
+
+  /**
+   * 입금 상태 판정 (공용 함수 — deals.html / profit.html 공통 사용)
+   * @param {Object} deal — 거래 객체 (paid_supply / paid_vat 필드 참조)
+   * @returns {{ code: string, label: string, progress: number }}
+   */
+  function calcPaymentStatus(deal) {
+    var c = calcTrade(deal);
+    var ps = n(deal.paid_supply);
+    var pv = n(deal.paid_vat);
+
+    /* 품목 미입력 (공급가 0) → 판정 불가, 미입금 처리 */
+    if (c.total_amount <= 0) {
+      return { code: "unpaid", label: "미입금", progress: 0 };
+    }
+
+    /* 진행률 (0~100) */
+    var progress = Math.min(100, Math.round((ps + pv) / c.total_amount * 100));
+
+    /* 3단계 판정 */
+    if (ps >= c.total_supply && pv >= c.vat_amount) {
+      return { code: "paid", label: "완납", progress: 100 };
+    }
+    if (ps >= c.total_supply && pv < c.vat_amount) {
+      return { code: "vat_pending", label: "VAT 미입금", progress: progress };
+    }
+    return { code: "unpaid", label: "미입금", progress: progress };
+  }
+
+  /* ══════════════════════════════════════
      거래 유형 분류 (v3.0)
      ══════════════════════════════════════ */
 
@@ -250,6 +282,16 @@ window.GoLabTradeEngine = (function () {
     return loadAll().find(function (t) { return t.id === tradeId; }) || null;
   }
 
+  /* v3.8: 품목 마스터 snapshot 추출 헬퍼 */
+  function _snapshotFromMaster(itemId) {
+    if (!itemId || typeof GoLabItemMaster === "undefined") return { unit: null, basePrice: null };
+    var m = GoLabItemMaster.getById(itemId);
+    if (!m) return { unit: null, basePrice: null };
+    /* v3.12: 전략 가격 폴백 (rrp_price, legacy consumer_price 호환) */
+    var bp = m.dealer_price || m.rrp_price || m.consumer_price || m.target_buy_price || null;
+    return { unit: m.unit || null, basePrice: bp };
+  }
+
   /** 거래 생성 */
   function create(fields) {
     if (!fields.partner_id) throw new Error("거래처를 선택해주세요.");
@@ -271,8 +313,9 @@ window.GoLabTradeEngine = (function () {
       deal_owner:            DEAL_OWNER.MINE,
       deal_status:           DEAL_STATUS.ACTIVE,
 
-      /* 품목 배열 */
+      /* 품목 배열 (v3.8: snapshot 필드 추가) */
       items: (fields.items || []).map(function (item, i) {
+        var snap = _snapshotFromMaster(item.item_id);
         return {
           seq:           i + 1,
           item_id:       item.item_id || null,
@@ -281,7 +324,10 @@ window.GoLabTradeEngine = (function () {
           unit_price:    n(item.unit_price),
           supply_amount: Math.round(n(item.qty) * n(item.unit_price)),
           cost:          (item.cost != null && item.cost !== "") ? n(item.cost) : null,
-          memo:          (item.memo || "").trim()
+          memo:          (item.memo || "").trim(),
+          /* v3.8: 품목 마스터 snapshot */
+          item_unit_snapshot:       snap.unit,
+          item_base_price_snapshot: snap.basePrice
         };
       }),
 
@@ -320,6 +366,10 @@ window.GoLabTradeEngine = (function () {
       delivery_note_at: fields.delivery_note_at || null,
       invoice_at:       fields.invoice_at || null,
       payment_at:       fields.payment_at || null,
+
+      /* v3.9: 입금 추적 (공급가/VAT 분리) */
+      paid_supply:   n(fields.paid_supply),
+      paid_vat:      n(fields.paid_vat),
 
       timeline: [{ step: "create", at: new Date().toISOString(), label: "거래 생성" }],
       source:        fields.source || "manual",
@@ -360,9 +410,10 @@ window.GoLabTradeEngine = (function () {
     if (fields.deal_status !== undefined) d.deal_status = fields.deal_status;
     if (fields.memo        !== undefined) d.memo        = fields.memo.trim();
 
-    /* 품목 배열 교체 */
+    /* 품목 배열 교체 (v3.8: snapshot 필드 추가) */
     if (fields.items !== undefined) {
       d.items = (fields.items || []).map(function (item, i) {
+        var snap = _snapshotFromMaster(item.item_id);
         return {
           seq:           i + 1,
           item_id:       item.item_id || null,
@@ -371,7 +422,10 @@ window.GoLabTradeEngine = (function () {
           unit_price:    n(item.unit_price),
           supply_amount: Math.round(n(item.qty) * n(item.unit_price)),
           cost:          (item.cost != null && item.cost !== "") ? n(item.cost) : null,
-          memo:          (item.memo || "").trim()
+          memo:          (item.memo || "").trim(),
+          /* v3.8: 품목 마스터 snapshot */
+          item_unit_snapshot:       snap.unit,
+          item_base_price_snapshot: snap.basePrice
         };
       });
     }
@@ -412,6 +466,10 @@ window.GoLabTradeEngine = (function () {
       };
     }
 
+    /* v3.9: 입금 추적 필드 */
+    if (fields.paid_supply !== undefined) d.paid_supply = n(fields.paid_supply);
+    if (fields.paid_vat    !== undefined) d.paid_vat    = n(fields.paid_vat);
+
     /* 날짜 필드 */
     /* v2.9c: 장부 기준일 — 사용자 수정 시 date_inferred 해제 */
     if (fields.deal_date        !== undefined) {
@@ -423,6 +481,16 @@ window.GoLabTradeEngine = (function () {
     if (fields.delivery_note_at !== undefined) d.delivery_note_at = fields.delivery_note_at || null;
     if (fields.invoice_at       !== undefined) d.invoice_at       = fields.invoice_at || null;
     if (fields.payment_at       !== undefined) d.payment_at       = fields.payment_at || null;
+
+    /* v3.9: 완납 시 payment_at 자동 기록 (기존 값 있으면 보존) */
+    if (!d.payment_at) {
+      var _ps = calcPaymentStatus(d);
+      if (_ps.code === "paid") {
+        d.payment_at = _today();
+        if (!d.timeline) d.timeline = [];
+        d.timeline.push({ step: "payment", at: new Date().toISOString(), label: "완납 자동 기록" });
+      }
+    }
 
     /* 상태 재계산 */
     d.status      = _calcStatus(d);
@@ -803,6 +871,7 @@ window.GoLabTradeEngine = (function () {
     n:               n,
     fmt:             fmt,
     calcTrade:       calcTrade,
+    calcPaymentStatus: calcPaymentStatus,   /* v3.9 신규 */
     classifyTrade:   classifyTrade,   /* v3.0 신규 */
     loadAll:         loadAll,
     getById:         getById,
@@ -842,5 +911,36 @@ GoLabTradeEngine.migrateFromV1();
     localStorage.setItem(GoLabTradeEngine.TRADE_KEY, JSON.stringify(all));
     GoLabTradeEngine.emitAudit("UPGRADE_V2_TO_V28A", { count: all.length });
     console.log("[TRADE ENGINE] v2→v2.8a 필드 보강 완료 (" + all.length + "건)");
+  }
+})();
+
+/* v3.9: paid_supply / paid_vat 필드 보정 (기존 데이터 호환) */
+(function () {
+  var TE = GoLabTradeEngine;
+  var all = TE.loadAll();
+  if (all.length === 0) return;
+  var changed = false;
+  all.forEach(function (t) {
+    /* 이미 두 필드 모두 존재하면 절대 덮어쓰지 않는다 (멱등) */
+    var hasSupply = (t.paid_supply !== undefined && t.paid_supply !== null);
+    var hasVat    = (t.paid_vat !== undefined && t.paid_vat !== null);
+    if (hasSupply && hasVat) return;
+
+    if (t.payment_at) {
+      /* 기존 완납 거래: calcTrade 기준 전액 입금 처리 */
+      var c = TE.calcTrade(t);
+      t.paid_supply = c.total_supply;
+      t.paid_vat = c.vat_amount;
+    } else {
+      /* 미완료 거래: 0으로 초기화 */
+      t.paid_supply = 0;
+      t.paid_vat = 0;
+    }
+    changed = true;
+  });
+  if (changed) {
+    localStorage.setItem(TE.TRADE_KEY, JSON.stringify(all));
+    TE.emitAudit("UPGRADE_PAID_FIELDS", { count: all.length });
+    console.log("[TRADE ENGINE] v3.9 paid_supply/paid_vat 보정 완료 (" + all.length + "건)");
   }
 })();

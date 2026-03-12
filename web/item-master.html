@@ -3,7 +3,7 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GoLab · 품목 마스터</title>
+  <title>GoLab · 품목 조종석</title>
   <style>
     :root{
       --bg:#f5f7fa;--card:#ffffff;--muted:#64748b;--text:#0f172a;
@@ -60,41 +60,70 @@
     td.r{text-align:right;font-variant-numeric:tabular-nums}
     tr:hover{background:rgba(8,145,178,.04)}
     .muted{color:var(--muted)}
-    .cat-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700}
-    .cat-badge.raw{background:rgba(37,99,235,.1);color:#1d4ed8}
-    .cat-badge.equip{background:rgba(217,119,6,.1);color:#92400e}
-    .cat-badge.general{background:rgba(100,116,139,.1);color:#475569}
+    .cat-badge{display:inline-flex;align-items:center;padding:3px 10px;border-radius:6px;font-size:11px;font-weight:700;letter-spacing:-0.01em;gap:6px}
+    .cat-badge::before{content:"";width:3px;height:12px;border-radius:2px;background:currentColor;opacity:0.5}
+    .cat-badge:hover{filter:brightness(0.95)}
+    .cat-badge.raw{background:rgba(37,99,235,.08);color:#1d4ed8}
+    .cat-badge.equip{background:rgba(217,119,6,.08);color:#92400e}
+    .cat-badge.general{background:rgba(100,116,139,.08);color:#475569}
     /* Search/Filter */
     .search-bar{margin-bottom:12px}
     .filter-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap;align-items:center}
     .filter-chip{padding:5px 12px;border-radius:8px;border:1px solid var(--line);background:var(--card);font-size:11px;font-weight:600;cursor:pointer;color:var(--muted);transition:all .15s}
     .filter-chip:hover{border-color:#cbd5e1;color:var(--text)}
     .filter-chip.active{background:var(--item);border-color:var(--item);color:#fff}
-    /* 상세 패널 */
-    .detail-row td{background:rgba(8,145,178,.03);padding:8px 12px;border-bottom:2px solid var(--line)}
-    .ip-panel{padding:16px;border-radius:10px;border:2px solid var(--item);background:rgba(8,145,178,.02)}
-    .ip-header{display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:12px;flex-wrap:wrap}
-    .ip-header .ip-name{font-size:16px;font-weight:800;color:var(--text)}
-    .ip-info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 20px;font-size:11px;color:var(--muted);margin-bottom:14px}
-    .ip-info-grid b{color:var(--text);font-weight:600}
+    /* ── 상세 패널 v3.8 SaaS 리디자인 ── */
+    .detail-row td{background:rgba(8,145,178,.02);padding:8px 12px;border-bottom:2px solid var(--line)}
+    .ip-panel{padding:0;border-radius:12px;border:1px solid var(--line);background:var(--card);overflow:hidden}
+
+    /* Hero 섹션 */
+    .ip-hero{padding:20px 24px 16px;background:linear-gradient(135deg,rgba(8,145,178,.04),rgba(8,145,178,.01));border-bottom:1px solid var(--line)}
+    .ip-hero-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:8px}
+    .ip-hero .ip-name{font-size:18px;font-weight:800;color:var(--text);letter-spacing:-0.02em}
+    .ip-hero .ip-unit{font-size:12px;color:var(--muted);font-weight:500}
+    .ip-hero-meta{display:flex;gap:12px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+    .ip-hero-meta span{display:inline-flex;align-items:center;gap:3px}
+    .ip-hero-meta b{color:var(--text);font-weight:600}
+
+    /* 섹션 카드 공통 */
+    .ip-zone{padding:16px 24px}
+    .ip-zone + .ip-zone{border-top:1px solid rgba(0,0,0,.04)}
+    .ip-zone-title{font-size:11px;font-weight:700;color:var(--muted);text-transform:uppercase;letter-spacing:.4px;margin-bottom:12px}
+
+    /* Core: 2-column 기본정보 + 가격 */
+    .ip-core-grid{display:grid;grid-template-columns:1fr 1fr;gap:16px}
+    .ip-info-block{display:flex;flex-direction:column;gap:8px}
+    .ip-field{display:flex;flex-direction:column;gap:2px}
+    .ip-field-label{font-size:11px;color:var(--muted);font-weight:600}
+    .ip-field-value{font-size:13px;color:var(--text);font-weight:500}
+
     /* 기준 가격 블록 */
-    .ip-prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(130px,1fr));gap:8px;margin-bottom:14px;padding:12px;border-radius:8px;background:rgba(8,145,178,.04);border:1px solid rgba(8,145,178,.12)}
-    .ip-price-item{font-size:11px}
-    .ip-price-item .pp-label{color:var(--muted);font-size:9px;font-weight:700;text-transform:uppercase;letter-spacing:.3px}
-    .ip-price-item .pp-value{font-size:16px;font-weight:800;color:var(--text);margin-top:2px}
+    .ip-prices{display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px;padding:14px;border-radius:10px;background:rgba(8,145,178,.03)}
+    .ip-price-item{display:flex;flex-direction:column;gap:2px}
+    .ip-price-item .pp-label{font-size:11px;color:var(--muted);font-weight:600}
+    .ip-price-item .pp-value{font-size:14px;font-weight:800;color:var(--text);font-variant-numeric:tabular-nums}
+    /* v3.12: 파생 데이터 구분 + 마진 색상 */
+    .ip-derived-sep{grid-column:1/-1;height:1px;background:var(--border);margin:4px 0}
+    .ip-derived .pp-label{font-style:italic}
+    .ip-derived .pp-label::before{content:"↳ ";opacity:.5}
+    .margin-high{color:#16a34a !important}
+    .margin-mid{color:#d97706 !important}
+    .margin-low{color:#dc2626 !important}
     .ip-ship-tag{display:inline-block;padding:3px 10px;border-radius:6px;font-size:10px;font-weight:700}
     .ip-ship-tag.included{background:#dcfce7;color:#166534}
     .ip-ship-tag.excluded{background:#fee2e2;color:#991b1b}
-    /* 상세 KPI 바 */
-    .ip-kpi-bar{display:grid;grid-template-columns:repeat(auto-fit,minmax(100px,1fr));gap:8px;margin-bottom:14px}
-    .ip-kpi{padding:10px;border-radius:8px;text-align:center;border:1px solid var(--line);background:var(--card)}
-    .ip-kpi .ipk-label{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px}
-    .ip-kpi .ipk-value{font-size:16px;font-weight:800;margin-top:4px;color:var(--item)}
+
+    /* Auxiliary: KPI 그리드 */
+    .ip-kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:8px}
+    .ip-kpi{padding:12px;border-radius:10px;background:rgba(0,0,0,.02)}
+    .ip-kpi .ipk-label{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:4px}
+    .ip-kpi .ipk-value{font-size:14px;font-weight:800;color:var(--item);font-variant-numeric:tabular-nums}
     .ip-kpi .ipk-value.red{color:var(--bad)}
     .ip-kpi .ipk-value.green{color:var(--accent)}
-    /* 상세 탭 */
-    .ip-tabs{display:flex;gap:4px;margin-bottom:12px}
-    .ip-tab{padding:6px 14px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+
+    /* Related: 탭 */
+    .ip-tabs{display:flex;gap:4px;margin-bottom:14px}
+    .ip-tab{padding:7px 16px;border-radius:8px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
     .ip-tab:hover{color:var(--text);border-color:#cbd5e1}
     .ip-tab.active{color:#fff;background:var(--item);border-color:var(--item)}
     /* 상세 히스토리 테이블 */
@@ -109,6 +138,16 @@
     .ip-deposit-badge.paid{background:#dcfce7;color:#166534}
     .ip-deposit-badge.unpaid{background:#fee2e2;color:#991b1b}
     .ip-deposit-badge.active{background:#fef3c7;color:#92400e}
+    /* v3.10: 폼 접힘 */
+    .form-toggle-bar{display:flex;align-items:center;gap:10px;margin-bottom:16px}
+    .form-toggle-btn{background:var(--item);border:none;color:#fff;border-radius:10px;padding:10px 18px;font-size:12px;font-weight:700;cursor:pointer;transition:background .15s}
+    .form-toggle-btn:hover{background:#0e7490}
+    .form-collapsed{display:none}
+    /* v3.10: 마진율 색상 */
+    .margin-high{color:#16a34a;font-weight:700}
+    .margin-mid{color:#d97706;font-weight:700}
+    .margin-low{color:#dc2626;font-weight:700}
+    .margin-na{color:var(--muted)}
     /* 정규화 도구 */
     .norm-section{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:16px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .norm-item{display:flex;align-items:center;gap:10px;padding:8px 0;border-bottom:1px solid rgba(0,0,0,.04);flex-wrap:wrap}
@@ -124,16 +163,18 @@
     @media(max-width:900px){
       .kpi-grid{grid-template-columns:1fr 1fr}
       .r3{grid-template-columns:1fr 1fr}
-      .ip-info-grid{grid-template-columns:1fr 1fr}
-      .ip-kpi-bar{grid-template-columns:1fr 1fr}
+      .ip-core-grid{grid-template-columns:1fr}
+      .ip-kpi-grid{grid-template-columns:1fr 1fr}
       .ip-prices{grid-template-columns:1fr 1fr}
     }
     @media(max-width:600px){
       .r3{grid-template-columns:1fr}
       .r2{grid-template-columns:1fr}
-      .ip-info-grid{grid-template-columns:1fr}
-      .ip-kpi-bar{grid-template-columns:1fr}
+      .ip-core-grid{grid-template-columns:1fr}
+      .ip-kpi-grid{grid-template-columns:1fr 1fr}
       .ip-prices{grid-template-columns:1fr}
+      .ip-zone{padding:12px 16px}
+      .ip-hero{padding:16px}
       .filter-row{flex-direction:column;align-items:stretch}
     }
   </style>
@@ -141,13 +182,13 @@
 <body>
 <header>
   <div class="top">
-    <h1>GoLab · 품목 마스터</h1>
+    <h1>GoLab · 품목 조종석</h1>
     <nav class="tabs">
       <a class="tab" href="./console.html">🏠 메인</a>
       <a class="tab" href="./deals.html">🔥 거래</a>
+      <a class="tab active" href="./item-master.html">🏷 품목</a>
       <a class="tab" href="./profit.html">💰 수익</a>
       <a class="tab" href="./index.html">📦 재고</a>
-      <a class="tab active" href="./item-master.html">🏷 품목</a>
       <a class="tab" href="./partner-master.html">👥 거래처</a>
     </nav>
   </div>
@@ -172,8 +213,13 @@
     </div>
   </div>
 
-  <!-- 등록/수정 폼 -->
-  <div class="card" id="formCard">
+  <!-- v3.10: 폼 접힘 토글 -->
+  <div class="form-toggle-bar" id="formToggleBar">
+    <button class="form-toggle-btn" id="btnFormToggle">＋ 품목 등록</button>
+  </div>
+
+  <!-- 등록/수정 폼 (v3.10: 기본 접힘) -->
+  <div class="card form-collapsed" id="formCard">
     <h2>➕ 품목 등록</h2>
 
     <div class="form-section-label">기본 정보</div>
@@ -188,15 +234,13 @@
       <div><label>별칭 <span class="opt">(콤마 구분)</span></label><input id="inAliases" placeholder="은분말, silver powder" /></div>
     </div>
 
-    <div class="form-section-label">기준 가격 <span class="opt">(선택 입력)</span></div>
+    <div class="form-section-label">가격 전략 <span class="opt">(선택 입력)</span></div>
     <div class="row r3">
-      <div><label>소비자가</label><input id="inConsumerPrice" type="number" placeholder="원" /></div>
+      <div><label>소비자가 (RRP)</label><input id="inRrpPrice" type="number" placeholder="원" /></div>
       <div><label>딜러가</label><input id="inDealerPrice" type="number" placeholder="원" /></div>
       <div><label>목표매입가</label><input id="inTargetBuyPrice" type="number" placeholder="원" /></div>
     </div>
     <div class="row r3">
-      <div><label>인터넷 최저가</label><input id="inInternetLowPrice" type="number" placeholder="원" /></div>
-      <div><label>총판 공급가</label><input id="inDistributorPrice" type="number" placeholder="원" /></div>
       <div>
         <label>택배비 조건</label>
         <div class="chk-row">
@@ -204,6 +248,8 @@
           <span>기본 택배비 포함</span>
         </div>
       </div>
+      <div></div>
+      <div></div>
     </div>
 
     <div class="form-section-label">메모</div>
@@ -231,7 +277,7 @@
 
   <!-- 검색 + 필터 -->
   <div class="search-bar">
-    <input id="fSearch" placeholder="품목명, 규격, 별칭으로 검색..." style="max-width:360px" />
+    <input id="fSearch" placeholder="품목명, 별칭, 메모, 매입처, 판매처로 검색..." style="max-width:420px" />
   </div>
   <div class="filter-row" id="filterRow">
     <button class="filter-chip active" data-cat="all">전체</button>
@@ -255,6 +301,7 @@
           <th class="r">최근 매입가</th>
           <th class="r">주 판매처</th>
           <th class="r">최근 판매가</th>
+          <th class="r">마진율</th>
           <th>최근 거래일</th>
           <th class="r">거래</th>
           <th class="r">총매출</th>
@@ -270,12 +317,12 @@
 </div>
 
 <!-- 엔진 로드 -->
-<script src="js/item-master.js?v=36a"></script>
+<script src="js/item-master.js?v=312"></script>
 <script src="js/partner-master.js"></script>
-<script src="js/trade-engine.js"></script>
+<script src="js/trade-engine.js?v=312"></script>
 <script>
 /* ══════════════════════════════════════
-   GoLab v3.6a — 품목 마스터 페이지
+   GoLab v3.10 — 품목 조종석 페이지
    ══════════════════════════════════════ */
 "use strict";
 
@@ -343,7 +390,8 @@ function _buildQuickStats(){
 
   var map = {};
   trades.forEach(function(deal){
-    if(deal.deal_status === "cancelled") return;
+    /* v3.12: 취소 거래 필터 */
+    if(deal.deal_status === "cancelled" || deal.is_canceled === true) return;
     var pName = deal.partner_name_snapshot || "";
     var pType = getPType(deal.partner_id);
     var dt = deal.deal_date || (deal.quote_at || deal.created_at || "").substring(0,10);
@@ -420,7 +468,26 @@ function catClass(cat){
 function render(){
   var all = GoLabItemMaster.loadAll();
   var q = ($("fSearch").value||"").trim();
-  var filtered = q ? GoLabItemMaster.search(q) : all;
+  /* v3.10: 통합 검색 — item-master.js search() + 주 매입처/판매처 추가 필터 */
+  var filtered;
+  if(q){
+    var baseResult = GoLabItemMaster.search(q);
+    var baseIds = {};
+    baseResult.forEach(function(it){ baseIds[it.item_id] = true; });
+    /* 매입처/판매처는 quickStats에서 추가 검색 */
+    if(!_quickStats) _buildQuickStats();
+    var ql = q.toLowerCase();
+    var extraFromStats = all.filter(function(it){
+      if(baseIds[it.item_id]) return false; /* 이미 포함 */
+      var qs = _quickStats[it.item_id];
+      if(!qs) return false;
+      return (qs.topBuyer || "").toLowerCase().indexOf(ql) >= 0 ||
+             (qs.topSeller || "").toLowerCase().indexOf(ql) >= 0;
+    });
+    filtered = baseResult.concat(extraFromStats);
+  } else {
+    filtered = all;
+  }
   if(_filterCat !== "all") filtered = filtered.filter(function(it){ return it.category === _filterCat; });
   if(!_quickStats) _buildQuickStats();
   if(!_invMap) _buildInvMap();
@@ -436,6 +503,13 @@ function render(){
   filtered.forEach(function(item, i){
     var qs = _quickStats[item.item_id] || {};
     var inv = _invMap[item.item_id];
+    /* v3.10: 마진율 계산 — (판매가-매입가)/판매가×100 */
+    var marginHtml = '<span class="margin-na">—</span>';
+    if(qs.lastSellPrice > 0 && qs.lastBuyPrice > 0){
+      var marginPct = (qs.lastSellPrice - qs.lastBuyPrice) / qs.lastSellPrice * 100;
+      var mClass = marginPct >= 20 ? "margin-high" : (marginPct >= 10 ? "margin-mid" : "margin-low");
+      marginHtml = '<span class="' + mClass + '">' + marginPct.toFixed(1) + '%</span>';
+    }
     html += '<tr>' +
       '<td class="muted">' + (i+1) + '</td>' +
       '<td><b>' + esc(item.item_name) + '</b>' + (item.unit ? ' <span class="muted" style="font-size:10px">(' + esc(item.unit) + ')</span>' : '') + '</td>' +
@@ -444,6 +518,7 @@ function render(){
       '<td class="r">' + (qs.lastBuyPrice ? fmtW(qs.lastBuyPrice) : '<span class="muted">—</span>') + '</td>' +
       '<td class="r muted">' + esc(qs.topSeller || "—") + '</td>' +
       '<td class="r">' + (qs.lastSellPrice ? fmtW(qs.lastSellPrice) : '<span class="muted">—</span>') + '</td>' +
+      '<td class="r">' + marginHtml + '</td>' +
       '<td class="muted">' + esc(qs.lastDate || "—") + '</td>' +
       '<td class="r">' + (qs.txCount ? qs.txCount + '건' : '<span class="muted">—</span>') + '</td>' +
       '<td class="r">' + (qs.totalRevenue ? fmtW(qs.totalRevenue) : '<span class="muted">—</span>') + '</td>' +
@@ -471,41 +546,79 @@ function buildItemStatusPanel(item){
   var stats = GoLabItemMaster.calcItemStats(item.item_id);
   var inv = _invMap[item.item_id];
 
-  var html = '<tr class="detail-row"><td colspan="12"><div class="ip-panel">';
+  var html = '<tr class="detail-row"><td colspan="13"><div class="ip-panel">';
 
-  /* ── 헤더 ── */
-  html += '<div class="ip-header">';
+  /* ═══ Hero 섹션 (v3.10 개선) ═══ */
+  var qs = _quickStats[item.item_id] || {};
+  html += '<div class="ip-hero">';
+  html += '<div class="ip-hero-top">';
   html += '<span class="ip-name">' + esc(item.item_name) + '</span>';
   html += '<span class="cat-badge ' + catClass(item.category) + '">' + esc(item.category) + '</span>';
-  if(item.unit) html += '<span style="font-size:11px;color:var(--muted)">(' + esc(item.unit) + ')</span>';
+  if(item.unit) html += '<span class="ip-unit">' + esc(item.unit) + '</span>';
+  /* v3.10: Hero 마진율 배지 */
+  if(qs.lastSellPrice > 0 && qs.lastBuyPrice > 0){
+    var heroMargin = (qs.lastSellPrice - qs.lastBuyPrice) / qs.lastSellPrice * 100;
+    var heroMCls = heroMargin >= 20 ? "margin-high" : (heroMargin >= 10 ? "margin-mid" : "margin-low");
+    html += '<span class="' + heroMCls + '" style="font-size:14px;margin-left:8px">마진 ' + heroMargin.toFixed(1) + '%</span>';
+  }
+  html += '</div>';
+  /* Hero 메타 정보 (한줄 요약) */
+  html += '<div class="ip-hero-meta">';
+  if(item.spec) html += '<span><b>규격</b> ' + esc(item.spec) + '</span>';
+  if(inv) html += '<span><b>재고</b> ' + fmtN(inv.qty) + '</span>';
+  html += '<span><b>등록</b> ' + (item.created_at ? item.created_at.substring(0,10) : "—") + '</span>';
+  if(stats.totalTxCount > 0) html += '<span><b>거래</b> ' + stats.totalTxCount + '건</span>';
+  if(qs.topBuyer) html += '<span><b>주 매입처</b> ' + esc(qs.topBuyer) + '</span>';
+  if(qs.topSeller) html += '<span><b>주 판매처</b> ' + esc(qs.topSeller) + '</span>';
+  html += '</div>';
   html += '</div>';
 
-  /* ── 기본 정보 ── */
-  html += '<div class="ip-info-grid">';
-  if(item.aliases && item.aliases.length > 0) html += '<span><b>별칭:</b> ' + esc(item.aliases.join(", ")) + '</span>';
-  if(item.spec) html += '<span><b>규격:</b> ' + esc(item.spec) + '</span>';
-  if(item.supplier) html += '<span><b>매입처(참고):</b> ' + esc(item.supplier) + '</span>';
-  if(inv) html += '<span><b>재고:</b> ' + fmtN(inv.qty) + '</span>';
-  html += '<span><b>등록일:</b> ' + (item.created_at ? item.created_at.substring(0,10) : "—") + '</span>';
-  if(item.note) html += '<span><b>전략 메모:</b> ' + esc(item.note) + '</span>';
-  html += '</div>';
+  /* ═══ Core 존: 기본정보 + 기준가격 (2-column) ═══ */
+  html += '<div class="ip-zone">';
 
-  /* ── 기준 가격 블록 (미입력 숨김) ── */
-  var priceLabels = {
-    consumer_price: "소비자가",
+  /* 기본정보 블록 */
+  var hasInfo = (item.aliases && item.aliases.length > 0) || item.supplier || item.note;
+
+  /* v3.12: 전략 가격 블록 (3종) + 참고 정보 (파생) */
+  var strategyLabels = {
+    rrp_price: "소비자가 (RRP)",
     dealer_price: "딜러가",
-    target_buy_price: "목표매입가",
-    internet_low_price: "인터넷 최저가",
-    distributor_price: "총판 공급가"
+    target_buy_price: "목표매입가"
+  };
+  /* legacy consumer_price 호환: rrp_price 없으면 consumer_price 참조 */
+  var _rrpVal = (item.rrp_price != null) ? item.rrp_price : (item.consumer_price || null);
+  var strategyValues = {
+    rrp_price: _rrpVal,
+    dealer_price: item.dealer_price || null,
+    target_buy_price: item.target_buy_price || null
   };
   var hasPrices = false;
   var priceHtml = '';
-  Object.keys(priceLabels).forEach(function(f){
-    if(item[f] !== null && item[f] !== undefined && item[f] !== 0){
+  Object.keys(strategyLabels).forEach(function(f){
+    var v = strategyValues[f];
+    if(v !== null && v !== undefined && v !== 0){
       hasPrices = true;
-      priceHtml += '<div class="ip-price-item"><div class="pp-label">' + priceLabels[f] + '</div><div class="pp-value">' + fmtW(item[f]) + '</div></div>';
+      priceHtml += '<div class="ip-price-item"><div class="pp-label">' + strategyLabels[f] + '</div><div class="pp-value">' + fmtW(v) + '</div></div>';
     }
   });
+  /* 파생 데이터: 최근 판매가 / 최근 매입가 */
+  var derivedHtml = '';
+  if (stats.lastSellPrice || stats.lastBuyPrice) {
+    derivedHtml += '<div class="ip-derived-sep"></div>';
+    if (stats.lastSellPrice) {
+      derivedHtml += '<div class="ip-price-item ip-derived"><div class="pp-label">최근 판매가</div><div class="pp-value">' + fmtW(stats.lastSellPrice) + '</div></div>';
+    }
+    if (stats.lastBuyPrice) {
+      derivedHtml += '<div class="ip-price-item ip-derived"><div class="pp-label">최근 매입가</div><div class="pp-value">' + fmtW(stats.lastBuyPrice) + '</div></div>';
+    }
+    /* 마진율 표시 */
+    if (stats.lastSellPrice && stats.lastBuyPrice) {
+      var _mr = ((stats.lastSellPrice - stats.lastBuyPrice) / stats.lastSellPrice * 100).toFixed(1);
+      var _mrCls = _mr >= 20 ? "margin-high" : (_mr >= 10 ? "margin-mid" : "margin-low");
+      derivedHtml += '<div class="ip-price-item ip-derived"><div class="pp-label">마진율</div><div class="pp-value ' + _mrCls + '">' + _mr + '%</div></div>';
+    }
+    hasPrices = true;
+  }
   /* 택배 조건 */
   if(item.shipping_included_default || item.shipping_note){
     hasPrices = true;
@@ -514,11 +627,39 @@ function buildItemStatusPanel(item){
     if(item.shipping_note) priceHtml += ' <span style="font-size:11px;color:var(--muted)">' + esc(item.shipping_note) + '</span>';
     priceHtml += '</div></div>';
   }
-  if(hasPrices) html += '<div class="ip-prices">' + priceHtml + '</div>';
 
-  /* ── KPI 바 ── */
-  html += '<div class="ip-kpi-bar">';
-  html += '<div class="ip-kpi"><div class="ipk-label">총 거래</div><div class="ipk-value">' + stats.totalTxCount + '건</div></div>';
+  if(hasInfo || hasPrices){
+    html += '<div class="ip-core-grid">';
+    /* 좌측: 기본정보 */
+    if(hasInfo){
+      html += '<div class="ip-info-block">';
+      html += '<div class="ip-zone-title">기본 정보</div>';
+      if(item.aliases && item.aliases.length > 0){
+        html += '<div class="ip-field"><span class="ip-field-label">별칭</span><span class="ip-field-value">' + esc(item.aliases.join(", ")) + '</span></div>';
+      }
+      if(item.supplier){
+        html += '<div class="ip-field"><span class="ip-field-label">매입처(참고)</span><span class="ip-field-value">' + esc(item.supplier) + '</span></div>';
+      }
+      if(item.note){
+        html += '<div class="ip-field"><span class="ip-field-label">전략 메모</span><span class="ip-field-value">' + esc(item.note) + '</span></div>';
+      }
+      html += '</div>';
+    }
+    /* 우측: 기준 가격 */
+    if(hasPrices){
+      html += '<div>';
+      html += '<div class="ip-zone-title">가격 전략</div>';
+      html += '<div class="ip-prices">' + priceHtml + derivedHtml + '</div>';
+      html += '</div>';
+    }
+    html += '</div>';
+  }
+  html += '</div>';
+
+  /* ═══ Auxiliary 존: KPI 실적 ═══ */
+  html += '<div class="ip-zone">';
+  html += '<div class="ip-zone-title">거래 실적</div>';
+  html += '<div class="ip-kpi-grid">';
   html += '<div class="ip-kpi"><div class="ipk-label">첫 거래</div><div class="ipk-value" style="font-size:12px">' + esc(stats.firstDate || "—") + '</div></div>';
   html += '<div class="ip-kpi"><div class="ipk-label">최근 거래</div><div class="ipk-value" style="font-size:12px">' + esc(stats.lastDate || "—") + '</div></div>';
   html += '<div class="ip-kpi"><div class="ipk-label">총 매출</div><div class="ipk-value">' + fmtW(stats.totalRevenue) + '</div></div>';
@@ -527,17 +668,22 @@ function buildItemStatusPanel(item){
   html += '<div class="ip-kpi"><div class="ipk-label">내 몫 합계</div><div class="ipk-value">' + fmtW(stats.totalMyShare) + '</div></div>';
   html += '<div class="ip-kpi"><div class="ipk-label">S 지급액</div><div class="ipk-value">' + fmtW(stats.totalSPaid) + '</div></div>';
   html += '</div>';
+  html += '</div>';
 
-  /* ── 탭 ── */
+  /* ═══ Related 존: 거래 이력 탭 ═══ */
+  html += '<div class="ip-zone">';
+  html += '<div class="ip-zone-title">거래 이력</div>';
   html += '<div class="ip-tabs">';
-  html += '<button class="ip-tab' + (_detailTab==="buyers"?" active":"") + '" data-tab="buyers">📦 매입처 비교 / 매입 이력</button>';
-  html += '<button class="ip-tab' + (_detailTab==="sellers"?" active":"") + '" data-tab="sellers">💰 판매처 / 판매 이력</button>';
-  html += '<button class="ip-tab' + (_detailTab==="history"?" active":"") + '" data-tab="history">📋 전체 거래 이력</button>';
+  html += '<button class="ip-tab' + (_detailTab==="buyers"?" active":"") + '" data-tab="buyers">📦 매입처 비교</button>';
+  html += '<button class="ip-tab' + (_detailTab==="sellers"?" active":"") + '" data-tab="sellers">💰 판매처</button>';
+  html += '<button class="ip-tab' + (_detailTab==="history"?" active":"") + '" data-tab="history">📋 전체 이력</button>';
   html += '</div>';
 
   if(_detailTab === "buyers") html += _renderBuyersTab(stats);
   else if(_detailTab === "sellers") html += _renderSellersTab(stats);
   else html += _renderHistoryTab(stats);
+
+  html += '</div>';
 
   html += '</div></td></tr>';
   return html;
@@ -673,12 +819,10 @@ function saveItem(){
     supplier:  $("inSupplier").value,
     aliases:   aliases,
     note:      $("inNote").value,
-    /* 기준 가격 */
-    consumer_price:     $("inConsumerPrice").value,
+    /* v3.12: 전략 가격 3종 */
+    rrp_price:          $("inRrpPrice").value,
     dealer_price:       $("inDealerPrice").value,
     target_buy_price:   $("inTargetBuyPrice").value,
-    internet_low_price: $("inInternetLowPrice").value,
-    distributor_price:  $("inDistributorPrice").value,
     /* 택배 조건 */
     shipping_included_default: $("inShippingIncluded").checked,
     shipping_note: $("inShippingNote").value
@@ -687,6 +831,8 @@ function saveItem(){
     if(editingId) GoLabItemMaster.update(editingId, fields);
     else GoLabItemMaster.create(fields);
     clearForm();
+    /* v3.10: 등록 완료 후 자동 접힘 */
+    _collapseForm();
     _quickStats = null;
     computeKPI();
     render();
@@ -704,17 +850,17 @@ function startEdit(itemId){
   $("inSupplier").value = item.supplier || "";
   $("inAliases").value  = (item.aliases || []).join(", ");
   $("inNote").value     = item.note || "";
-  /* 기준 가격 */
-  $("inConsumerPrice").value     = (item.consumer_price !== null && item.consumer_price !== undefined) ? item.consumer_price : "";
-  $("inDealerPrice").value       = (item.dealer_price !== null && item.dealer_price !== undefined) ? item.dealer_price : "";
-  $("inTargetBuyPrice").value    = (item.target_buy_price !== null && item.target_buy_price !== undefined) ? item.target_buy_price : "";
-  $("inInternetLowPrice").value  = (item.internet_low_price !== null && item.internet_low_price !== undefined) ? item.internet_low_price : "";
-  $("inDistributorPrice").value  = (item.distributor_price !== null && item.distributor_price !== undefined) ? item.distributor_price : "";
+  /* v3.12: 전략 가격 3종 (rrp_price, legacy consumer_price 호환) */
+  $("inRrpPrice").value          = (item.rrp_price != null) ? item.rrp_price : (item.consumer_price != null ? item.consumer_price : "");
+  $("inDealerPrice").value       = (item.dealer_price != null) ? item.dealer_price : "";
+  $("inTargetBuyPrice").value    = (item.target_buy_price != null) ? item.target_buy_price : "";
   $("inShippingIncluded").checked = !!item.shipping_included_default;
   $("inShippingNote").value      = item.shipping_note || "";
   $("btnSave").textContent = "수정 저장";
   $("btnCancel").style.display = "inline-block";
   $("formCard").querySelector("h2").innerHTML = "✏️ 품목 수정";
+  /* v3.10: 수정 시 폼 자동 펼침 */
+  _expandForm();
   window.scrollTo({top:0, behavior:"smooth"});
 }
 
@@ -733,13 +879,15 @@ function clearForm(){
   $("inName").value = ""; $("inCategory").value = "일반상품"; $("inUnit").value = "";
   $("inSpec").value = ""; $("inSupplier").value = ""; $("inAliases").value = "";
   $("inNote").value = "";
-  $("inConsumerPrice").value = ""; $("inDealerPrice").value = ""; $("inTargetBuyPrice").value = "";
-  $("inInternetLowPrice").value = ""; $("inDistributorPrice").value = "";
+  /* v3.12: 전략 가격 3종 */
+  $("inRrpPrice").value = ""; $("inDealerPrice").value = ""; $("inTargetBuyPrice").value = "";
   $("inShippingIncluded").checked = false; $("inShippingNote").value = "";
   editingId = null;
   $("btnSave").textContent = "등록";
   $("btnCancel").style.display = "none";
   $("formCard").querySelector("h2").innerHTML = "➕ 품목 등록";
+  /* v3.10: 취소 시 폼 접힘 */
+  _collapseForm();
 }
 
 /* ══════════════════════════════════════
@@ -777,6 +925,24 @@ function renderNormSection(){
     btn.onclick = function(){ _normHidden[btn.dataset.name.toLowerCase()] = true; renderNormSection(); };
   });
 }
+
+/* ══════════════════════════════════════
+   v3.10: 폼 접힘/펼침
+   ══════════════════════════════════════ */
+function _expandForm(){
+  $("formCard").classList.remove("form-collapsed");
+  $("formToggleBar").style.display = "none";
+}
+function _collapseForm(){
+  $("formCard").classList.add("form-collapsed");
+  $("formToggleBar").style.display = "";
+  /* 수정 모드 아닌 상태로 복원 */
+  $("btnFormToggle").textContent = "＋ 품목 등록";
+}
+$("btnFormToggle").addEventListener("click", function(){
+  _expandForm();
+  $("inName").focus();
+});
 
 /* ══════════════════════════════════════
    이벤트 바인딩

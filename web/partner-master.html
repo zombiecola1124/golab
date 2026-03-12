@@ -140,9 +140,9 @@
     <nav class="tabs">
       <a class="tab" href="./console.html">🏠 메인</a>
       <a class="tab" href="./deals.html">🔥 거래</a>
+      <a class="tab" href="./item-master.html">🏷 품목</a>
       <a class="tab" href="./profit.html">💰 수익</a>
       <a class="tab" href="./index.html">📦 재고</a>
-      <a class="tab" href="./item-master.html">🏷 품목</a>
       <a class="tab active" href="./partner-master.html">👥 거래처</a>
     </nav>
   </div>
@@ -357,8 +357,17 @@ function buildStatusPanel(p){
     html += '<div class="sp-latest">';
     html += '<span class="sl-label">최근 거래</span> ';
     html += '<b>' + esc(ldDate) + '</b> · ';
-    html += esc(ld.item_name || "") + ' · ';
-    html += '<b>' + fmtAmt(Number(ld.supply_amount)||0) + '</b>';
+    /* v3.8 fix: v2 trade는 items[] 배열 구조 — 루트 item_name 없음 */
+    var _ldItemName = (ld.items && ld.items.length > 0) ? ld.items[0].name : (ld.item_name || "");
+    html += esc(_ldItemName) + ' · ';
+    /* v3.8 fix: v2 trade는 items[] 기준 합산 */
+    var _ldSupply = 0;
+    if (ld.items && ld.items.length > 0) {
+      ld.items.forEach(function(it){ _ldSupply += Number(it.supply_amount) || Math.round((Number(it.qty)||0)*(Number(it.unit_price)||0)); });
+    } else {
+      _ldSupply = Number(ld.supply_amount) || 0;
+    }
+    html += '<b>' + fmtAmt(_ldSupply) + '</b>';
     if(ld.payment_at){
       html += ' · <span class="sp-deposit-badge paid">입금</span>';
     } else if(ld.invoice_at){

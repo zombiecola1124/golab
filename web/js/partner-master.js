@@ -781,7 +781,13 @@ window.GoLabPartnerMaster = (function () {
     var dActiveCount = 0;
 
     partnerDeals.forEach(function(d) {
-      var amt = Number(d.supply_amount) || 0;
+      /* v3.8 fix: v2 trade는 items[] 배열 — 루트 supply_amount 없음 */
+      var amt = 0;
+      if (d.items && d.items.length > 0) {
+        d.items.forEach(function(it) { amt += Number(it.supply_amount) || Math.round((Number(it.qty)||0) * (Number(it.unit_price)||0)); });
+      } else {
+        amt = Number(d.supply_amount) || 0;  /* v1 폴백 */
+      }
       dTotalAmount += amt;
       /* 미입금: invoice_at 있고 payment_at 없는 건 */
       if (d.invoice_at && !d.payment_at) {
