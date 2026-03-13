@@ -259,9 +259,9 @@
   <nav class="tabs">
     <a class="tab" href="./console.html">🏠 메인</a>
     <a class="tab" href="./deals.html">🔥 거래</a>
-    <a class="tab" href="./profit.html">💰 수익</a>
-    <a class="tab" href="./index.html">📦 재고</a>
     <a class="tab" href="./item-master.html">🏷 품목</a>
+    <a class="tab" href="./index.html">📦 재고</a>
+    <a class="tab" href="./profit.html">💰 수익</a>
     <a class="tab" href="./partner-master.html">👥 거래처</a>
   </nav>
 </header>
@@ -997,6 +997,7 @@ function saveAction(){
       status: "OPEN",
       priority: $("actPriority").value || "NORMAL",
       vendorId: $("actVendor").value.trim(),
+      deal_id: null, /* v4: Deal 연결 준비 */
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     });
@@ -1035,6 +1036,7 @@ function quickAdd(){
     status: "OPEN",
     priority: "NORMAL",
     vendorId: "",
+    deal_id: null, /* v4: Deal 연결 준비 */
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   });
@@ -1245,6 +1247,7 @@ function executeConvert(){
     status: "OPEN",
     priority: $("convertPriority").value || "NORMAL",
     vendorId: "",
+    deal_id: null, /* v4: Deal 연결 준비 */
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString(),
     fromInitiativeId: i.id

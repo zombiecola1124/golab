@@ -289,8 +289,8 @@
     <a class="tab active" href="./console.html">🏠 메인</a>
     <a class="tab" href="./deals.html">🔥 거래</a>
     <a class="tab" href="./item-master.html">🏷 품목</a>
-    <a class="tab" href="./profit.html">💰 수익</a>
     <a class="tab" href="./index.html">📦 재고</a>
+    <a class="tab" href="./profit.html">💰 수익</a>
     <a class="tab" href="./partner-master.html">👥 거래처</a>
   </nav>
 </header>
@@ -651,6 +651,7 @@ function migrateLegacyTasks(){
       status: t.done ? "DONE" : "OPEN",
       priority: "NORMAL",
       vendorId: t.vendor || "",
+      deal_id: null, /* v4: Deal 연결 준비 */
       createdAt: t.createdAt || new Date().toISOString(),
       updatedAt: t.createdAt || new Date().toISOString(),
       doneAt: t.completedAt || null,
@@ -873,7 +874,8 @@ function quickAdd(){
   const a = {
     id: uid(), title, dueDate: todayStr(),
     type: "ACTION", status: "OPEN", priority: "NORMAL",
-    vendorId: "", createdAt: new Date().toISOString(),
+    vendorId: "", deal_id: null, /* v4: Deal 연결 준비 (UI 미구현) */
+    createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
   actions.push(a);
@@ -932,7 +934,8 @@ function saveActionModal(){
     const a = {
       id: uid(), title, dueDate: $("actDate").value || todayStr(),
       type: "ACTION", status: "OPEN", priority: $("actPriority").value || "NORMAL",
-      vendorId: vendorPid || "", createdAt: new Date().toISOString(),
+      vendorId: vendorPid || "", deal_id: null, /* v4: Deal 연결 준비 (UI 미구현) */
+      createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
     actions.push(a);

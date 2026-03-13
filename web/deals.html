@@ -140,11 +140,21 @@
     .timeline li .tl-dot{width:8px;height:8px;border-radius:50%;background:var(--deal);flex-shrink:0;margin-top:4px}
     .timeline li .tl-date{font-size:10px;color:#94a3b8;min-width:70px}
 
-    /* Table */
+    /* Table — v4: 12컬럼 (금액 말줄임 절대 금지) */
     .tableWrap{overflow:auto;border-radius:10px;border:1px solid var(--line)}
-    table.list-table{width:100%;border-collapse:collapse;font-size:12px;min-width:800px}
-    table.list-table th{background:#f8fafc;color:var(--muted);text-align:left;padding:10px 12px;position:sticky;top:0;white-space:nowrap;z-index:2;border-bottom:1px solid var(--line)}
-    table.list-table td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
+    table.list-table{width:100%;border-collapse:collapse;font-size:12px;min-width:1100px}
+    table.list-table th{background:#f8fafc;color:var(--muted);text-align:left;padding:6px 6px;position:sticky;top:0;white-space:nowrap;z-index:2;border-bottom:1px solid var(--line);font-size:11px}
+    table.list-table td{padding:6px 6px;border-bottom:1px solid var(--line);vertical-align:middle}
+    /* 숫자 컬럼: 우측 정렬 + 줄바꿈/말줄임 금지 → 금액 보존 최우선 */
+    table.list-table td.num,table.list-table th.num{text-align:right;white-space:nowrap;font-variant-numeric:tabular-nums;overflow:visible;text-overflow:clip}
+    /* 텍스트 컬럼(거래처/품목)만 축소 허용 */
+    table.list-table td.col-text{max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    /* 모바일: 데스크톱 전용 컬럼 숨김 */
+    @media(max-width:768px){
+      .col-desk{display:none!important}
+      table.list-table{min-width:auto}
+      table.list-table td.col-text{max-width:none}
+    }
     table.list-table tr:hover{background:rgba(8,145,178,.04);transition:background .1s}
     .muted{color:var(--muted)}
 
@@ -153,6 +163,18 @@
     table.list-table th.sortable:hover{color:var(--deal)}
     .sort-arrow{font-size:10px;color:var(--deal);margin-left:2px;opacity:0;transition:opacity .15s}
     .sort-arrow.active{opacity:1}
+
+    /* v4.1: 기간 프리셋 바 */
+    .period-bar{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+    .period-btn{padding:5px 14px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
+    .period-btn:hover{border-color:#cbd5e1}
+    .period-btn.active{background:var(--deal);color:#fff;border-color:transparent}
+
+    /* v4.1: tfoot 합계 */
+    #tfoot td{border-top:2px solid var(--deal);padding:8px 8px}
+
+    /* v4.1: 거래처/품목 말줄임 + hover 전체 표시 */
+    .col-text{max-width:130px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
 
     /* v3.3: 메모 편집 */
     .memo-edit{width:100%;min-height:60px;resize:vertical;border-radius:8px;border:1px solid var(--line);background:var(--chip);color:var(--text);padding:8px 10px;font-size:12px;font-family:inherit;outline:none;transition:border-color .2s}
@@ -305,8 +327,8 @@
       <a class="tab" href="./console.html">🏠 메인</a>
       <a class="tab active" href="./deals.html">🔥 거래</a>
       <a class="tab" href="./item-master.html">🏷 품목</a>
-      <a class="tab" href="./profit.html">💰 수익</a>
       <a class="tab" href="./index.html">📦 재고</a>
+      <a class="tab" href="./profit.html">💰 수익</a>
       <a class="tab" href="./partner-master.html">👥 거래처</a>
     </nav>
   </div>
@@ -513,12 +535,19 @@
       <button class="chip-filter" data-chip-filter="unsettled">🔵 정산대기 <span class="cf-count" id="cfUnsettled">0</span></button>
       <button class="chip-filter" data-chip-filter="todo">🔴 할일있음 <span class="cf-count" id="cfTodo">0</span></button>
     </div>
+    <!-- v4.1: 기간 프리셋 퀵버튼 -->
+    <div class="period-bar" id="periodBar">
+      <button class="period-btn active" data-period="">전체</button>
+      <button class="period-btn" data-period="this">이번 달</button>
+      <button class="period-btn" data-period="last">지난 달</button>
+      <button class="period-btn" data-period="custom">월 선택 ▾</button>
+    </div>
     <div class="filter-row">
-      <!-- v3.15: 월별 필터 드롭다운 -->
-      <select id="fMonth" style="min-width:110px">
+      <!-- v3.15: 월별 필터 드롭다운 (기간 프리셋에서 "월 선택" 시 표시) -->
+      <select id="fMonth" style="min-width:110px;display:none">
         <option value="">전체</option>
       </select>
-      <input id="fSearch" placeholder="거래처/품목/메모 검색..." style="flex:2" />
+      <input id="fSearch" placeholder="거래처/품목/메모/관리업체 검색..." style="flex:2" />
       <select id="fStatus">
         <option value="">전체 상태</option>
         <option value="신규">신규</option><option value="견적">견적</option><option value="발주">발주</option>
@@ -538,22 +567,48 @@
         <option value="">전체 채널</option>
         <option value="direct">직접 거래</option>
       </select>
+      <!-- v4.1: 입금 상태 필터 -->
+      <select id="fPayment">
+        <option value="">전체 입금</option>
+        <option value="unpaid">🔴 미입금</option>
+        <option value="vat_pending">🟡 VAT 미입금</option>
+        <option value="paid">🟢 완납</option>
+      </select>
     </div>
     <div class="tableWrap">
       <table class="list-table">
         <thead>
           <tr>
-            <th class="sortable" data-sort="date" style="width:100px">거래일 <span class="sort-arrow active">↓</span></th>
+            <th class="sortable" data-sort="date" style="width:90px">거래일 <span class="sort-arrow active">↓</span></th>
             <th>거래처</th>
             <th>품목</th>
-            <th class="sortable" data-sort="supply">공급가 <span class="sort-arrow"></span></th>
-            <th style="min-width:280px">진행 상태</th>
-            <th class="sortable" data-sort="profit">내 최종 몫 <span class="sort-arrow"></span></th>
-            <th>유형</th>
-            <th style="text-align:right">관리</th>
+            <th class="sortable col-desk" data-sort="supply">매출 <span class="sort-arrow"></span></th>
+            <th class="col-desk">원가</th>
+            <th class="col-desk">순이익</th>
+            <th class="col-desk">관리업체</th>
+            <th class="col-desk">배분대상</th>
+            <th class="col-desk">S지급</th>
+            <th class="sortable" data-sort="profit"><b>내 몫</b> <span class="sort-arrow"></span></th>
+            <th>입금</th>
+            <th class="col-desk" style="text-align:right">상세</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
+        <!-- v4.1: 필터 결과 합계 행 -->
+        <tfoot id="tfoot" style="display:none">
+          <tr style="background:#f0f9ff;font-weight:700;font-size:12px">
+            <td colspan="3" style="text-align:right;color:var(--muted)">필터 합계</td>
+            <td class="col-desk num" id="sumSupply">—</td>
+            <td class="col-desk num" id="sumCost">—</td>
+            <td class="col-desk num" id="sumProfit">—</td>
+            <td class="col-desk"></td>
+            <td class="col-desk num" id="sumDist">—</td>
+            <td class="col-desk num" id="sumS">—</td>
+            <td class="num" id="sumMy" style="color:var(--accent)">—</td>
+            <td></td>
+            <td class="col-desk"></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
     <div id="emptyMsg" class="muted" style="text-align:center;padding:24px;display:none">등록된 거래가 없습니다.</div>
@@ -1427,6 +1482,7 @@ function render() {
   var tradeClassFilter = $("fTradeClass").value;
   var dealStatusFilter = $("fDealStatus").value;
   var channelFilter = $("fChannel").value;
+  var paymentFilter = $("fPayment").value; /* v4.1: 입금 상태 필터 */
   var filtered = all;
 
   /* v3.15: 월 필터 (deal_date 우선, fallback: quote_at → created_at) */
@@ -1440,9 +1496,13 @@ function render() {
   if (q) {
     filtered = filtered.filter(function(t) {
       var itemNames = (t.items || []).map(function(it) { return (it.name || "").toLowerCase(); }).join(" ");
+      /* v4.1: 관리업체명도 검색 대상 추가 */
+      var chName = "";
+      if (t.channel_id) { var _ch = CM.getById(t.channel_id); chName = _ch ? _ch.name.toLowerCase() : ""; }
       return (t.partner_name_snapshot || "").toLowerCase().includes(q) ||
              itemNames.includes(q) ||
-             (t.memo || "").toLowerCase().includes(q);
+             (t.memo || "").toLowerCase().includes(q) ||
+             chName.includes(q);
     });
   }
   if (statusFilter) filtered = filtered.filter(function(t) { return t.status === statusFilter; });
@@ -1453,6 +1513,12 @@ function render() {
     filtered = filtered.filter(function(t) { return !t.channel_id; });
   } else if (channelFilter) {
     filtered = filtered.filter(function(t) { return t.channel_id === channelFilter; });
+  }
+  /* v4.1: 입금 상태 필터 — calcPaymentStatus() 기반 */
+  if (paymentFilter) {
+    filtered = filtered.filter(function(t) {
+      return TE.calcPaymentStatus(t).code === paymentFilter;
+    });
   }
 
   /* v3.7: 칩 카운트 (전체 기준, 필터 전) */
@@ -1516,6 +1582,33 @@ function render() {
     _kpEl.style.color = "var(--accent)";
   }
 
+  /* v4.1: 필터 합계 행 계산 */
+  var _sumSupply = 0, _sumCost = 0, _sumProfit = 0, _sumDist = 0, _sumS = 0, _sumMy = 0;
+  filtered.forEach(function(t) {
+    if (t.deal_status === "cancelled") return;
+    var c = TE.calcTrade(t);
+    _sumSupply += c.total_supply;
+    _sumCost   += c.total_cost;
+    _sumProfit += c.gross_profit || 0;
+    _sumDist   += c.distributable || 0;
+    _sumS      += (t.settlement && t.settlement.actual_S_amount) ? TE.n(t.settlement.actual_S_amount) : 0;
+    _sumMy     += c.final_my_amount || 0;
+  });
+  var _tf = $("tfoot");
+  if (filtered.length > 0) {
+    _tf.style.display = "";
+    $("sumSupply").textContent = TE.fmt(_sumSupply);
+    $("sumCost").textContent   = TE.fmt(_sumCost);
+    $("sumProfit").textContent = TE.fmt(_sumProfit);
+    $("sumDist").textContent   = TE.fmt(_sumDist);
+    $("sumS").textContent      = _sumS ? TE.fmt(_sumS) : "—";
+    $("sumMy").textContent     = TE.fmt(_sumMy);
+    $("sumMy").style.color     = _sumMy >= 0 ? "var(--accent)" : "var(--bad)";
+    $("sumProfit").style.color = _sumProfit >= 0 ? "var(--accent)" : "var(--bad)";
+  } else {
+    _tf.style.display = "none";
+  }
+
   var tb = $("tbody");
   if (!filtered.length) { tb.innerHTML = ""; $("emptyMsg").style.display = "block"; return; }
   $("emptyMsg").style.display = "none";
@@ -1528,10 +1621,12 @@ function render() {
     var dispName = TE.itemDisplayName(t);
 
     html += '<tr '+rowStyle+' data-id="'+t.id+'" data-toggle="'+t.id+'">';
-    /* v3.15: 날짜 컬럼 — deal_date 우선, fallback: quote_at → created_at */
+
+    /* ① 날짜 */
     var _dtDisp = (t.deal_date || t.quote_at || t.created_at || "").substring(0,10) || "—";
     html += '<td style="white-space:nowrap;color:var(--muted);font-size:11px">'+_dtDisp+'</td>';
-    /* v3.7: 거래처 셀 + 상태 칩 */
+
+    /* ② 거래처 + 상태 칩 */
     var _chips = _getStatusChips(t);
     var _chipHtml = "";
     if (_chips.length) {
@@ -1539,37 +1634,53 @@ function render() {
       _chips.forEach(function(c) { _chipHtml += '<span class="status-chip '+c.type+'">'+c.label+'</span>'; });
       _chipHtml += '</div>';
     }
-    html += '<td><b>'+esc(t.partner_name_snapshot)+'</b>'+_chipHtml+'</td>';
-    html += '<td>'+esc(dispName)+_getItemLinkBadge(t)+'</td>';
-    html += '<td>'+TE.fmt(calc.total_supply)+'</td>';
-    html += '<td>'+renderProgressBar(t, false)+'</td>';
-    /* 내 최종 몫 + 입금 배지 */
-    html += '<td>';
-    var myColor = calc.final_my_amount >= 0 ? "var(--accent)" : "var(--bad)";
-    html += '<span style="font-weight:700;color:'+myColor+'">'+TE.fmt(calc.final_my_amount)+'</span>';
-    /* v3.9: 입금 상태 배지 */
-    var _pStat = TE.calcPaymentStatus(t);
-    html += '<div><span class="pay-badge '+_pStat.code+'">'+_pStat.label+' <span class="pay-pct">'+_pStat.progress+'%</span></span></div>';
-    html += '</td>';
-    /* v3.0: 유형 배지 — 관리업체는 실명 표시 */
+    html += '<td class="col-text" title="'+esc(t.partner_name_snapshot)+'"><b>'+esc(t.partner_name_snapshot)+'</b>'+_chipHtml+'</td>';
+
+    /* ③ 품목 — hover 시 전체 텍스트 표시 */
+    html += '<td class="col-text" title="'+esc(dispName)+'">'+esc(dispName)+_getItemLinkBadge(t)+'</td>';
+
+    /* ④ 매출 (데스크톱) */
+    html += '<td class="col-desk num">'+TE.fmt(calc.total_supply)+'</td>';
+
+    /* ⑤ 원가 (데스크톱) */
+    html += '<td class="col-desk num">'+(calc.has_cost ? TE.fmt(calc.total_cost) : '<span style="color:var(--muted)">—</span>')+'</td>';
+
+    /* ⑥ 순이익 (데스크톱) */
+    var _gpColor = calc.gross_profit > 0 ? "var(--accent)" : calc.gross_profit < 0 ? "var(--bad)" : "var(--muted)";
+    html += '<td class="col-desk num" style="color:'+_gpColor+'">'+(calc.has_cost ? TE.fmt(calc.gross_profit) : '<span style="color:var(--muted)">—</span>')+'</td>';
+
+    /* ⑦ 관리업체 (데스크톱) */
     var _tc = TE.classifyTrade(t);
-    var _tcLabel;
+    var _chName = "—";
     if (_tc === "channel") {
       var _tch = CM.getById(t.channel_id);
-      var _tchName = _tch ? _tch.name : "알 수 없음";
-      _tcLabel = '관리업체 (<span class="ch-name" title="'+esc(_tchName)+'">'+esc(_tchName)+'</span>)';
-    } else {
-      _tcLabel = _tc === "settle" ? "정산" : "단독";
+      _chName = _tch ? _tch.name : "알 수 없음";
     }
-    html += '<td><span class="type-badge '+_tc+'">'+_tcLabel+'</span></td>';
-    html += '<td style="text-align:right;white-space:nowrap">';
-    html += '<button class="secondary" style="padding:5px 8px;font-size:11px" data-detail="'+t.id+'">상세</button> ';
-    html += '<button class="danger" style="padding:5px 8px;font-size:11px" data-del="'+t.id+'">삭제</button>';
+    html += '<td class="col-desk" style="font-size:11px">'+esc(_chName)+'</td>';
+
+    /* ⑧ 배분대상 (데스크톱) */
+    html += '<td class="col-desk num">'+TE.fmt(calc.distributable)+'</td>';
+
+    /* ⑨ S지급 (데스크톱) */
+    var _sAmt = (t.settlement && t.settlement.actual_S_amount) ? TE.n(t.settlement.actual_S_amount) : 0;
+    html += '<td class="col-desk num">'+(_sAmt ? TE.fmt(_sAmt) : '<span style="color:var(--muted)">—</span>')+'</td>';
+
+    /* ⑩ 내 몫 (항상 표시, 굵게 강조) */
+    var myColor = calc.final_my_amount >= 0 ? "var(--accent)" : "var(--bad)";
+    html += '<td class="num"><span style="font-weight:700;font-size:13px;color:'+myColor+'">'+TE.fmt(calc.final_my_amount)+'</span></td>';
+
+    /* ⑪ 입금 (항상 표시, 배지) */
+    var _pStat = TE.calcPaymentStatus(t);
+    html += '<td><span class="pay-badge '+_pStat.code+'">'+_pStat.label+'</span></td>';
+
+    /* ⑫ 상세 (데스크톱) */
+    html += '<td class="col-desk" style="text-align:right;white-space:nowrap">';
+    html += '<button class="secondary" style="padding:4px 8px;font-size:11px" data-detail="'+t.id+'">상세</button>';
     html += '</td></tr>';
 
     /* 상세 행 (v3.8 SaaS 리디자인) */
     if (_expandedId === t.id) {
-      html += '<tr class="detail-row"><td colspan="8"><div class="detail-panel">';
+      html += '<tr class="detail-row"><td colspan="12"><div class="detail-panel">';
 
       /* ═══ Hero 섹션 ═══ */
       var _dtc = TE.classifyTrade(t);
@@ -2312,11 +2423,47 @@ $("btnCancel").addEventListener("click", clearForm);
 
 var _searchTimer = null;
 $("fSearch").addEventListener("input", function() { clearTimeout(_searchTimer); _searchTimer = setTimeout(render, 200); });
-$("fMonth").addEventListener("change", render);   /* v3.15: 월 필터 */
+/* v3.15→v4.1: fMonth 이벤트는 periodBar 통합 리스너에서 처리 */
 $("fStatus").addEventListener("change", render);
 $("fTradeClass").addEventListener("change", render);
 $("fDealStatus").addEventListener("change", render);
 $("fChannel").addEventListener("change", render);
+$("fPayment").addEventListener("change", render); /* v4.1: 입금 상태 필터 */
+
+/* v4.1: 기간 프리셋 바 */
+$("periodBar").addEventListener("click", function(e) {
+  var btn = e.target.closest("[data-period]");
+  if (!btn) return;
+  var period = btn.dataset.period;
+  /* 활성 버튼 토글 */
+  $("periodBar").querySelectorAll(".period-btn").forEach(function(b) {
+    b.classList.toggle("active", b.dataset.period === period);
+  });
+  var fMonth = $("fMonth");
+  if (period === "this") {
+    fMonth.value = new Date().toISOString().substring(0, 7);
+    fMonth.style.display = "none";
+  } else if (period === "last") {
+    var d = new Date(); d.setMonth(d.getMonth() - 1);
+    fMonth.value = d.toISOString().substring(0, 7);
+    fMonth.style.display = "none";
+  } else if (period === "custom") {
+    fMonth.style.display = "";
+    /* fMonth 값은 유저가 선택 */
+  } else {
+    /* 전체 */
+    fMonth.value = "";
+    fMonth.style.display = "none";
+  }
+  render();
+});
+/* fMonth 변경 시 기간 프리셋을 "월 선택"으로 동기화 */
+$("fMonth").addEventListener("change", function() {
+  $("periodBar").querySelectorAll(".period-btn").forEach(function(b) {
+    b.classList.toggle("active", b.dataset.period === "custom");
+  });
+  render();
+});
 
 /* v3.3: thead 정렬 클릭 */
 document.querySelectorAll(".list-table thead .sortable").forEach(function(th) {
