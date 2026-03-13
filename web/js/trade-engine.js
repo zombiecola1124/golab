@@ -309,6 +309,8 @@ window.GoLabTradeEngine = (function () {
       date_inferred:         false,   /* 사용자가 직접 지정 */
 
       channel_id:            fields.channel_id || null,
+      /* v5: 관리업체명 스냅샷 (검색용) */
+      channel_name_snapshot: (fields.channel_name_snapshot || "").trim(),
       trade_type:            fields.channel_id ? "channel" : "direct",
       /* v3.0: deal_owner 폐기 — 기존 데이터 호환용 기본값 */
       deal_owner:            DEAL_OWNER.MINE,
@@ -406,6 +408,8 @@ window.GoLabTradeEngine = (function () {
       d.channel_id = fields.channel_id || null;
       d.trade_type = d.channel_id ? "channel" : "direct";
     }
+    /* v5: 관리업체명 스냅샷 */
+    if (fields.channel_name_snapshot !== undefined) d.channel_name_snapshot = (fields.channel_name_snapshot || "").trim();
     /* v3.0: deal_owner 폐기 — 업데이트 중단 */
     if (fields.deal_status !== undefined) d.deal_status = fields.deal_status;
     if (fields.memo        !== undefined) d.memo        = fields.memo.trim();
@@ -838,6 +842,41 @@ window.GoLabTradeEngine = (function () {
   }
 
   /* ══════════════════════════════════════
+     v5: channel_name_snapshot 일회성 보정
+     — channel_id 있고 channel_name_snapshot 비어있는 건만 대상
+     — GoLabChannelMaster에서 이름 조회해서 채움
+     ══════════════════════════════════════ */
+
+  function backfillChannelSnapshot() {
+    if (typeof GoLabChannelMaster === "undefined") return { total: 0, filled: 0 };
+    var all = loadAll();
+    var total = 0;   // 보정 대상 건수
+    var filled = 0;  // 실제 채운 건수
+    var changed = false;
+
+    all.forEach(function (t) {
+      if (!t.channel_id) return;                           // 관리업체 없는 거래 — 스킵
+      if (t.channel_name_snapshot && t.channel_name_snapshot.trim()) return;  // 이미 값 있음 — 스킵
+
+      total++;
+      var ch = GoLabChannelMaster.getById(t.channel_id);
+      if (ch && ch.name) {
+        t.channel_name_snapshot = ch.name.trim();
+        filled++;
+        changed = true;
+      }
+    });
+
+    if (changed) {
+      _save(all);
+      emitAudit("BACKFILL_CHANNEL_SNAPSHOT", { total: total, filled: filled });
+      console.log("[TRADE ENGINE] v5 channel_name_snapshot 보정: 대상 " + total + "건, 채움 " + filled + "건");
+    }
+
+    return { total: total, filled: filled };
+  }
+
+  /* ══════════════════════════════════════
      감사 로그
      ══════════════════════════════════════ */
 
@@ -880,6 +919,7 @@ window.GoLabTradeEngine = (function () {
     getScorecard:    getScorecard,
     getComparison:   getComparison,
     migrateFromV1:   migrateFromV1,
+    backfillChannelSnapshot: backfillChannelSnapshot,   /* v5 신규 */
     emitAudit:       emitAudit,
     currentStepIndex: _currentStepIndex,
     itemDisplayName: _itemDisplayName

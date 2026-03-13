@@ -547,7 +547,7 @@
       <select id="fMonth" style="min-width:110px;display:none">
         <option value="">전체</option>
       </select>
-      <input id="fSearch" placeholder="거래처/품목/메모/관리업체 검색..." style="flex:2" />
+      <input id="fSearch" placeholder="🔍 거래처, 품목, 관리업체 검색" style="flex:2" />
       <select id="fStatus">
         <option value="">전체 상태</option>
         <option value="신규">신규</option><option value="견적">견적</option><option value="발주">발주</option>
@@ -1493,16 +1493,13 @@ function render() {
     });
   }
 
+  /* v5: 검색 3필드 — partner + items + channel (정규화: trim + toLowerCase) */
   if (q) {
     filtered = filtered.filter(function(t) {
-      var itemNames = (t.items || []).map(function(it) { return (it.name || "").toLowerCase(); }).join(" ");
-      /* v4.1: 관리업체명도 검색 대상 추가 */
-      var chName = "";
-      if (t.channel_id) { var _ch = CM.getById(t.channel_id); chName = _ch ? _ch.name.toLowerCase() : ""; }
-      return (t.partner_name_snapshot || "").toLowerCase().includes(q) ||
-             itemNames.includes(q) ||
-             (t.memo || "").toLowerCase().includes(q) ||
-             chName.includes(q);
+      var pn = (t.partner_name_snapshot || "").trim().toLowerCase();
+      var cn = (t.channel_name_snapshot || "").trim().toLowerCase();
+      var itemNames = (t.items || []).map(function(it) { return (it.name || "").trim().toLowerCase(); }).join(" ");
+      return pn.includes(q) || itemNames.includes(q) || cn.includes(q);
     });
   }
   if (statusFilter) filtered = filtered.filter(function(t) { return t.status === statusFilter; });
@@ -2229,10 +2226,14 @@ function saveTrade() {
 
   if (isChannel && !channelId) { alert("관리업체를 선택해주세요."); return; }
 
+  /* v5: 관리업체명 스냅샷 */
+  var channel = channelId ? CM.getById(channelId) : null;
+
   var fields = {
     partner_id: partnerId,
     partner_name_snapshot: partner ? (partner.display_name || partner.name) : "",
     channel_id: channelId,
+    channel_name_snapshot: channel ? channel.name : "",
     /* v3.0: trade_type은 저장소에서 direct/channel 유지 (하위 호환) */
     items: validItems.map(function(it) {
       return {
@@ -2498,6 +2499,13 @@ window.addEventListener("storage", function(e) {
 });
 
 /* ── Init ── */
+/* v5: 기존 거래 channel_name_snapshot 일회성 보정 */
+(function() {
+  var result = TE.backfillChannelSnapshot();
+  if (result.total > 0) {
+    console.log("[DEALS] channel_name_snapshot 보정 완료: 대상 " + result.total + "건, 채움 " + result.filled + "건");
+  }
+})();
 /* v2.9c: 거래일 기본값 = 오늘 */
 $("inDealDate").value = new Date().toISOString().substring(0, 10);
 /* v3.0: 초기 유형 상태 반영 (solo → 비율 필드 숨김) */

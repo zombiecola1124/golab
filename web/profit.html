@@ -286,7 +286,7 @@
 
   <!-- v3.2: 검색 + 미입금 필터 + 정렬 -->
   <div class="filter-bar" id="searchSortBar" style="gap:8px;align-items:center;flex-wrap:wrap">
-    <input type="text" class="search-input" id="profitSearch" placeholder="거래처명 검색..." />
+    <input type="text" class="search-input" id="profitSearch" placeholder="🔍 거래처, 품목, 관리업체 검색" />
     <button class="fbtn unpaid-toggle" id="btnUnpaidOnly">📋 미입금만</button>
     <span class="sort-sep">|</span>
     <span class="sort-label">정렬:</span>
@@ -1001,10 +1001,15 @@ function render(){
     }
   }
 
-  /* 2) 검색 필터 (거래처명) */
+  /* 2) v5: 검색 3필드 — partner + items + channel (정규화: trim + toLowerCase) */
   if(currentSearchQuery){
     filteredDeals = filteredDeals.filter(function(d){
-      return (d.partner_name_snapshot || "").toLowerCase().indexOf(currentSearchQuery) !== -1;
+      var pn = (d.partner_name_snapshot || "").trim().toLowerCase();
+      var cn = (d.channel_name_snapshot || "").trim().toLowerCase();
+      var itemNames = (d.items || []).map(function(it){ return (it.name || "").trim().toLowerCase(); }).join(" ");
+      return pn.indexOf(currentSearchQuery) !== -1 ||
+             itemNames.indexOf(currentSearchQuery) !== -1 ||
+             cn.indexOf(currentSearchQuery) !== -1;
     });
   }
 
@@ -1293,6 +1298,13 @@ window.addEventListener("storage", function(e){
 });
 
 /* -- Init -- */
+/* v5: 기존 거래 channel_name_snapshot 일회성 보정 */
+(function() {
+  var result = TE.backfillChannelSnapshot();
+  if (result.total > 0) {
+    console.log("[PROFIT] channel_name_snapshot 보정 완료: 대상 " + result.total + "건, 채움 " + result.filled + "건");
+  }
+})();
 render();
 </script>
 </body>
