@@ -187,7 +187,7 @@
       <a class="tab" href="./console.html">🏠 메인</a>
       <a class="tab" href="./deals.html">🔥 거래</a>
       <a class="tab active" href="./item-master.html">🏷 품목</a>
-      <a class="tab" href="./index.html">📦 재고</a>
+      <!-- [GoLab v4] inventory tab hidden - file kept at index.html -->
       <a class="tab" href="./profit.html">💰 수익</a>
       <a class="tab" href="./partner-master.html">👥 거래처</a>
     </nav>
@@ -610,6 +610,14 @@ function buildItemStatusPanel(item){
     }
     if (stats.lastBuyPrice) {
       derivedHtml += '<div class="ip-price-item ip-derived"><div class="pp-label">최근 매입가</div><div class="pp-value">' + fmtW(stats.lastBuyPrice) + '</div></div>';
+    }
+    /* v4: 평균 매입가 — 회계 판단 기준 */
+    if (stats.avgBuyPrice) {
+      derivedHtml += '<div class="ip-price-item ip-derived"><div class="pp-label">평균 매입가</div><div class="pp-value">' + fmtW(stats.avgBuyPrice) + '</div></div>';
+    }
+    /* v4: 최저 매입가 — 협상 기준 */
+    if (stats.minBuyPrice) {
+      derivedHtml += '<div class="ip-price-item ip-derived"><div class="pp-label">최저 매입가</div><div class="pp-value" style="color:var(--accent)">' + fmtW(stats.minBuyPrice) + '</div></div>';
     }
     /* 마진율 표시 */
     if (stats.lastSellPrice && stats.lastBuyPrice) {

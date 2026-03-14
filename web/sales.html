@@ -96,16 +96,24 @@
     .margin-modal .mm-force{border:none;color:#fff}
     .margin-modal .mm-force.red{background:var(--bad)}
     .margin-modal .mm-force.orange{background:var(--warn)}
-    /* ── [DEPOSIT PATCH] 입금 토글 뱃지 ── */
-    .deposit-tag{display:inline-block;padding:2px 8px;border-radius:999px;font-size:10px;font-weight:700;letter-spacing:.2px;cursor:pointer;user-select:none;transition:all .15s}
-    .deposit-tag.unpaid{background:#fee2e2;color:#991b1b}
-    .deposit-tag.paid{background:#dcfce7;color:#166534}
-    .deposit-tag:hover{opacity:.75}
+    /* ── v4: 통합 입금 배지 — 연한 배경 + 진한 글자 + border 가독성 개선 ── */
+    .pay-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap;border:1px solid transparent;cursor:pointer;user-select:none;transition:all .15s}
+    .pay-badge.unpaid{background:#fef2f2;color:#991b1b;border-color:#fecaca}
+    .pay-badge.vat_pending{background:#fffbeb;color:#92400e;border-color:#fde68a}
+    .pay-badge.paid{background:#f0fdf4;color:#14532d;border-color:#bbf7d0}
+    .pay-badge:hover{opacity:.75}
     @media(max-width:900px){
       .kpi-grid{grid-template-columns:1fr 1fr}
       .r4,.r5,.r6{grid-template-columns:1fr 1fr}
       .filter-bar{flex-direction:column}
       .ld-stats-grid{grid-template-columns:1fr 1fr}
+    }
+    /* v4: 모바일 테이블 축소 — 매출일/거래처/상품명/매출액/입금만 표시 */
+    @media(max-width:768px){
+      .col-desk{display:none!important}
+      table{min-width:auto}
+      /* v4: 모바일 버튼 터치 영역 44×44px (Apple HIG / Material Design 기준) */
+      button.secondary,button.danger{min-width:44px;min-height:44px}
     }
   </style>
 </head>
@@ -117,7 +125,7 @@
       <a class="tab" href="./console.html">🏠 메인</a>
       <a class="tab" href="./deals.html">🔥 거래</a>
       <a class="tab" href="./item-master.html">🏷 품목</a>
-      <a class="tab" href="./index.html">📦 재고</a>
+      <!-- [GoLab v4] inventory tab hidden - file kept at index.html -->
       <a class="tab" href="./profit.html">💰 수익</a>
       <a class="tab" href="./partner-master.html">👥 거래처</a>
     </nav>
@@ -266,16 +274,16 @@
           <tr>
             <th>매출일</th>
             <th>거래처</th>
-            <th>문서번호</th>
-            <th>품번</th>
+            <th class="col-desk">문서번호</th>
+            <th class="col-desk">품번</th>
             <th>상품명</th>
-            <th class="num">수량</th>
-            <th>단위</th>
-            <th class="num">판매단가</th>
+            <th class="num col-desk">수량</th>
+            <th class="col-desk">단위</th>
+            <th class="num col-desk">판매단가</th>
             <th class="num">매출액</th>
             <th style="text-align:center">입금</th>
-            <th>비고</th>
-            <th style="text-align:right">관리</th>
+            <th class="col-desk">비고</th>
+            <th style="text-align:right" class="col-desk">관리</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -643,16 +651,16 @@ function render(){
     tr.innerHTML=`
       <td class="muted">${esc(r.salesDate)}</td>
       <td><b>${esc(r.client)}</b></td>
-      <td class="muted">${esc(r.docNo)}</td>
-      <td class="muted">${esc(r.partNo)}</td>
+      <td class="muted col-desk">${esc(r.docNo)}</td>
+      <td class="muted col-desk">${esc(r.partNo)}</td>
       <td>${esc(r.itemName)}</td>
-      <td class="num">${n(r.qty).toLocaleString()}</td>
-      <td class="muted">${esc(r.unit)}</td>
-      <td class="num">${fmt(n(r.sellUnitPrice))}</td>
+      <td class="num col-desk">${n(r.qty).toLocaleString()}</td>
+      <td class="muted col-desk">${esc(r.unit)}</td>
+      <td class="num col-desk">${fmt(n(r.sellUnitPrice))}</td>
       <td class="num highlight">${fmt(salesTotal)}</td>
-      <td style="text-align:center"><span class="deposit-tag ${r.deposit_date ? 'paid' : 'unpaid'}" data-deposit="${r.id}">${r.deposit_date ? '입금 ('+r.deposit_date.substring(5)+')' : '미입금'}</span></td>
-      <td class="muted">${r.costOverrideUnitPriceKrw!=null ? '<span title="수동원가: '+fmt(n(r.costOverrideUnitPriceKrw))+'" style="color:var(--point);cursor:help">🔧</span> ' : ''}${esc(r.memo)}</td>
-      <td style="text-align:right;white-space:nowrap">
+      <td style="text-align:center"><span class="pay-badge ${r.deposit_date ? 'paid' : 'unpaid'}" data-deposit="${r.id}">${r.deposit_date ? '완납 ('+r.deposit_date.substring(5)+')' : '미입금'}</span></td>
+      <td class="muted col-desk">${r.costOverrideUnitPriceKrw!=null ? '<span title="수동원가: '+fmt(n(r.costOverrideUnitPriceKrw))+'" style="color:var(--point);cursor:help">🔧</span> ' : ''}${esc(r.memo)}</td>
+      <td style="text-align:right;white-space:nowrap" class="col-desk">
         <button class="secondary" style="padding:5px 8px;font-size:11px" data-edit="${r.id}">수정</button>
         <button class="danger" style="padding:5px 8px;font-size:11px" data-del="${r.id}">삭제</button>
       </td>`;
@@ -1506,15 +1514,15 @@ function render_deals(){
     tr.innerHTML =
       '<td class="muted">' + esc(dt) + '</td>' +
       '<td><b>' + esc(d.partner_name_snapshot || "") + '</b></td>' +
-      '<td class="muted">-</td><td class="muted">-</td>' +
+      '<td class="muted col-desk">-</td><td class="muted col-desk">-</td>' +
       '<td>' + esc(d.item_name || "") + '</td>' +
-      '<td class="num">' + (Number(d.qty)||0).toLocaleString() + '</td>' +
-      '<td class="muted">ea</td>' +
-      '<td class="num">' + fmt(Number(d.unit_price)||0) + '</td>' +
+      '<td class="num col-desk">' + (Number(d.qty)||0).toLocaleString() + '</td>' +
+      '<td class="muted col-desk">ea</td>' +
+      '<td class="num col-desk">' + fmt(Number(d.unit_price)||0) + '</td>' +
       '<td class="num highlight">' + fmt(Number(d.supply_amount)||0) + '</td>' +
-      '<td style="text-align:center"><span class="deposit-tag ' + stClass + '" style="cursor:default">' + stLabel + '</span></td>' +
-      '<td class="muted">' + esc(d.memo || "") + '</td>' +
-      '<td style="text-align:right"><a href="./deals.html" style="color:var(--point);font-size:11px;text-decoration:none">\uac70\ub798\u2192</a></td>';
+      '<td style="text-align:center"><span class="pay-badge ' + stClass + '" style="cursor:default">' + stLabel + '</span></td>' +
+      '<td class="muted col-desk">' + esc(d.memo || "") + '</td>' +
+      '<td style="text-align:right" class="col-desk"><a href="./deals.html" style="color:var(--point);font-size:11px;text-decoration:none">\uac70\ub798\u2192</a></td>';
     tb.appendChild(tr);
   });
   /* Pagination */

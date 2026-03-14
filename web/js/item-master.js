@@ -839,6 +839,9 @@ window.GoLabItemMaster = (function () {
     /* v3.12: 최근 판매가/매입가 추적 */
     let lastSellPrice = null, lastSellDate = "";
     let lastBuyPrice  = null, lastBuyDate  = "";
+    /* v4: 평균 매입가 / 최저 매입가 추적 */
+    let totalBuyAmount = 0, totalBuyQty = 0;
+    let minBuyPrice = null;
 
     trades.forEach(function(deal) {
       /* v3.12: 취소 거래 필터 (is_canceled !== true) */
@@ -881,6 +884,12 @@ window.GoLabItemMaster = (function () {
           /* v3.12: 최근 매입가 추적 */
           var _bp = unitPrice || cost;
           if (_bp > 0 && dt > lastBuyDate) { lastBuyPrice = _bp; lastBuyDate = dt; }
+          /* v4: 평균 매입가 / 최저 매입가 집계 */
+          if (_bp > 0) {
+            totalBuyAmount += _bp * qty;
+            totalBuyQty += qty;
+            if (minBuyPrice === null || _bp < minBuyPrice) { minBuyPrice = _bp; }
+          }
         } else {
           /* 매출처 또는 겸용 → sellers */
           if (!sellerMap[deal.partner_id]) {
@@ -939,7 +948,10 @@ window.GoLabItemMaster = (function () {
       totalSPaid: totalSPaid,
       /* v3.12: 파생 가격 (거래 데이터 기반) */
       lastSellPrice: lastSellPrice,
-      lastBuyPrice:  lastBuyPrice
+      lastBuyPrice:  lastBuyPrice,
+      /* v4: 평균 매입가 / 최저 매입가 */
+      avgBuyPrice: totalBuyQty > 0 ? Math.round(totalBuyAmount / totalBuyQty) : null,
+      minBuyPrice: minBuyPrice
     };
   }
 

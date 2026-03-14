@@ -207,11 +207,11 @@
     .summary-table tbody tr{transition:background .1s}
     .summary-table tbody tr:hover{background:rgba(37,99,235,.06)}
 
-    /* -- v3.9: 입금 상태 배지 -- */
-    .pay-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap}
-    .pay-badge.unpaid{background:rgba(234,179,8,.12);color:#a16207}
-    .pay-badge.vat_pending{background:rgba(37,99,235,.1);color:#1d4ed8}
-    .pay-badge.paid{background:rgba(22,163,74,.1);color:#15803d}
+    /* -- v4: 통합 입금 배지 — 연한 배경 + 진한 글자 + border 가독성 개선 -- */
+    .pay-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap;border:1px solid transparent}
+    .pay-badge.unpaid{background:#fef2f2;color:#991b1b;border-color:#fecaca}
+    .pay-badge.vat_pending{background:#fffbeb;color:#92400e;border-color:#fde68a}
+    .pay-badge.paid{background:#f0fdf4;color:#14532d;border-color:#bbf7d0}
     .pay-badge .pay-pct{font-weight:800;font-size:9px;opacity:.8}
     .pay-progress-bar{height:4px;border-radius:2px;background:rgba(0,0,0,.06);overflow:hidden;margin-top:3px}
     .pay-progress-fill{height:100%;border-radius:2px;transition:width .3s ease}
@@ -238,6 +238,14 @@
       .exp-zone{padding:12px 16px}
       .exp-hero{padding:16px}
     }
+    /* v4: 모바일 테이블 축소 — 날짜/거래처/품목/내 몫/입금만 표시 */
+    @media(max-width:768px){
+      .col-desk{display:none!important}
+      .ledger-table{min-width:auto}
+      .ledger-table tbody td.name{max-width:none}
+      /* v4: 모바일 상세 버튼 터치 영역 44×44px (Apple HIG / Material Design 기준) */
+      .expand-btn{min-width:44px;min-height:44px;display:inline-flex;align-items:center;justify-content:center}
+    }
     @media(max-width:480px){
       .kpi-row{grid-template-columns:1fr}
       .ledger-table{font-size:11px}
@@ -253,7 +261,7 @@
     <a class="tab" href="./console.html">🏠 메인</a>
     <a class="tab" href="./deals.html">🔥 거래</a>
     <a class="tab" href="./item-master.html">🏷 품목</a>
-    <a class="tab" href="./index.html">📦 재고</a>
+    <!-- [GoLab v4] inventory tab hidden - file kept at index.html -->
     <a class="tab active" href="./profit.html">💰 수익</a>
     <a class="tab" href="./partner-master.html">👥 거래처</a>
   </nav>
@@ -334,15 +342,15 @@
           <th class="sortable" data-sort="date" style="width:52px">날짜 <span class="sort-arrow active">↓</span></th>
           <th style="min-width:70px">거래처</th>
           <th style="min-width:70px">품목</th>
-          <th class="r sortable" data-sort="revenue" style="min-width:80px">매출 <span class="sort-arrow"></span></th>
-          <th class="r" style="min-width:72px">원가</th>
-          <th class="r" style="min-width:72px">순이익</th>
-          <th class="r" style="min-width:72px">관리업체</th>
-          <th class="r" style="min-width:72px">배분대상</th>
-          <th class="r" style="min-width:64px">S지급</th>
+          <th class="r sortable col-desk" data-sort="revenue" style="min-width:80px">매출 <span class="sort-arrow"></span></th>
+          <th class="r col-desk" style="min-width:72px">원가</th>
+          <th class="r col-desk" style="min-width:72px">순이익</th>
+          <th class="r col-desk" style="min-width:72px">관리업체</th>
+          <th class="r col-desk" style="min-width:72px">배분대상</th>
+          <th class="r col-desk" style="min-width:64px">S지급</th>
           <th class="r sortable" data-sort="myProfit" style="min-width:80px;font-weight:800">내 몫 <span class="sort-arrow"></span></th>
           <th class="c" style="width:56px">입금</th>
-          <th class="c" style="width:36px">상세</th>
+          <th class="c col-desk" style="width:36px">상세</th>
         </tr>
       </thead>
       <tbody id="ledgerBody"></tbody>
@@ -886,11 +894,9 @@ function renderFlatTable(deals, thisYear){
     var myFinal = calc.final_my_amount;
     var myDisp = '<span style="font-weight:800;color:'+(myFinal>=0?'var(--accent)':'var(--warn)')+'">'+fmtW(myFinal)+'</span>';
 
-    /* 입금 상태: 🔴 미정산 or 완납 */
+    /* v4: 입금 상태 — 통합 pay-badge 클래스 사용 */
     var payStatus = TE.calcPaymentStatus(d);
-    var payDisp = payStatus.code === "paid"
-      ? '<span style="color:var(--accent)">완납</span>'
-      : '<span style="color:var(--warn)">🔴 미정산</span>';
+    var payDisp = '<span class="pay-badge '+payStatus.code+'">'+payStatus.label+'</span>';
 
     var isExpanded = (_expandedId === d.id);
 
@@ -903,15 +909,15 @@ function renderFlatTable(deals, thisYear){
     html += '<td style="white-space:nowrap;color:var(--muted);font-size:11px">'+_dtDisp+'</td>';
     html += '<td class="name" title="'+esc(d.partner_name_snapshot)+'">'+partner+'</td>';
     html += '<td class="name" title="'+esc(dispName)+'">'+esc(dispName)+'</td>';
-    html += '<td class="r">'+fmtW(calc.total_supply)+'</td>';
-    html += '<td class="r">'+costDisp+'</td>';
-    html += '<td class="r">'+gpDisp+'</td>';
-    html += '<td class="r">'+rebateDisp+'</td>';
-    html += '<td class="r">'+distribDisp+'</td>';
-    html += '<td class="r">'+sDisp+'</td>';
+    html += '<td class="r col-desk">'+fmtW(calc.total_supply)+'</td>';
+    html += '<td class="r col-desk">'+costDisp+'</td>';
+    html += '<td class="r col-desk">'+gpDisp+'</td>';
+    html += '<td class="r col-desk">'+rebateDisp+'</td>';
+    html += '<td class="r col-desk">'+distribDisp+'</td>';
+    html += '<td class="r col-desk">'+sDisp+'</td>';
     html += '<td class="r">'+myDisp+'</td>';
     html += '<td class="c">'+payDisp+'</td>';
-    html += '<td class="c"><button class="expand-btn">'+(isExpanded?'▲':'▼')+'</button></td>';
+    html += '<td class="c col-desk"><button class="expand-btn">'+(isExpanded?'▲':'▼')+'</button></td>';
     html += '</tr>';
 
     /* 확장 행 */
@@ -944,14 +950,14 @@ function renderFlatFooter(deals){
 
   var html = '<tr>';
   html += '<td colspan="3" style="text-align:right;font-weight:700">합계 <b>'+cnt+'</b>건</td>';
-  html += '<td class="r" style="font-variant-numeric:tabular-nums;font-weight:700">'+fmtW(tRevenue)+'</td>';
-  html += '<td class="r" style="font-variant-numeric:tabular-nums">'+fmtW(tCost)+'</td>';
-  html += '<td class="r" style="color:'+(tGP>=0?'var(--accent)':'var(--warn)')+'">'+fmtW(tGP)+'</td>';
-  html += '<td class="r">'+fmtW(tRebate)+'</td>';
-  html += '<td class="r">'+fmtW(tDistrib)+'</td>';
-  html += '<td class="r">'+fmtW(tSPaid)+'</td>';
+  html += '<td class="r col-desk" style="font-variant-numeric:tabular-nums;font-weight:700">'+fmtW(tRevenue)+'</td>';
+  html += '<td class="r col-desk" style="font-variant-numeric:tabular-nums">'+fmtW(tCost)+'</td>';
+  html += '<td class="r col-desk" style="color:'+(tGP>=0?'var(--accent)':'var(--warn)')+'">'+fmtW(tGP)+'</td>';
+  html += '<td class="r col-desk">'+fmtW(tRebate)+'</td>';
+  html += '<td class="r col-desk">'+fmtW(tDistrib)+'</td>';
+  html += '<td class="r col-desk">'+fmtW(tSPaid)+'</td>';
   html += '<td class="r" style="font-weight:700;color:'+(tMy>=0?'var(--accent)':'var(--warn)')+'">'+fmtW(tMy)+'</td>';
-  html += '<td colspan="2"></td>';
+  html += '<td></td><td class="col-desk"></td>';
   html += '</tr>';
 
   return html;
