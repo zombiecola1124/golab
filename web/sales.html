@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>GoLab · 매출 관리</title>
+  <link rel="stylesheet" href="./css/ui.css">
   <style>
     :root{
       --bg:#f5f7fa;--card:#ffffff;--muted:#64748b;--text:#0f172a;
@@ -13,13 +14,7 @@
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--text);
       font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",Arial;}
-    header{padding:0 20px;border-bottom:none;position:sticky;top:0;background:rgba(15,23,42,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:20;height:48px}
-    header .top{display:flex;align-items:center;justify-content:space-between;gap:10px;height:100%}
-    header h1{margin:0;font-size:15px;font-weight:800;color:#fff;letter-spacing:-.2px}
-    .tabs{display:flex;gap:2px;flex-wrap:wrap;height:100%}
-    .tab{display:inline-flex;align-items:center;padding:0 14px;height:100%;border:none;border-bottom:2px solid transparent;color:rgba(255,255,255,.55);text-decoration:none;font-size:12px;font-weight:600;background:transparent;transition:color .2s,border-color .2s}
-    .tab:hover{color:rgba(255,255,255,.85)}
-    .tab.active{color:#fff;font-weight:800;border-bottom:2px solid #fff}
+    /* [GoLab v4.1] header/tabs/pay-badge → ui.css로 이동 */
     .wrap{max-width:1440px;margin:0 auto;padding:16px 16px 36px}
     .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .card h2{margin:0 0 12px;font-size:13px;color:var(--sales);display:flex;align-items:center;gap:8px}
@@ -96,12 +91,7 @@
     .margin-modal .mm-force{border:none;color:#fff}
     .margin-modal .mm-force.red{background:var(--bad)}
     .margin-modal .mm-force.orange{background:var(--warn)}
-    /* ── v4: 통합 입금 배지 — 연한 배경 + 진한 글자 + border 가독성 개선 ── */
-    .pay-badge{display:inline-flex;align-items:center;gap:4px;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;white-space:nowrap;border:1px solid transparent;cursor:pointer;user-select:none;transition:all .15s}
-    .pay-badge.unpaid{background:#fef2f2;color:#991b1b;border-color:#fecaca}
-    .pay-badge.vat_pending{background:#fffbeb;color:#92400e;border-color:#fde68a}
-    .pay-badge.paid{background:#f0fdf4;color:#14532d;border-color:#bbf7d0}
-    .pay-badge:hover{opacity:.75}
+    /* [GoLab v4.1] pay-badge → ui.css로 이동 (clickable 클래스 사용) */
     @media(max-width:900px){
       .kpi-grid{grid-template-columns:1fr 1fr}
       .r4,.r5,.r6{grid-template-columns:1fr 1fr}
@@ -110,7 +100,6 @@
     }
     /* v4: 모바일 테이블 축소 — 매출일/거래처/상품명/매출액/입금만 표시 */
     @media(max-width:768px){
-      .col-desk{display:none!important}
       table{min-width:auto}
       /* v4: 모바일 버튼 터치 영역 44×44px (Apple HIG / Material Design 기준) */
       button.secondary,button.danger{min-width:44px;min-height:44px}
@@ -118,19 +107,8 @@
   </style>
 </head>
 <body>
-<header>
-  <div class="top">
-    <h1>GoLab · 매출 관리</h1>
-    <nav class="tabs">
-      <a class="tab" href="./console.html">🏠 메인</a>
-      <a class="tab" href="./deals.html">🔥 거래</a>
-      <a class="tab" href="./item-master.html">🏷 품목</a>
-      <!-- [GoLab v4] inventory tab hidden - file kept at index.html -->
-      <a class="tab" href="./profit.html">💰 수익</a>
-      <a class="tab" href="./partner-master.html">👥 거래처</a>
-    </nav>
-  </div>
-</header>
+<header data-title="GoLab · 매출 관리"></header>
+<script src="./js/navbar.js"></script>
 <div class="wrap">
 
   <!-- KPI -->
@@ -658,7 +636,7 @@ function render(){
       <td class="muted col-desk">${esc(r.unit)}</td>
       <td class="num col-desk">${fmt(n(r.sellUnitPrice))}</td>
       <td class="num highlight">${fmt(salesTotal)}</td>
-      <td style="text-align:center"><span class="pay-badge ${r.deposit_date ? 'paid' : 'unpaid'}" data-deposit="${r.id}">${r.deposit_date ? '완납 ('+r.deposit_date.substring(5)+')' : '미입금'}</span></td>
+      <td style="text-align:center"><span class="pay-badge clickable ${r.deposit_date ? 'paid' : 'unpaid'}" data-deposit="${r.id}">${r.deposit_date ? '완납 ('+r.deposit_date.substring(5)+')' : '미입금'}</span></td>
       <td class="muted col-desk">${r.costOverrideUnitPriceKrw!=null ? '<span title="수동원가: '+fmt(n(r.costOverrideUnitPriceKrw))+'" style="color:var(--point);cursor:help">🔧</span> ' : ''}${esc(r.memo)}</td>
       <td style="text-align:right;white-space:nowrap" class="col-desk">
         <button class="secondary" style="padding:5px 8px;font-size:11px" data-edit="${r.id}">수정</button>

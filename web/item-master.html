@@ -4,6 +4,7 @@
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>GoLab · 품목 조종석</title>
+  <link rel="stylesheet" href="./css/ui.css">
   <style>
     :root{
       --bg:#f5f7fa;--card:#ffffff;--muted:#64748b;--text:#0f172a;
@@ -13,13 +14,7 @@
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--text);
       font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",Arial;}
-    header{padding:0 20px;border-bottom:none;position:sticky;top:0;background:rgba(15,23,42,.82);backdrop-filter:blur(12px);-webkit-backdrop-filter:blur(12px);z-index:20;height:48px}
-    header .top{display:flex;align-items:center;justify-content:space-between;gap:10px;height:100%}
-    header h1{margin:0;font-size:15px;font-weight:800;color:#fff;letter-spacing:-.2px}
-    .tabs{display:flex;gap:2px;flex-wrap:wrap;height:100%}
-    .tab{display:inline-flex;align-items:center;padding:0 14px;height:100%;border:none;border-bottom:2px solid transparent;color:rgba(255,255,255,.55);text-decoration:none;font-size:12px;font-weight:600;background:transparent;transition:color .2s,border-color .2s}
-    .tab:hover{color:rgba(255,255,255,.85)}
-    .tab.active{color:#fff;font-weight:800;border-bottom:2px solid #fff}
+    /* [GoLab v4.1] header/tabs → ui.css로 이동 */
     .wrap{max-width:1440px;margin:0 auto;padding:16px 16px 36px}
     .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .card h2{margin:0 0 12px;font-size:13px;color:var(--item);display:flex;align-items:center;gap:8px}
@@ -180,19 +175,8 @@
   </style>
 </head>
 <body>
-<header>
-  <div class="top">
-    <h1>GoLab · 품목 조종석</h1>
-    <nav class="tabs">
-      <a class="tab" href="./console.html">🏠 메인</a>
-      <a class="tab" href="./deals.html">🔥 거래</a>
-      <a class="tab active" href="./item-master.html">🏷 품목</a>
-      <!-- [GoLab v4] inventory tab hidden - file kept at index.html -->
-      <a class="tab" href="./profit.html">💰 수익</a>
-      <a class="tab" href="./partner-master.html">👥 거래처</a>
-    </nav>
-  </div>
-</header>
+<header data-title="GoLab · 품목 조종석"></header>
+<script src="./js/navbar.js"></script>
 
 <div class="wrap">
   <!-- KPI -->

@@ -1,0 +1,108 @@
+/* ================================================================
+   [GoLab v4.1] ui.css — 공통 UI 스타일
+   - 헤더, 탭 네비게이션, 입금 배지, 모바일 테이블 축소
+   - 11개 HTML 파일에서 공유
+   ================================================================ */
+
+:root {
+  /* ── 입금 배지 색상 변수 ── */
+  --badge-unpaid-bg: #fef2f2;
+  --badge-unpaid-text: #991b1b;
+  --badge-unpaid-border: #fecaca;
+
+  --badge-vat-bg: #fffbeb;
+  --badge-vat-text: #92400e;
+  --badge-vat-border: #fde68a;
+
+  --badge-paid-bg: #f0fdf4;
+  --badge-paid-text: #14532d;
+  --badge-paid-border: #bbf7d0;
+}
+
+/* ══════════════════════════════════════
+   헤더
+   ══════════════════════════════════════ */
+header {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 0 20px;
+  position: sticky;
+  top: 0;
+  background: rgba(15,23,42,.82);
+  backdrop-filter: blur(12px);
+  -webkit-backdrop-filter: blur(12px);
+  z-index: 20;
+  height: 48px;
+  border-bottom: none;
+}
+header h1 {
+  margin: 0;
+  font-size: 15px;
+  font-weight: 800;
+  color: #fff;
+  letter-spacing: -.2px;
+}
+
+/* ══════════════════════════════════════
+   탭 네비게이션
+   ══════════════════════════════════════ */
+.tabs { display: flex; gap: 2px; flex-wrap: wrap; height: 100% }
+.tab {
+  display: inline-flex;
+  align-items: center;
+  padding: 0 14px;
+  height: 100%;
+  border: none;
+  border-bottom: 2px solid transparent;
+  color: rgba(255,255,255,.55);
+  text-decoration: none;
+  font-size: 12px;
+  font-weight: 600;
+  background: transparent;
+  transition: color .2s, border-color .2s;
+}
+.tab:hover { color: rgba(255,255,255,.85) }
+.tab.active { color: #fff; font-weight: 800; border-bottom: 2px solid #fff }
+
+/* ══════════════════════════════════════
+   입금 배지 (공통)
+   ══════════════════════════════════════ */
+.pay-badge {
+  display: inline-flex;
+  align-items: center;
+  gap: 4px;
+  padding: 2px 8px;
+  border-radius: 6px;
+  font-size: 10px;
+  font-weight: 700;
+  white-space: nowrap;
+  border: 1px solid transparent;
+}
+.pay-badge.unpaid {
+  background: var(--badge-unpaid-bg);
+  color: var(--badge-unpaid-text);
+  border-color: var(--badge-unpaid-border);
+}
+.pay-badge.vat_pending {
+  background: var(--badge-vat-bg);
+  color: var(--badge-vat-text);
+  border-color: var(--badge-vat-border);
+}
+.pay-badge.paid {
+  background: var(--badge-paid-bg);
+  color: var(--badge-paid-text);
+  border-color: var(--badge-paid-border);
+}
+.pay-badge .pay-pct { font-weight: 800; font-size: 9px; opacity: .8 }
+
+/* 클릭 가능 배지 (sales, trade) */
+.pay-badge.clickable { cursor: pointer; user-select: none; transition: all .15s }
+.pay-badge.clickable:hover { opacity: .75 }
+
+/* ══════════════════════════════════════
+   모바일 테이블 축소
+   ══════════════════════════════════════ */
+@media (max-width: 768px) {
+  .col-desk { display: none !important }
+}
