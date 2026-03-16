@@ -1204,16 +1204,25 @@ function buildCalendarEvents(){
   // 중간 맵: `${deal_id}_${date}` → {deal_id, labelsSet, partner, amount}
   const dealDedupeMap = new Map();
 
+  /* v2.4.1: 거래 SSoT를 golab_trade_v2로 교체 */
   try{
-    const deals = JSON.parse(localStorage.getItem("golab_deals_v1") || "[]");
-    deals.forEach(deal => {
-      if(deal.deal_status === "cancelled") return;
-      const did = deal.deal_id;
+    const trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]");
+    trades.forEach(trade => {
+      if(trade.deal_status === "cancelled") return;
+      const did = trade.id;   /* v2: id (v1은 deal_id) */
       if(!did) return;
+
+      /* 얇은 매핑: supply_amount (items 배열 합산) */
+      const totalSupply = (trade.items || []).reduce((s, i) => s + (Number(i.supply_amount) || 0), 0);
+      /* 얇은 매핑: item_name (1건이면 품목명, 2건+ 이면 "첫품목 외 N건") */
+      const itemArr = trade.items || [];
+      const itemLabel = itemArr.length === 0 ? ""
+        : itemArr.length === 1 ? (itemArr[0].name || "")
+        : (itemArr[0].name || "") + " 외 " + (itemArr.length - 1) + "건";
 
       // 4개 필드 스캔
       Object.keys(DEAL_FIELD_MAP).forEach(field => {
-        const raw = deal[field];
+        const raw = trade[field];
         if(!isValidDateStr(raw)) return;
         const d = raw.substring(0,10);
         const label = DEAL_FIELD_MAP[field];
@@ -1226,9 +1235,9 @@ function buildCalendarEvents(){
             deal_id: did,
             date: d,
             labelsSet: new Set([label]),
-            partner: deal.partner_name_snapshot || "",
-            amount: deal.supply_amount || 0,
-            item: deal.item_name || ""
+            partner: trade.partner_name_snapshot || "",
+            amount: totalSupply,
+            item: itemLabel
           });
         } else {
           dealDedupeMap.get(key).labelsSet.add(label);
@@ -1817,8 +1826,9 @@ document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){ closeCalPanel(); closeActionModal(); closeDrawer(); closeSearch(); closeRestorePanel(); closeUnregPanel(); }
 });
 
-/* ── 크로스탭 동기화: 다른 탭에서 ACTION/DEAL 변경 시 자동 반영 ── */
-window.addEventListener("storage", e => { if(e.key === ACTION_KEY || e.key === "golab_deals_v1") renderAll(); });
+/* ── 크로스탭 동기화: 다른 탭에서 ACTION/거래 변경 시 자동 반영 ── */
+/* v2.4.1: golab_deals_v1 → golab_trade_v2 (Calendar SSoT 교체) */
+window.addEventListener("storage", e => { if(e.key === ACTION_KEY || e.key === "golab_trade_v2") renderAll(); });
 
 /* ══════════════════════════════════════════
    DATA MANAGEMENT — 전체 백업/복원
