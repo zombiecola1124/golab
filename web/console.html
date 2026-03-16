@@ -672,7 +672,8 @@ function getEndOfMonth(today){
 /* ══════════════════════════════════════════
    SINGLE SOURCE: Actions CRUD
    ══════════════════════════════════════════ */
-function loadActions(){ try{return JSON.parse(localStorage.getItem(ACTION_KEY)||"[]")}catch{return[]} }
+/* v2.5: deal_id 없는 레거시 Action에 null 기본값 런타임 보강 */
+function loadActions(){ try{return JSON.parse(localStorage.getItem(ACTION_KEY)||"[]").map(a=>({deal_id:null,...a}))}catch{return[]} }
 function saveActions(arr){ localStorage.setItem(ACTION_KEY, JSON.stringify(arr)); }
 
 /* ── Legacy Migration (one-time, non-destructive) ── */
