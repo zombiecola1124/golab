@@ -129,6 +129,44 @@
     .cal-day.has-overdue::after{background:var(--warn)}
     .cal-day.today.has-action::after{background:var(--primary)}
 
+    /* ─ Deal 도트 (금색) — Action만/Deal만일 때 중앙, 둘 다일 때 좌우 분리 ─ */
+    .cal-day.has-deal{font-weight:700}
+    .cal-day.has-deal::before{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--orange)}
+    /* 둘 다 있을 때: Action=::after(좌), Deal=::before(우) */
+    .cal-day.has-action.has-deal::after{left:50%;transform:translateX(-4px)}
+    .cal-day.has-action.has-deal::before{left:50%;transform:translateX(1px)}
+
+    /* ─ Calendar Slide Panel ─ */
+    .cal-panel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:90}
+    .cal-panel-overlay.open{display:block}
+    .cal-panel{position:fixed;top:0;right:-440px;width:420px;height:100vh;background:var(--bg);border-left:1px solid var(--border);z-index:100;overflow-y:auto;padding:0;transition:right .25s ease}
+    .cal-panel.open{right:0}
+    .cp-header{padding:16px 20px 12px;border-bottom:1px solid var(--border);position:sticky;top:0;background:var(--bg);z-index:2}
+    .cp-top-row{display:flex;align-items:center;gap:8px}
+    .cp-month-title{flex:1;text-align:center;font-size:14px;font-weight:800;color:var(--text)}
+    .cp-close{background:none;border:none;color:var(--muted);font-size:20px;cursor:pointer;padding:4px 8px;margin-left:auto}
+    .cp-close:hover{color:var(--warn)}
+    .cp-body{padding:16px 20px}
+    .cp-section{margin-bottom:20px}
+    .cp-section-title{font-size:11px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px;margin-bottom:10px;display:flex;align-items:center;gap:6px}
+    .cp-section-title .cp-count{font-size:10px;padding:1px 7px;border-radius:6px;background:#f1f5f9;color:var(--muted);font-weight:700}
+    .cp-date-header{font-size:13px;font-weight:800;color:var(--text);padding:8px 12px;background:rgba(37,99,235,.06);border-radius:8px;margin-bottom:12px;border-left:3px solid var(--primary)}
+    .cp-empty{font-size:12px;color:var(--muted);padding:12px 0;text-align:center}
+    .cp-event{display:flex;align-items:flex-start;gap:10px;padding:8px 10px;border-radius:8px;margin-bottom:6px;transition:background .1s;cursor:default}
+    .cp-event:hover{background:#f8fafc}
+    .cp-event .cp-dot{width:6px;height:6px;border-radius:50%;margin-top:5px;flex-shrink:0}
+    .cp-event .cp-dot.action{background:var(--primary)}
+    .cp-event .cp-dot.overdue{background:var(--warn)}
+    .cp-event .cp-dot.deal{background:var(--orange)}
+    .cp-event .cp-info{flex:1;min-width:0}
+    .cp-event .cp-label{font-size:12px;font-weight:600;color:var(--text);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .cp-event .cp-sub{font-size:10px;color:var(--muted);margin-top:1px}
+    .cp-event .cp-badge{font-size:9px;padding:2px 7px;border-radius:5px;font-weight:700;flex-shrink:0;margin-top:2px}
+    .cp-event .cp-badge.action-badge{background:#dbeafe;color:#1e40af}
+    .cp-event .cp-badge.deal-badge{background:rgba(217,119,6,.12);color:#92400e}
+    .cp-event .cp-badge.overdue-badge{background:#fee2e2;color:#991b1b}
+    .cp-divider{height:1px;background:var(--border);margin:16px 0}
+
     .kpi-stack{display:flex;flex-direction:column;gap:8px}
     .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .kpi-card .t{font-size:10px;color:var(--muted);font-weight:600}
@@ -274,6 +312,7 @@
       .bento{grid-template-columns:1fr;padding:12px}
       .right{display:none}
       .drawer{width:100%;right:-102%}
+      .cal-panel{width:100%;right:-102%}
     }
   </style>
 </head>
@@ -418,7 +457,7 @@
     <div class="cal-card">
       <div class="cal-header">
         <button class="cal-nav" id="calPrev">◀</button>
-        <a id="calTitle" href="./calendar.html">2026년 2월</a>
+        <span id="calTitle" style="cursor:pointer">2026년 2월</span>
         <button class="cal-nav" id="calNext">▶</button>
       </div>
       <div class="cal-grid" id="calGrid"></div>
@@ -454,6 +493,22 @@
       <button id="actCancel">취소</button>
       <button id="actSave" class="btn-primary">저장</button>
     </div>
+  </div>
+</div>
+
+<!-- ═══ CALENDAR SLIDE PANEL (v2.4) ═══ -->
+<div class="cal-panel-overlay" id="calPanelOverlay"></div>
+<div class="cal-panel" id="calPanel">
+  <div class="cp-header">
+    <div class="cp-top-row">
+      <button class="cal-nav" id="cpPrev">◀</button>
+      <span class="cp-month-title" id="cpMonthTitle">2026년 3월</span>
+      <button class="cal-nav" id="cpNext">▶</button>
+      <button class="cp-close" id="cpClose">✕</button>
+    </div>
+  </div>
+  <div class="cp-body" id="cpBody">
+    <!-- JS로 동적 렌더링 -->
   </div>
 </div>
 
@@ -1091,30 +1146,133 @@ function computeKPI(){
 }
 
 /* ══════════════════════════════════════════
-   MINI CALENDAR (Right sidebar)
+   CALENDAR: 단일 소스 함수 + Mini Calendar + Slide Panel (v2.4)
    ══════════════════════════════════════════ */
 let calYear, calMonth;
 (function(){ const d=new Date(); calYear=d.getFullYear(); calMonth=d.getMonth(); })();
 
+/* ── 라벨 순서 상수 (dedupe 정렬용) ── */
+const DEAL_LABEL_ORDER = ["견적", "거래", "계산서", "입금"];
+const DEAL_FIELD_MAP = {
+  quote_at:   "견적",
+  deal_date:  "거래",
+  invoice_at: "계산서",
+  payment_at: "입금"
+};
+
+/* ── 날짜 유효성 검사 ── */
+function isValidDateStr(s){
+  if(!s || typeof s !== "string" || s.length < 10) return false;
+  const d = s.substring(0,10);
+  if(!/^\d{4}-\d{2}-\d{2}$/.test(d)) return false;
+  return !isNaN(Date.parse(d));
+}
+
+/* ══════════════════════════════════════════
+   buildCalendarEvents() — 도트 + 리스트 단일 소스
+   Mini Calendar 도트 계산과 Slide Panel 이벤트 리스트를
+   동일 함수에서 생성하여 불일치를 원천 차단한다.
+   ══════════════════════════════════════════ */
+function buildCalendarEvents(){
+  const today = todayStr();
+
+  /* ── 1. Action 수집 ── */
+  const actionDates = new Map(); // date → {open, overdue}
+  const actionsByDate = {};      // date → [{id, title, priority, overdue, status}]
+  loadActions().forEach(a => {
+    if(!isValidDateStr(a.dueDate)) return;
+    const d = a.dueDate.substring(0,10);
+    // 도트용 (DONE 제외)
+    if(!actionDates.has(d)) actionDates.set(d, {open:false, overdue:false});
+    const info = actionDates.get(d);
+    if(a.status !== "DONE"){ info.open = true; if(d < today) info.overdue = true; }
+    // 리스트용 (모든 상태)
+    if(!actionsByDate[d]) actionsByDate[d] = [];
+    actionsByDate[d].push({
+      id: a.id,
+      title: a.title || "(제목 없음)",
+      priority: a.priority || "NORMAL",
+      overdue: a.status !== "DONE" && d < today,
+      done: a.status === "DONE",
+      deal_id: a.deal_id || null
+    });
+  });
+
+  /* ── 2. Deal 수집 + dedupe ── */
+  const dealDates = new Set();        // date Set (도트용)
+  const dealGroupsByDate = {};        // date → [{deal_id, labels, partner, amount}]
+  // 중간 맵: `${deal_id}_${date}` → {deal_id, labelsSet, partner, amount}
+  const dealDedupeMap = new Map();
+
+  try{
+    const deals = JSON.parse(localStorage.getItem("golab_deals_v1") || "[]");
+    deals.forEach(deal => {
+      if(deal.deal_status === "cancelled") return;
+      const did = deal.deal_id;
+      if(!did) return;
+
+      // 4개 필드 스캔
+      Object.keys(DEAL_FIELD_MAP).forEach(field => {
+        const raw = deal[field];
+        if(!isValidDateStr(raw)) return;
+        const d = raw.substring(0,10);
+        const label = DEAL_FIELD_MAP[field];
+        const key = did + "_" + d;
+
+        dealDates.add(d);
+
+        if(!dealDedupeMap.has(key)){
+          dealDedupeMap.set(key, {
+            deal_id: did,
+            date: d,
+            labelsSet: new Set([label]),
+            partner: deal.partner_name_snapshot || "",
+            amount: deal.supply_amount || 0,
+            item: deal.item_name || ""
+          });
+        } else {
+          dealDedupeMap.get(key).labelsSet.add(label);
+        }
+      });
+    });
+  }catch(e){}
+
+  // dedupe 맵 → 날짜별 그룹 배열로 변환
+  dealDedupeMap.forEach(entry => {
+    const d = entry.date;
+    if(!dealGroupsByDate[d]) dealGroupsByDate[d] = [];
+    // 라벨 순서 고정: 견적 → 거래 → 계산서 → 입금
+    const sortedLabels = DEAL_LABEL_ORDER.filter(l => entry.labelsSet.has(l));
+    dealGroupsByDate[d].push({
+      deal_id: entry.deal_id,
+      labels: sortedLabels,
+      labelText: sortedLabels.join(" / "),
+      partner: entry.partner,
+      amount: entry.amount,
+      item: entry.item
+    });
+  });
+
+  return { actionDates, dealDates, actionsByDate, dealGroupsByDate };
+}
+
+/* ══════════════════════════════════════════
+   MINI CALENDAR (Right sidebar)
+   ══════════════════════════════════════════ */
 function renderMiniCal(){
   const mNames=["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
-  const calLink=$("calTitle");
-  calLink.textContent=calYear+"년 "+mNames[calMonth];
-  calLink.href="./calendar.html?y="+calYear+"&m="+(calMonth+1);
+  const calTitle=$("calTitle");
+  calTitle.textContent=calYear+"년 "+mNames[calMonth];
 
   const first=new Date(calYear,calMonth,1);
   const lastDay=new Date(calYear,calMonth+1,0).getDate();
   const startDow=first.getDay();
   const today=todayStr();
 
-  // Action dates for dots
-  const actionDates=new Map();
-  loadActions().forEach(a => {
-    if(!a.dueDate) return;
-    if(!actionDates.has(a.dueDate)) actionDates.set(a.dueDate, {open:false, overdue:false});
-    const info = actionDates.get(a.dueDate);
-    if(a.status !== "DONE"){ info.open = true; if(a.dueDate < today) info.overdue = true; }
-  });
+  // 단일 소스에서 도트 데이터 가져오기
+  const evData = buildCalendarEvents();
+  const actionDates = evData.actionDates;
+  const dealDates = evData.dealDates;
 
   const grid=$("calGrid"); grid.innerHTML="";
   ["일","월","화","수","목","금","토"].forEach(d=>{
@@ -1129,16 +1287,200 @@ function renderMiniCal(){
     const ds=`${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
     d.className="cal-day current-month";
     if(ds===today) d.classList.add("today");
-    const info = actionDates.get(ds);
-    if(info && info.open){ d.classList.add("has-action"); if(info.overdue) d.classList.add("has-overdue"); }
+
+    // Action 도트 (파랑/빨강)
+    const aInfo = actionDates.get(ds);
+    if(aInfo && aInfo.open){ d.classList.add("has-action"); if(aInfo.overdue) d.classList.add("has-overdue"); }
+    // Deal 도트 (금색)
+    if(dealDates.has(ds)) d.classList.add("has-deal");
+
     d.textContent=day;
-    d.onclick=()=>{window.location.href="./calendar.html?date="+ds;};
+    // 클릭 → Slide Panel 열기 (페이지 이동 제거)
+    d.onclick=()=>{ openCalPanel(ds); };
     grid.appendChild(d);
   }
   const total=startDow+lastDay, rem=total%7===0?0:7-total%7;
   for(let i=1;i<=rem;i++){
     const d=document.createElement("div"); d.className="cal-day"; d.textContent=i; grid.appendChild(d);
   }
+}
+
+/* ══════════════════════════════════════════
+   CALENDAR SLIDE PANEL (v2.4)
+   Console 내부 우측 슬라이드 패널
+   ══════════════════════════════════════════ */
+let cpYear, cpMonth, selectedCalDate;
+(function(){ const d=new Date(); cpYear=d.getFullYear(); cpMonth=d.getMonth(); selectedCalDate=todayStr(); })();
+
+/* ── 패널 열기 ── */
+function openCalPanel(dateStr){
+  if(!dateStr) dateStr = todayStr();
+  selectedCalDate = dateStr;
+  // 패널 월을 선택 날짜 기준으로 맞춤
+  const parts = dateStr.split("-");
+  cpYear = parseInt(parts[0]);
+  cpMonth = parseInt(parts[1]) - 1;
+  renderCalPanel();
+  $("calPanel").classList.add("open");
+  $("calPanelOverlay").classList.add("open");
+}
+
+/* ── 패널 닫기 ── */
+function closeCalPanel(){
+  $("calPanel").classList.remove("open");
+  $("calPanelOverlay").classList.remove("open");
+}
+
+/* ── 패널 렌더링 ── */
+function renderCalPanel(){
+  const mNames=["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
+  $("cpMonthTitle").textContent = cpYear+"년 "+mNames[cpMonth];
+
+  const evData = buildCalendarEvents();
+  const today = todayStr();
+  const body = $("cpBody");
+
+  // 현재 월의 시작~끝 날짜
+  const monthStart = `${cpYear}-${String(cpMonth+1).padStart(2,"0")}-01`;
+  const lastDay = new Date(cpYear, cpMonth+1, 0).getDate();
+  const monthEnd = `${cpYear}-${String(cpMonth+1).padStart(2,"0")}-${String(lastDay).padStart(2,"0")}`;
+
+  // 이번 주 범위 (일~토)
+  const todayDate = new Date();
+  const dow = todayDate.getDay();
+  const weekStart = new Date(todayDate); weekStart.setDate(weekStart.getDate() - dow);
+  const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 6);
+  const wsStr = dateStr(weekStart);
+  const weStr = dateStr(weekEnd);
+
+  // 전체 날짜 수집 (이번 달 범위)
+  const allDatesInMonth = [];
+  for(let day=1; day<=lastDay; day++){
+    allDatesInMonth.push(`${cpYear}-${String(cpMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`);
+  }
+
+  let html = "";
+
+  /* ── (A) 선택된 날짜 이벤트 (강조 섹션) ── */
+  const selActions = evData.actionsByDate[selectedCalDate] || [];
+  const selDeals = evData.dealGroupsByDate[selectedCalDate] || [];
+  const selTotal = selActions.length + selDeals.length;
+
+  // 날짜 포맷
+  const selParts = selectedCalDate.split("-");
+  const selDateObj = new Date(+selParts[0], +selParts[1]-1, +selParts[2]);
+  const dayNames = ["일","월","화","수","목","금","토"];
+  const selLabel = `${+selParts[1]}월 ${+selParts[2]}일 (${dayNames[selDateObj.getDay()]})`;
+  const isToday = selectedCalDate === today;
+
+  html += `<div class="cp-date-header">${isToday?"📌 오늘 — ":"📅 "}${selLabel}</div>`;
+
+  if(selTotal === 0){
+    html += `<div class="cp-empty">이 날짜에 일정이 없습니다</div>`;
+  } else {
+    // Action 이벤트
+    selActions.forEach(a => {
+      const dotCls = a.done ? "action" : (a.overdue ? "overdue" : "action");
+      const badgeCls = a.done ? "action-badge" : (a.overdue ? "overdue-badge" : "action-badge");
+      const badgeText = a.done ? "완료" : (a.overdue ? "지연" : (a.priority === "HIGH" ? "높음" : "Action"));
+      const titleStyle = a.done ? "text-decoration:line-through;color:var(--muted)" : "";
+      const dealHint = a.deal_id ? ` <span style="font-size:9px;color:var(--muted)">🔗 Deal</span>` : "";
+      html += `<div class="cp-event">
+        <div class="cp-dot ${dotCls}"></div>
+        <div class="cp-info">
+          <div class="cp-label" style="${titleStyle}">${esc(a.title)}${dealHint}</div>
+        </div>
+        <span class="cp-badge ${badgeCls}">${badgeText}</span>
+      </div>`;
+    });
+    // Deal 이벤트
+    selDeals.forEach(dg => {
+      const amtText = dg.amount ? fmt(dg.amount) : "";
+      const partnerText = dg.partner ? esc(dg.partner) : "";
+      const sub = [partnerText, dg.item ? esc(dg.item) : "", amtText].filter(Boolean).join(" · ");
+      html += `<div class="cp-event">
+        <div class="cp-dot deal"></div>
+        <div class="cp-info">
+          <div class="cp-label">💰 ${esc(dg.labelText)}</div>
+          ${sub ? `<div class="cp-sub">${sub}</div>` : ""}
+        </div>
+        <span class="cp-badge deal-badge">Deal</span>
+      </div>`;
+    });
+  }
+
+  html += `<div class="cp-divider"></div>`;
+
+  /* ── (B) 이번 주 예정 ── */
+  html += `<div class="cp-section">`;
+  html += `<div class="cp-section-title">📋 이번 주 예정</div>`;
+  let weekCount = 0;
+  allDatesInMonth.forEach(d => {
+    if(d < wsStr || d > weStr || d === selectedCalDate) return;
+    const acts = evData.actionsByDate[d] || [];
+    const dls = evData.dealGroupsByDate[d] || [];
+    if(acts.length === 0 && dls.length === 0) return;
+
+    const dp = d.split("-");
+    const dObj = new Date(+dp[0], +dp[1]-1, +dp[2]);
+    const dLabel = `${+dp[1]}/${+dp[2]}(${dayNames[dObj.getDay()]})`;
+
+    acts.filter(a => !a.done).forEach(a => {
+      weekCount++;
+      const dotCls = a.overdue ? "overdue" : "action";
+      html += `<div class="cp-event" onclick="openCalPanel('${d}')">
+        <div class="cp-dot ${dotCls}"></div>
+        <div class="cp-info"><div class="cp-label">${esc(a.title)}</div><div class="cp-sub">${dLabel}</div></div>
+      </div>`;
+    });
+    dls.forEach(dg => {
+      weekCount++;
+      html += `<div class="cp-event" onclick="openCalPanel('${d}')">
+        <div class="cp-dot deal"></div>
+        <div class="cp-info"><div class="cp-label">💰 ${esc(dg.labelText)}</div><div class="cp-sub">${dLabel} · ${esc(dg.partner||dg.item||"")}</div></div>
+      </div>`;
+    });
+  });
+  if(weekCount === 0) html += `<div class="cp-empty">이번 주 추가 예정 없음</div>`;
+  html += `</div>`;
+
+  /* ── (C) 이번 달 전체 ── */
+  html += `<div class="cp-section">`;
+  html += `<div class="cp-section-title">📆 ${mNames[cpMonth]} 전체</div>`;
+  let monthEvents = [];
+  allDatesInMonth.forEach(d => {
+    if(d === selectedCalDate) return;
+    const acts = (evData.actionsByDate[d] || []).filter(a => !a.done);
+    const dls = evData.dealGroupsByDate[d] || [];
+    if(acts.length === 0 && dls.length === 0) return;
+    const dp = d.split("-");
+    const dObj = new Date(+dp[0], +dp[1]-1, +dp[2]);
+    const dLabel = `${+dp[1]}/${+dp[2]}(${dayNames[dObj.getDay()]})`;
+    acts.forEach(a => {
+      monthEvents.push({d, dLabel, type:"action", title:esc(a.title), overdue:a.overdue});
+    });
+    dls.forEach(dg => {
+      monthEvents.push({d, dLabel, type:"deal", title:"💰 "+esc(dg.labelText), sub:esc(dg.partner||dg.item||"")});
+    });
+  });
+  if(monthEvents.length === 0){
+    html += `<div class="cp-empty">추가 이벤트 없음</div>`;
+  } else {
+    // 최대 20건 표시
+    monthEvents.slice(0,20).forEach(ev => {
+      const dotCls = ev.type === "deal" ? "deal" : (ev.overdue ? "overdue" : "action");
+      html += `<div class="cp-event" onclick="openCalPanel('${ev.d}')" style="cursor:pointer">
+        <div class="cp-dot ${dotCls}"></div>
+        <div class="cp-info"><div class="cp-label">${ev.title}</div><div class="cp-sub">${ev.dLabel}${ev.sub?" · "+ev.sub:""}</div></div>
+      </div>`;
+    });
+    if(monthEvents.length > 20){
+      html += `<div class="cp-empty">외 ${monthEvents.length - 20}건 더 있음</div>`;
+    }
+  }
+  html += `</div>`;
+
+  body.innerHTML = html;
 }
 
 /* ══════════════════════════════════════════
@@ -1464,12 +1806,19 @@ $("drawerOverlay").onclick = closeDrawer;
 $("calPrev").onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderMiniCal();};
 $("calNext").onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderMiniCal();};
 
+/* ── Calendar Panel 이벤트 바인딩 (v2.4) ── */
+$("calTitle").onclick=()=>{ openCalPanel(todayStr()); };
+$("cpClose").onclick = closeCalPanel;
+$("calPanelOverlay").onclick = closeCalPanel;
+$("cpPrev").onclick=()=>{cpMonth--;if(cpMonth<0){cpMonth=11;cpYear--;}renderCalPanel();};
+$("cpNext").onclick=()=>{cpMonth++;if(cpMonth>11){cpMonth=0;cpYear++;}renderCalPanel();};
+
 document.addEventListener("keydown",e=>{
-  if(e.key==="Escape"){ closeActionModal(); closeDrawer(); closeSearch(); closeRestorePanel(); closeUnregPanel(); }
+  if(e.key==="Escape"){ closeCalPanel(); closeActionModal(); closeDrawer(); closeSearch(); closeRestorePanel(); closeUnregPanel(); }
 });
 
-/* ── 크로스탭 동기화: 다른 탭(calendar)에서 ACTION 변경 시 자동 반영 ── */
-window.addEventListener("storage", e => { if(e.key === ACTION_KEY) renderAll(); });
+/* ── 크로스탭 동기화: 다른 탭에서 ACTION/DEAL 변경 시 자동 반영 ── */
+window.addEventListener("storage", e => { if(e.key === ACTION_KEY || e.key === "golab_deals_v1") renderAll(); });
 
 /* ══════════════════════════════════════════
    DATA MANAGEMENT — 전체 백업/복원
