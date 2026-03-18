@@ -62,7 +62,8 @@ window.GoLabPartnerMaster = (function () {
     /* search_text: 모든 텍스트 필드 정규화 결합 */
     const parts = [
       p.name, p.alias, p.region, p.dept,
-      p.contact_name, p.email, p.memo, phoneDigits
+      p.contact_name, p.email, p.memo, phoneDigits,
+      p.bank_name, p.account_holder, p.billing_email
     ];
     p.search_text = _normalize(parts.filter(Boolean).join(" "));
     return p;
@@ -89,6 +90,11 @@ window.GoLabPartnerMaster = (function () {
     p.email        = p.email        || "";
     p.alias        = p.alias        || "";
     p.memo         = p.memo         || "";
+    /* v4.1 정산 정보 */
+    p.bank_name      = p.bank_name      || "";
+    p.account_holder = p.account_holder || "";
+    p.account_number = p.account_number || "";
+    p.billing_email  = p.billing_email  || "";
     /* 파생 필드 갱신 */
     return _buildDerived(p);
   }
@@ -175,6 +181,11 @@ window.GoLabPartnerMaster = (function () {
       email:        (fields.email || "").trim(),
       alias:        (fields.alias || "").trim(),
       memo:         (fields.memo || "").trim(),
+      /* v4.1 정산 정보 */
+      bank_name:      (fields.bank_name || "").trim(),
+      account_holder: (fields.account_holder || "").trim(),
+      account_number: (fields.account_number || "").replace(/\s/g, ""),
+      billing_email:  (fields.billing_email || "").trim(),
       created_at:   new Date().toISOString()
     };
     if (!partner.name) throw new Error("거래처명은 필수입니다.");
@@ -206,6 +217,11 @@ window.GoLabPartnerMaster = (function () {
     if (fields.email        !== undefined) all[idx].email        = fields.email.trim();
     if (fields.alias        !== undefined) all[idx].alias        = fields.alias.trim();
     if (fields.memo         !== undefined) all[idx].memo         = fields.memo.trim();
+    /* v4.1 정산 정보 */
+    if (fields.bank_name      !== undefined) all[idx].bank_name      = fields.bank_name.trim();
+    if (fields.account_holder !== undefined) all[idx].account_holder = fields.account_holder.trim();
+    if (fields.account_number !== undefined) all[idx].account_number = fields.account_number.replace(/\s/g, "");
+    if (fields.billing_email  !== undefined) all[idx].billing_email  = fields.billing_email.trim();
     /* 파생 필드 재생성 (search_text, display_name 갱신) */
     _buildDerived(all[idx]);
     _save(all);

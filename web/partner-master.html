@@ -19,16 +19,21 @@
     .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .card h2{margin:0 0 12px;font-size:13px;color:var(--partner);display:flex;align-items:center;gap:8px}
     /* KPI */
-    .kpi-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-bottom:16px}
-    .kpi{padding:14px;border-radius:10px;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .kpi-row{display:flex;gap:10px;margin-bottom:16px;align-items:stretch}
+    .kpi{padding:14px;border-radius:10px;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04);flex:1}
     .kpi .t{font-size:11px;color:var(--muted)}
     .kpi .v{margin-top:6px;font-size:24px;font-weight:600;color:var(--partner)}
-    .kpi .sub{margin-top:4px;font-size:10px;color:var(--muted);font-weight:400}
+    .btn-new{
+      display:flex;align-items:center;justify-content:center;gap:6px;
+      padding:14px 20px;border-radius:10px;border:2px dashed var(--partner);
+      background:rgba(124,58,237,.04);color:var(--partner);font-size:13px;
+      font-weight:800;cursor:pointer;white-space:nowrap;transition:background .2s;
+    }
+    .btn-new:hover{background:rgba(124,58,237,.1)}
     /* Form */
     .row{display:grid;gap:10px;margin-bottom:10px}
     .r2{grid-template-columns:1fr 1fr}
     .r3{grid-template-columns:1fr 1fr 1fr}
-    .r4{grid-template-columns:1fr 1fr 1fr 1fr}
     label{display:block;font-size:11px;color:var(--muted);margin-bottom:5px;font-weight:700}
     label .opt{font-weight:400;color:#94a3b8}
     input,select,textarea{width:100%;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--text);padding:9px 10px;font-size:12px;outline:none;transition:border .2s;box-sizing:border-box}
@@ -48,6 +53,7 @@
     th{background:#f8fafc;color:var(--muted);text-align:left;padding:10px 12px;position:sticky;top:0;white-space:nowrap;z-index:2;border-bottom:1px solid var(--line)}
     td{padding:10px 12px;border-bottom:1px solid var(--line);vertical-align:middle}
     tr:hover{background:rgba(124,58,237,.03)}
+    tr.active-row{background:rgba(124,58,237,.06)}
     .muted{color:var(--muted)}
     .badge{display:inline-flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;background:var(--partner);color:#fff;border-radius:99px;min-width:20px;height:20px;padding:0 6px;margin-left:6px}
     .type-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700}
@@ -59,57 +65,74 @@
       display:inline-flex;align-items:center;justify-content:center;
       border:none;background:rgba(124,58,237,.08);color:var(--partner);
       border-radius:6px;padding:2px 6px;font-size:10px;cursor:pointer;
-      margin-left:4px;vertical-align:middle;font-weight:400;
+      margin-left:4px;vertical-align:middle;font-weight:400;position:relative;
     }
     .copy-btn:hover{background:rgba(124,58,237,.18)}
-    /* 상세 행 */
-    .detail-row td{
-      background:rgba(124,58,237,.03);padding:8px 12px;
-      border-bottom:2px solid var(--line);
+    /* Toast (복사 피드백) */
+    .copy-toast{
+      position:absolute;left:calc(100% + 6px);top:50%;transform:translateY(-50%);
+      background:var(--partner);color:#fff;font-size:10px;font-weight:700;
+      padding:3px 8px;border-radius:6px;white-space:nowrap;
+      opacity:0;transition:opacity .2s;pointer-events:none;
     }
-    .detail-grid{display:flex;flex-wrap:wrap;gap:6px 20px;font-size:11px;color:var(--muted)}
-    .detail-grid b{color:var(--text);font-weight:600}
+    .copy-toast.show{opacity:1}
     /* Search */
     .search-bar{margin-bottom:12px}
-    .stat-inline{font-size:11px;color:var(--muted);margin-left:auto}
     /* 섹션 구분 */
     .form-section{margin-bottom:4px}
     .form-section-label{font-size:10px;color:#94a3b8;margin-bottom:6px;font-weight:600;letter-spacing:.5px;text-transform:uppercase}
-    @media(max-width:900px){
-      .kpi-grid{grid-template-columns:1fr 1fr}
-      .r3{grid-template-columns:1fr 1fr}
-      .r4{grid-template-columns:1fr 1fr}
+
+    /* ══ 사이드 패널 ══ */
+    .panel-overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:90;
+      opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s;
     }
-    @media(max-width:600px){
-      .r3{grid-template-columns:1fr}
-      .r2{grid-template-columns:1fr}
+    .panel-overlay.open{opacity:1;visibility:visible}
+    .side-panel{
+      position:fixed;top:0;right:0;bottom:0;width:440px;
+      background:var(--card);border-left:1px solid var(--line);
+      box-shadow:-8px 0 30px rgba(0,0,0,.1);z-index:100;
+      transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+      display:flex;flex-direction:column;overflow:hidden;
     }
-    /* ══ 거래처 상태창 (게임 스테이터스 패널) ══ */
-    .status-panel{padding:16px;border-radius:10px;border:2px solid var(--partner);background:rgba(124,58,237,.02)}
-    .sp-header{display:flex;align-items:center;gap:12px;padding-bottom:12px;border-bottom:1px solid var(--line);margin-bottom:12px}
+    .side-panel.open{transform:translateX(0)}
+    .sp-top{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:16px 20px;border-bottom:1px solid var(--line);
+      background:rgba(124,58,237,.03);flex-shrink:0;
+    }
+    .sp-top-title{font-size:14px;font-weight:800;color:var(--partner)}
+    .sp-close{
+      border:none;background:transparent;color:var(--muted);font-size:20px;
+      cursor:pointer;padding:4px 8px;border-radius:6px;line-height:1;
+    }
+    .sp-close:hover{background:rgba(0,0,0,.06);color:var(--text)}
+    .sp-body{flex:1;overflow-y:auto;padding:0}
+    /* 패널 내부 섹션 */
+    .sp-section{padding:16px 20px;border-bottom:1px solid var(--line)}
+    .sp-section:last-child{border-bottom:none}
+    .sp-section-title{font-size:11px;font-weight:700;color:var(--partner);margin-bottom:10px;display:flex;align-items:center;gap:6px}
+    /* 패널 View: 상태 요약 */
+    .sp-header{display:flex;align-items:center;gap:12px;margin-bottom:12px}
     .sp-header .sp-name{font-size:16px;font-weight:800;color:var(--text)}
-    /* 기본 정보 그리드 */
-    .sp-info-grid{display:grid;grid-template-columns:1fr 1fr 1fr;gap:6px 20px;font-size:11px;color:var(--muted);margin-bottom:14px}
+    .sp-info-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:11px;color:var(--muted);margin-bottom:12px}
     .sp-info-grid b{color:var(--text);font-weight:600}
+    /* 정산 정보 */
+    .sp-settle-grid{display:grid;grid-template-columns:1fr 1fr;gap:6px 16px;font-size:11px;color:var(--muted)}
+    .sp-settle-grid b{color:var(--text);font-weight:600}
+    .sp-settle-item{display:flex;align-items:center;gap:4px;position:relative}
     /* KPI 바 */
-    .sp-kpi-bar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:14px}
-    .sp-kpi{padding:10px;border-radius:8px;text-align:center;border:1px solid var(--line);background:var(--card)}
+    .sp-kpi-bar{display:grid;grid-template-columns:1fr 1fr 1fr;gap:8px;margin-bottom:12px}
+    .sp-kpi{padding:8px;border-radius:8px;text-align:center;border:1px solid var(--line);background:var(--chip)}
     .sp-kpi .spk-label{font-size:9px;color:var(--muted);font-weight:700;text-transform:uppercase;letter-spacing:.3px}
-    .sp-kpi .spk-value{font-size:20px;font-weight:800;margin-top:4px}
+    .sp-kpi .spk-value{font-size:18px;font-weight:800;margin-top:2px}
     .sp-kpi .spk-value.purple{color:var(--partner)}
     .sp-kpi .spk-value.red{color:var(--bad)}
     .sp-kpi .spk-value.green{color:var(--accent)}
     /* 경고 플래그 */
-    .sp-warnings{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:12px}
+    .sp-warnings{display:flex;flex-wrap:wrap;gap:6px;margin-bottom:10px}
     .sp-warn-flag{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;font-size:11px;font-weight:700;background:#fef2f2;color:#991b1b;border:1px solid #fca5a5}
-    .sp-warn-flag.ok{background:#f0fdf4;color:#166534;border-color:#86efac}
-    /* 최근 거래 요약 */
-    .sp-latest{margin-bottom:12px;padding:10px;border-radius:8px;background:rgba(124,58,237,.04);border:1px solid rgba(124,58,237,.15);font-size:12px}
-    .sp-latest b{color:var(--text)}
-    .sp-latest .sl-label{color:var(--muted);font-size:10px;font-weight:700}
     /* 히스토리 테이블 */
-    .sp-history{margin-top:12px}
-    .sp-history-title{font-size:11px;font-weight:700;color:var(--partner);margin-bottom:8px;display:flex;align-items:center;gap:6px}
     .sp-history table{width:100%;border-collapse:collapse;font-size:11px}
     .sp-history th{background:#f8fafc;color:var(--muted);padding:6px 8px;text-align:left;border-bottom:1px solid var(--line);font-size:10px}
     .sp-history td{padding:6px 8px;border-bottom:1px solid var(--line)}
@@ -118,13 +141,25 @@
     .sp-deposit-badge{display:inline-block;padding:2px 6px;border-radius:999px;font-size:9px;font-weight:700}
     .sp-deposit-badge.paid{background:#dcfce7;color:#166534}
     .sp-deposit-badge.unpaid{background:#fee2e2;color:#991b1b}
+    .sp-deposit-badge.progress{background:#fef3c7;color:#92400e}
+    /* 패널 Edit: 폼 버튼 */
+    .sp-form-btns{display:flex;gap:8px;margin-top:8px;padding:16px 20px;border-top:1px solid var(--line);flex-shrink:0;background:var(--card)}
+
+    /* ══ 반응형 ══ */
     @media(max-width:900px){
+      .kpi-row{flex-wrap:wrap}
+      .kpi{min-width:calc(50% - 5px)}
+      .r3{grid-template-columns:1fr 1fr}
       .sp-kpi-bar{grid-template-columns:1fr 1fr}
-      .sp-info-grid{grid-template-columns:1fr 1fr}
+      .sp-info-grid{grid-template-columns:1fr}
+      /* 모바일 패널: 전체화면 */
+      .side-panel{width:100%;border-left:none}
     }
     @media(max-width:600px){
+      .r3{grid-template-columns:1fr}
+      .r2{grid-template-columns:1fr}
+      .kpi{min-width:100%}
       .sp-kpi-bar{grid-template-columns:1fr}
-      .sp-info-grid{grid-template-columns:1fr}
     }
   </style>
 </head>
@@ -133,8 +168,8 @@
 <script src="./js/navbar.js"></script>
 
 <div class="wrap">
-  <!-- KPI -->
-  <div class="kpi-grid">
+  <!-- KPI + 신규등록 버튼 -->
+  <div class="kpi-row">
     <div class="kpi">
       <div class="t">전체 거래처</div>
       <div class="v" id="kTotal">0</div>
@@ -147,84 +182,15 @@
       <div class="t">매입처</div>
       <div class="v" id="kBuy">0</div>
     </div>
+    <button class="btn-new" id="btnNew">+ 신규 등록</button>
   </div>
 
-  <!-- 등록/수정 폼 — v2.2 확장 -->
+  <!-- 목록 -->
   <div class="card">
-    <h2>➕ 거래처 등록</h2>
-
-    <!-- 상단: 기본 정보 -->
-    <div class="form-section">
-      <div class="form-section-label">기본 정보</div>
-      <div class="row r3">
-        <div>
-          <label>거래처명 *</label>
-          <input id="inName" placeholder="예: 대성금속" />
-        </div>
-        <div>
-          <label>유형</label>
-          <select id="inType">
-            <option value="매출처" selected>매출처</option>
-            <option value="매입처">매입처</option>
-            <option value="겸용">겸용</option>
-          </select>
-        </div>
-        <div>
-          <label>별칭 <span class="opt">(선택)</span></label>
-          <input id="inAlias" placeholder="예: 시흥공장, 대성(시흥)" />
-        </div>
-      </div>
-    </div>
-
-    <!-- 중단: 연락 정보 -->
-    <div class="form-section">
-      <div class="form-section-label">연락 정보</div>
-      <div class="row r3">
-        <div>
-          <label>지역 <span class="opt">(선택)</span></label>
-          <input id="inRegion" placeholder="예: 시흥, 도쿄" />
-        </div>
-        <div>
-          <label>담당자명 <span class="opt">(선택)</span></label>
-          <input id="inContactName" placeholder="예: 김철수" />
-        </div>
-        <div>
-          <label>전화번호 <span class="opt">(선택)</span></label>
-          <input id="inPhone" placeholder="예: 01012345678" />
-        </div>
-      </div>
-    </div>
-
-    <!-- 하단: 부가 정보 -->
-    <div class="form-section">
-      <div class="form-section-label">부가 정보</div>
-      <div class="row r3">
-        <div>
-          <label>부서 <span class="opt">(선택)</span></label>
-          <input id="inDept" placeholder="예: 영업1팀" />
-        </div>
-        <div>
-          <label>이메일 <span class="opt">(선택)</span></label>
-          <input id="inEmail" placeholder="예: kim@company.com" type="email" />
-        </div>
-        <div>
-          <label>메모 <span class="opt">(선택)</span></label>
-          <input id="inMemo" placeholder="메모" />
-        </div>
-      </div>
-    </div>
-
-    <div style="display:flex;gap:8px;margin-top:4px">
-      <button id="btnSave" class="save">등록</button>
-      <button id="btnCancel" class="secondary" style="display:none">취소</button>
-      <div style="flex:1"></div>
-      <button id="btnMigrate" class="secondary">📥 매출에서 거래처 가져오기</button>
-    </div>
-  </div>
-
-  <!-- 목록 — v2.2 컬럼 변경 -->
-  <div class="card">
-    <h2>📋 거래처 목록 <span class="badge" id="listBadge">0</span></h2>
+    <h2>📋 거래처 목록 <span class="badge" id="listBadge">0</span>
+      <span style="flex:1"></span>
+      <button id="btnMigrate" class="secondary" style="padding:5px 10px;font-size:10px">📥 매출에서 가져오기</button>
+    </h2>
     <div class="search-bar">
       <input id="fSearch" placeholder="거래처명/별칭/지역/담당자/전화/메모 검색..." />
     </div>
@@ -248,21 +214,126 @@
   </div>
 </div>
 
+<!-- ══ 사이드 패널 (오버레이 + 패널) ══ -->
+<div class="panel-overlay" id="panelOverlay"></div>
+<div class="side-panel" id="sidePanel">
+  <div class="sp-top">
+    <span class="sp-top-title" id="panelTitle">거래처 등록</span>
+    <button class="sp-close" id="panelClose">&times;</button>
+  </div>
+  <div class="sp-body" id="panelBody">
+    <!-- View 섹션: 동적 렌더링 -->
+    <div id="panelView" class="sp-section" style="display:none"></div>
+    <!-- History 섹션: 동적 렌더링 -->
+    <div id="panelHistory" class="sp-section" style="display:none"></div>
+    <!-- Edit 섹션: 폼 -->
+    <div class="sp-section">
+      <div class="sp-section-title">기본 정보</div>
+      <div class="row r2">
+        <div>
+          <label>거래처명 *</label>
+          <input id="inName" placeholder="예: 대성금속" />
+        </div>
+        <div>
+          <label>유형</label>
+          <select id="inType">
+            <option value="매출처" selected>매출처</option>
+            <option value="매입처">매입처</option>
+            <option value="겸용">겸용</option>
+          </select>
+        </div>
+      </div>
+      <div class="row r2">
+        <div>
+          <label>별칭 <span class="opt">(선택)</span></label>
+          <input id="inAlias" placeholder="예: 시흥공장" />
+        </div>
+        <div>
+          <label>지역 <span class="opt">(선택)</span></label>
+          <input id="inRegion" placeholder="예: 시흥, 도쿄" />
+        </div>
+      </div>
+
+      <div class="sp-section-title" style="margin-top:12px">연락 정보</div>
+      <div class="row r2">
+        <div>
+          <label>담당자명 <span class="opt">(선택)</span></label>
+          <input id="inContactName" placeholder="예: 김철수" />
+        </div>
+        <div>
+          <label>전화번호 <span class="opt">(선택)</span></label>
+          <input id="inPhone" placeholder="예: 01012345678" />
+        </div>
+      </div>
+      <div class="row r2">
+        <div>
+          <label>부서 <span class="opt">(선택)</span></label>
+          <input id="inDept" placeholder="예: 영업1팀" />
+        </div>
+        <div>
+          <label>이메일 <span class="opt">(선택)</span></label>
+          <input id="inEmail" placeholder="예: kim@company.com" type="email" />
+        </div>
+      </div>
+
+      <div class="sp-section-title" style="margin-top:12px">정산 정보</div>
+      <div class="row r2">
+        <div>
+          <label>은행명 <span class="opt">(선택)</span></label>
+          <input id="inBankName" placeholder="예: 국민은행" />
+        </div>
+        <div>
+          <label>예금주 <span class="opt">(선택)</span></label>
+          <input id="inAccountHolder" placeholder="예: 홍길동" />
+        </div>
+      </div>
+      <div class="row r2">
+        <div>
+          <label>계좌번호 <span class="opt">(선택)</span></label>
+          <input id="inAccountNumber" placeholder="예: 12345678901234" />
+        </div>
+        <div>
+          <label>정산 이메일 <span class="opt">(선택)</span></label>
+          <input id="inBillingEmail" placeholder="예: billing@company.com" type="email" />
+        </div>
+      </div>
+
+      <div class="sp-section-title" style="margin-top:12px">메모</div>
+      <div class="row">
+        <div>
+          <textarea id="inMemo" placeholder="메모" rows="2"></textarea>
+        </div>
+      </div>
+    </div>
+  </div>
+  <!-- 패널 하단 버튼 -->
+  <div class="sp-form-btns">
+    <button id="btnSave" class="save">등록</button>
+    <button id="btnCancel" class="secondary">취소</button>
+    <div style="flex:1"></div>
+    <button id="btnPanelDelete" class="danger" style="display:none">삭제</button>
+  </div>
+</div>
+
 <script src="js/channel-master.js"></script>
 <script src="js/deal-tracker.js?v=5"></script>
-<script src="js/partner-master.js?v=3"></script>
+<script src="js/partner-master.js?v=4"></script>
 <script>
 /* ══════════════════════════════════════════
-   GoLab v2.2 거래처 마스터 관리 페이지
+   GoLab v4.1 거래처 운영 조종석
+   — 사이드패널 (View + History + Edit)
    ══════════════════════════════════════════ */
 var $ = function(id){ return document.getElementById(id); };
 var editingId = null;
-var _expandedId = null; /* 상세보기 토글 상태 */
+var _panelOpen = false;
+var _savedScrollY = 0;
 
 /* ── 모바일 감지 ── */
 var _isMobile = /Mobi|Android|iPhone/i.test(navigator.userAgent);
 
-/* ── KPI ── */
+/* ══════════════════════════════════════
+   KPI
+   ══════════════════════════════════════ */
 function computeKPI(){
   var all = GoLabPartnerMaster.loadAll();
   $("kTotal").textContent = all.length;
@@ -270,185 +341,59 @@ function computeKPI(){
   $("kBuy").textContent = all.filter(function(p){ return p.type === "매입처" || p.type === "겸용"; }).length;
 }
 
-/* ── 유형 뱃지 클래스 ── */
+/* ══════════════════════════════════════
+   유틸리티
+   ══════════════════════════════════════ */
 function typeClass(t){
   if(t === "매입처") return "buy";
   if(t === "매출처") return "sell";
   return "both";
 }
 
-/* ── HTML 이스케이프 ── */
 function esc(s){ return (s||"").replace(/&/g,"&amp;").replace(/</g,"&lt;").replace(/>/g,"&gt;"); }
 
-/* ── 전화번호 표시 (PC: 포맷+복사 / 모바일: tel링크) ── */
+function fmtAmt(v){
+  return "\u20a9" + Math.round(v).toLocaleString();
+}
+
+/* ── 전화번호 표시 ── */
 function renderPhone(digits){
   if(!digits) return "";
   var formatted = GoLabPartnerMaster.formatPhone(digits);
   if(_isMobile){
     return '<a href="javascript:void(0)" class="tel-link" data-tel="' + esc(digits) + '" style="color:var(--partner);text-decoration:none">' + esc(formatted) + '</a>';
   }
-  return esc(formatted) + ' <button class="copy-btn" data-copy="' + esc(digits) + '" title="복사">📋</button>';
+  return esc(formatted) + ' <button class="copy-btn" data-copy="' + esc(digits) + '" title="복사">📋<span class="copy-toast">복사됨</span></button>';
 }
 
-/* ── 이메일 표시 (복사 버튼 + confirm 후 mailto) ── */
+/* ── 이메일 표시 (.mailto-link 패턴) ── */
 function renderEmail(email){
   if(!email) return "";
   return '<a href="javascript:void(0)" class="mailto-link" data-email="' + esc(email) + '" style="color:var(--partner);text-decoration:none;font-size:11px">' + esc(email) + '</a>' +
-         ' <button class="copy-btn" data-copy="' + esc(email) + '" title="복사">📋</button>';
+         ' <button class="copy-btn" data-copy="' + esc(email) + '" title="복사">📋<span class="copy-toast">복사됨</span></button>';
 }
 
-/* ── 금액 포맷 헬퍼 ── */
-function fmtAmt(v){
-  return "\u20a9" + Math.round(v).toLocaleString();
+/* ── 계좌번호 마스킹 (목록용) ── */
+function maskAccount(num){
+  if(!num) return "";
+  if(num.length <= 4) return "****";
+  return "****" + num.slice(-4);
+}
+
+/* ── 계좌번호 전체 표시 + 복사 (패널용) ── */
+function renderAccountFull(num){
+  if(!num) return '<span class="muted">-</span>';
+  return '<b>' + esc(num) + '</b> <button class="copy-btn" data-copy="' + esc(num) + '" title="복사">📋<span class="copy-toast">복사됨</span></button>';
 }
 
 /* ══════════════════════════════════════
-   거래처 상태창 렌더링 — 거래 흐름 체크 중심 (v2.2)
-   "지금 이 거래처와 어디까지 진행됐고, 빠진 게 뭔지" 바로 보는 UI
+   목록 렌더링
    ══════════════════════════════════════ */
-function buildStatusPanel(p){
-  var stats = GoLabPartnerMaster.calcPartnerStats(p.partner_id);
-
-  var html = '<tr class="detail-row"><td colspan="7">';
-  html += '<div class="status-panel">';
-
-  /* ── 헤더: 거래처명 + 유형 ── */
-  html += '<div class="sp-header">';
-  html += '<span class="sp-name">' + esc(p.display_name || p.name) + '</span>';
-  html += '<span class="type-badge ' + typeClass(p.type) + '">' + esc(p.type) + '</span>';
-  if(stats.useSalesFallback) html += '<span style="font-size:10px;color:var(--warn);margin-left:8px">(매출 데이터 기반 — 마이그레이션 필요)</span>';
-  html += '</div>';
-
-  /* ── 기본 정보 그리드 ── */
-  html += '<div class="sp-info-grid">';
-  if(p.alias)        html += '<span><b>별칭:</b> ' + esc(p.alias) + '</span>';
-  if(p.region)       html += '<span><b>지역:</b> ' + esc(p.region) + '</span>';
-  if(p.contact_name) html += '<span><b>담당자:</b> ' + esc(p.contact_name) + '</span>';
-  if(p.dept)         html += '<span><b>부서:</b> ' + esc(p.dept) + '</span>';
-  if(p.phone)        html += '<span><b>전화:</b> ' + renderPhone(p.phone) + '</span>';
-  if(p.email)        html += '<span><b>이메일:</b> ' + renderEmail(p.email) + '</span>';
-  if(p.memo)         html += '<span><b>메모:</b> ' + esc(p.memo) + '</span>';
-  var regDate = p.created_at ? p.created_at.substring(0,10) : "-";
-  html += '<span><b>등록일:</b> ' + regDate + '</span>';
-  html += '</div>';
-
-  /* ── 최근 거래 요약 (deals 우선, sales 폴백) ── */
-  if(stats.latestDeal){
-    /* deals 기반 최근 거래 */
-    var ld = stats.latestDeal;
-    var ldDate = ld.quote_at || ld.created_at || "";
-    if(ldDate.length > 10) ldDate = ldDate.substring(0,10);
-    html += '<div class="sp-latest">';
-    html += '<span class="sl-label">최근 거래</span> ';
-    html += '<b>' + esc(ldDate) + '</b> · ';
-    /* v3.8 fix: v2 trade는 items[] 배열 구조 — 루트 item_name 없음 */
-    var _ldItemName = (ld.items && ld.items.length > 0) ? ld.items[0].name : (ld.item_name || "");
-    html += esc(_ldItemName) + ' · ';
-    /* v3.8 fix: v2 trade는 items[] 기준 합산 */
-    var _ldSupply = 0;
-    if (ld.items && ld.items.length > 0) {
-      ld.items.forEach(function(it){ _ldSupply += Number(it.supply_amount) || Math.round((Number(it.qty)||0)*(Number(it.unit_price)||0)); });
-    } else {
-      _ldSupply = Number(ld.supply_amount) || 0;
-    }
-    html += '<b>' + fmtAmt(_ldSupply) + '</b>';
-    if(ld.payment_at){
-      html += ' · <span class="sp-deposit-badge paid">입금</span>';
-    } else if(ld.invoice_at){
-      html += ' · <span class="sp-deposit-badge unpaid">미입금</span>';
-    } else {
-      html += ' · <span class="sp-deposit-badge" style="background:#fef3c7;color:#92400e">진행중</span>';
-    }
-    html += '</div>';
-  } else if(stats.useSalesFallback && stats.sales.latestSale){
-    /* sales 폴백 최근 거래 */
-    var ls = stats.sales.latestSale;
-    var lsAmt = (Number(ls.sellUnitPrice)||0) * (Number(ls.qty)||0);
-    html += '<div class="sp-latest">';
-    html += '<span class="sl-label">최근 거래</span> ';
-    html += '<b>' + esc(ls.salesDate) + '</b> · ';
-    html += esc(ls.itemName) + ' · ';
-    html += '<b>' + fmtAmt(lsAmt) + '</b>';
-    if(ls.deposit_date){
-      html += ' · <span class="sp-deposit-badge paid">입금</span>';
-    } else {
-      html += ' · <span class="sp-deposit-badge unpaid">미입금</span>';
-    }
-    html += '</div>';
-  }
-
-  /* ── KPI 바 (3칸: 누적 매출 / 미입금 / 거래건수) — 통합 필드 사용 ── */
-  html += '<div class="sp-kpi-bar">';
-  html += '<div class="sp-kpi"><div class="spk-label">누적 매출</div><div class="spk-value purple">' + fmtAmt(stats.totalAmount) + '</div></div>';
-  html += '<div class="sp-kpi"><div class="spk-label">미입금</div><div class="spk-value ' + (stats.receivableAmount > 0 ? 'red' : 'green') + '">' + fmtAmt(stats.receivableAmount) + '</div></div>';
-  html += '<div class="sp-kpi"><div class="spk-label">거래 건수</div><div class="spk-value purple">' + stats.txCount + '건</div></div>';
-  html += '</div>';
-
-  /* ── 경고 플래그 ── */
-  if(stats.receivableCount > 0){
-    html += '<div class="sp-warnings">';
-    html += '<span class="sp-warn-flag">\u26a0 입금 대기 ' + stats.receivableCount + '건 (' + fmtAmt(stats.receivableAmount) + ')</span>';
-    html += '</div>';
-  }
-
-  /* ── 최근 거래 히스토리 (deals 기반) ── */
-  if(stats.recentDeals.length > 0){
-    html += '<div class="sp-history">';
-    html += '<div class="sp-history-title">\uD83D\uDCDD 최근 거래 (최대 5건)</div>';
-    html += '<table><thead><tr><th>견적일</th><th>품목</th><th style="text-align:right">공급가</th><th style="text-align:center">상태</th></tr></thead><tbody>';
-    stats.recentDeals.forEach(function(deal){
-      var dDate = deal.quote_at || deal.created_at || "";
-      if(dDate.length > 10) dDate = dDate.substring(0,10);
-      var statusLabel = "진행";
-      var statusClass = "";
-      if(deal.deal_status === "completed"){ statusLabel = "완료"; statusClass = "paid"; }
-      else if(deal.payment_at){ statusLabel = "입금"; statusClass = "paid"; }
-      else if(deal.invoice_at){ statusLabel = "미입금"; statusClass = "unpaid"; }
-      html += '<tr>';
-      html += '<td class="muted">' + esc(dDate) + '</td>';
-      html += '<td>' + esc(deal.item_name || "") + '</td>';
-      html += '<td class="h-amt">' + fmtAmt(Number(deal.supply_amount)||0) + '</td>';
-      html += '<td class="h-status"><span class="sp-deposit-badge ' + statusClass + '">' + statusLabel + '</span></td>';
-      html += '</tr>';
-    });
-    html += '</tbody></table></div>';
-  }
-
-  /* ── sales 폴백: 매출 히스토리 ── */
-  if(stats.useSalesFallback && stats.sales.recentTx.length > 0){
-    html += '<div class="sp-history">';
-    html += '<div class="sp-history-title">\uD83D\uDCB0 최근 매출 (최대 5건) <span style="font-size:9px;color:var(--warn)">[레거시]</span></div>';
-    html += '<table><thead><tr><th>매출일</th><th>상품명</th><th style="text-align:right">매출액</th><th style="text-align:center">입금</th></tr></thead><tbody>';
-    stats.sales.recentTx.forEach(function(r){
-      var amt = (Number(r.sellUnitPrice)||0) * (Number(r.qty)||0);
-      var isPaid = r.deposit_date != null;
-      html += '<tr>';
-      html += '<td class="muted">' + esc(r.salesDate) + '</td>';
-      html += '<td>' + esc(r.itemName) + '</td>';
-      html += '<td class="h-amt">' + fmtAmt(amt) + '</td>';
-      html += '<td class="h-status"><span class="sp-deposit-badge ' + (isPaid?'paid':'unpaid') + '">' + (isPaid?'입금':'미입금') + '</span></td>';
-      html += '</tr>';
-    });
-    html += '</tbody></table></div>';
-  }
-
-  /* 거래 데이터 없는 경우 안내 */
-  if(stats.txCount === 0){
-    html += '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">아직 거래 기록이 없습니다.</div>';
-  }
-
-  html += '</div>'; /* close status-panel */
-  html += '</td></tr>';
-  return html;
-}
-
-/* ── 렌더링 — v2.2 ── */
 function render(){
   var all = GoLabPartnerMaster.loadAll();
   var q = ($("fSearch").value||"").trim();
   var filtered = all;
   if(q){
-    /* search_text 기반 normalize 매칭 */
     var qNorm = GoLabPartnerMaster.normalize(q);
     filtered = all.filter(function(p){
       return (p.search_text || "").includes(qNorm);
@@ -467,7 +412,9 @@ function render(){
   $("emptyMsg").style.display = "none";
   var html = "";
   filtered.forEach(function(p, i){
-    html += '<tr>' +
+    /* 패널에서 편집 중인 행 하이라이트 */
+    var rowClass = (editingId === p.partner_id) ? ' class="active-row"' : '';
+    html += '<tr' + rowClass + ' data-pid="' + p.partner_id + '" style="cursor:pointer">' +
       '<td class="muted">' + (i+1) + '</td>' +
       '<td><b>' + esc(p.display_name || p.name) + '</b></td>' +
       '<td class="muted">' + esc(p.region) + '</td>' +
@@ -475,52 +422,263 @@ function render(){
       '<td class="muted">' + renderPhone(p.phone) + '</td>' +
       '<td><span class="type-badge ' + typeClass(p.type) + '">' + esc(p.type) + '</span></td>' +
       '<td style="text-align:right;white-space:nowrap">' +
-        '<button class="secondary" style="padding:5px 8px;font-size:11px" data-detail="' + p.partner_id + '">상세</button> ' +
-        '<button class="secondary" style="padding:5px 8px;font-size:11px" data-edit="' + p.partner_id + '">수정</button> ' +
         '<button class="danger" style="padding:5px 8px;font-size:11px" data-del="' + p.partner_id + '">삭제</button>' +
       '</td>' +
     '</tr>';
-
-    /* ── 상태창 (게임 스테이터스 패널) ── */
-    if(_expandedId === p.partner_id){
-      html += buildStatusPanel(p);
-    }
   });
   tb.innerHTML = html;
 
-  /* 이벤트 바인딩 */
-  tb.querySelectorAll("button[data-detail]").forEach(function(btn){
-    btn.onclick = function(){ toggleDetail(btn.dataset.detail); };
-  });
-  tb.querySelectorAll("button[data-edit]").forEach(function(btn){
-    btn.onclick = function(){ startEdit(btn.dataset.edit); };
+  /* 이벤트 바인딩 — 행 클릭 → 패널 열기 (삭제·복사 버튼 제외) */
+  tb.querySelectorAll("tr[data-pid]").forEach(function(tr){
+    tr.onclick = function(e){
+      /* 삭제 버튼이나 복사 버튼 클릭은 무시 */
+      if(e.target.closest("button[data-del]") || e.target.closest(".copy-btn")) return;
+      openPanel(tr.dataset.pid);
+    };
   });
   tb.querySelectorAll("button[data-del]").forEach(function(btn){
-    btn.onclick = function(){ deletePartner(btn.dataset.del); };
+    btn.onclick = function(e){ e.stopPropagation(); deletePartner(btn.dataset.del); };
   });
 }
 
-/* ── 상세보기 토글 ── */
-function toggleDetail(partnerId){
-  _expandedId = (_expandedId === partnerId) ? null : partnerId;
+/* ══════════════════════════════════════
+   사이드 패널 — 열기 / 닫기
+   ══════════════════════════════════════ */
+
+/** 패널 열기 — partnerId가 있으면 수정, 없으면 신규 */
+function openPanel(partnerId){
+  _savedScrollY = window.scrollY;
+  editingId = partnerId || null;
+  var p = partnerId ? GoLabPartnerMaster.getById(partnerId) : null;
+
+  /* 패널 타이틀 */
+  $("panelTitle").textContent = p ? (p.display_name || p.name) : "거래처 등록";
+  $("btnSave").textContent = p ? "저장" : "등록";
+  $("btnPanelDelete").style.display = p ? "inline-block" : "none";
+
+  /* View 섹션 */
+  if(p){
+    $("panelView").innerHTML = buildPanelView(p);
+    $("panelView").style.display = "";
+  } else {
+    $("panelView").style.display = "none";
+    $("panelView").innerHTML = "";
+  }
+
+  /* History 섹션 */
+  if(p){
+    $("panelHistory").innerHTML = buildPanelHistory(p);
+    $("panelHistory").style.display = "";
+  } else {
+    $("panelHistory").style.display = "none";
+    $("panelHistory").innerHTML = "";
+  }
+
+  /* Edit 폼 채우기 */
+  fillForm(p);
+
+  /* 패널 열기 */
+  $("panelOverlay").classList.add("open");
+  $("sidePanel").classList.add("open");
+  _panelOpen = true;
+
+  /* 목록에서 편집 중인 행 하이라이트 */
   render();
+
+  /* 첫 입력에 포커스 */
+  setTimeout(function(){ $("inName").focus(); }, 300);
 }
 
-/* ── CRUD ── */
+/** 패널 닫기 */
+function closePanel(){
+  $("panelOverlay").classList.remove("open");
+  $("sidePanel").classList.remove("open");
+  _panelOpen = false;
+  editingId = null;
+  clearForm();
+  render();
+  /* 스크롤 위치 복원 */
+  window.scrollTo(0, _savedScrollY);
+}
+
+/* ══════════════════════════════════════
+   패널 View 섹션 — 상태 요약 + 정산 정보
+   ══════════════════════════════════════ */
+function buildPanelView(p){
+  var stats = GoLabPartnerMaster.calcPartnerStats(p.partner_id);
+  var html = '';
+
+  /* 헤더: 거래처명 + 유형 */
+  html += '<div class="sp-header">';
+  html += '<span class="sp-name">' + esc(p.display_name || p.name) + '</span>';
+  html += '<span class="type-badge ' + typeClass(p.type) + '">' + esc(p.type) + '</span>';
+  html += '</div>';
+
+  /* 기본 정보 그리드 */
+  html += '<div class="sp-info-grid">';
+  if(p.alias)        html += '<span><b>별칭:</b> ' + esc(p.alias) + '</span>';
+  if(p.region)       html += '<span><b>지역:</b> ' + esc(p.region) + '</span>';
+  if(p.contact_name) html += '<span><b>담당자:</b> ' + esc(p.contact_name) + '</span>';
+  if(p.dept)         html += '<span><b>부서:</b> ' + esc(p.dept) + '</span>';
+  if(p.phone)        html += '<span><b>전화:</b> ' + renderPhone(p.phone) + '</span>';
+  if(p.email)        html += '<span><b>이메일:</b> ' + renderEmail(p.email) + '</span>';
+  if(p.memo)         html += '<span><b>메모:</b> ' + esc(p.memo) + '</span>';
+  var regDate = p.created_at ? p.created_at.substring(0,10) : "-";
+  html += '<span><b>등록일:</b> ' + regDate + '</span>';
+  html += '</div>';
+
+  /* ── 정산/연락 정보 ── */
+  if(p.bank_name || p.account_holder || p.account_number || p.billing_email){
+    html += '<div class="sp-section-title" style="margin-top:4px">정산 정보</div>';
+    html += '<div class="sp-settle-grid">';
+    if(p.bank_name)      html += '<span class="sp-settle-item"><b>은행:</b>&nbsp;' + esc(p.bank_name) + '</span>';
+    if(p.account_holder) html += '<span class="sp-settle-item"><b>예금주:</b>&nbsp;' + esc(p.account_holder) + '</span>';
+    if(p.account_number) html += '<span class="sp-settle-item"><b>계좌:</b>&nbsp;' + renderAccountFull(p.account_number) + '</span>';
+    if(p.billing_email)  html += '<span class="sp-settle-item"><b>정산메일:</b>&nbsp;' + renderEmail(p.billing_email) + '</span>';
+    html += '</div>';
+  }
+
+  /* KPI 바 */
+  html += '<div class="sp-kpi-bar" style="margin-top:12px">';
+  html += '<div class="sp-kpi"><div class="spk-label">누적 매출</div><div class="spk-value purple">' + fmtAmt(stats.totalAmount) + '</div></div>';
+  html += '<div class="sp-kpi"><div class="spk-label">미입금</div><div class="spk-value ' + (stats.receivableAmount > 0 ? 'red' : 'green') + '">' + fmtAmt(stats.receivableAmount) + '</div></div>';
+  html += '<div class="sp-kpi"><div class="spk-label">거래 건수</div><div class="spk-value purple">' + stats.txCount + '건</div></div>';
+  html += '</div>';
+
+  /* 경고 플래그 */
+  if(stats.receivableCount > 0){
+    html += '<div class="sp-warnings">';
+    html += '<span class="sp-warn-flag">\u26a0 입금 대기 ' + stats.receivableCount + '건 (' + fmtAmt(stats.receivableAmount) + ')</span>';
+    html += '</div>';
+  }
+
+  return html;
+}
+
+/* ══════════════════════════════════════
+   패널 History 섹션 — 최근 거래 3건
+   ══════════════════════════════════════ */
+function buildPanelHistory(p){
+  var stats = GoLabPartnerMaster.calcPartnerStats(p.partner_id);
+  var html = '<div class="sp-section-title">최근 거래</div>';
+
+  /* deals 기반 최근 3건 */
+  var deals = stats.recentDeals.slice(0, 3);
+  if(deals.length > 0){
+    html += '<div class="sp-history"><table><thead><tr><th>날짜</th><th>품목</th><th style="text-align:right">공급가</th><th style="text-align:center">상태</th></tr></thead><tbody>';
+    deals.forEach(function(deal){
+      var dDate = deal.quote_at || deal.created_at || "";
+      if(dDate.length > 10) dDate = dDate.substring(0,10);
+      /* v3.8: items[] 배열 대응 */
+      var itemName = (deal.items && deal.items.length > 0) ? deal.items[0].name : (deal.item_name || "");
+      var amt = 0;
+      if(deal.items && deal.items.length > 0){
+        deal.items.forEach(function(it){ amt += Number(it.supply_amount) || Math.round((Number(it.qty)||0)*(Number(it.unit_price)||0)); });
+      } else {
+        amt = Number(deal.supply_amount) || 0;
+      }
+      var statusLabel = "진행";
+      var statusClass = "progress";
+      if(deal.deal_status === "completed"){ statusLabel = "완료"; statusClass = "paid"; }
+      else if(deal.payment_at){ statusLabel = "입금"; statusClass = "paid"; }
+      else if(deal.invoice_at){ statusLabel = "미입금"; statusClass = "unpaid"; }
+      html += '<tr>';
+      html += '<td class="muted">' + esc(dDate) + '</td>';
+      html += '<td>' + esc(itemName) + '</td>';
+      html += '<td class="h-amt">' + fmtAmt(amt) + '</td>';
+      html += '<td class="h-status"><span class="sp-deposit-badge ' + statusClass + '">' + statusLabel + '</span></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table></div>';
+    return html;
+  }
+
+  /* sales 폴백 */
+  if(stats.useSalesFallback && stats.sales.recentTx.length > 0){
+    var salesTx = stats.sales.recentTx.slice(0, 3);
+    html += '<div class="sp-history"><table><thead><tr><th>매출일</th><th>상품명</th><th style="text-align:right">매출액</th><th style="text-align:center">입금</th></tr></thead><tbody>';
+    salesTx.forEach(function(r){
+      var amt = (Number(r.sellUnitPrice)||0) * (Number(r.qty)||0);
+      var isPaid = r.deposit_date != null;
+      html += '<tr>';
+      html += '<td class="muted">' + esc(r.salesDate) + '</td>';
+      html += '<td>' + esc(r.itemName) + '</td>';
+      html += '<td class="h-amt">' + fmtAmt(amt) + '</td>';
+      html += '<td class="h-status"><span class="sp-deposit-badge ' + (isPaid?'paid':'unpaid') + '">' + (isPaid?'입금':'미입금') + '</span></td>';
+      html += '</tr>';
+    });
+    html += '</tbody></table>';
+    html += '<div style="font-size:9px;color:var(--warn);margin-top:4px;text-align:right">[레거시 매출 데이터]</div>';
+    html += '</div>';
+    return html;
+  }
+
+  /* 거래 데이터 없음 */
+  html += '<div style="text-align:center;padding:16px;color:var(--muted);font-size:12px">최근 거래 내역이 없습니다</div>';
+  return html;
+}
+
+/* ══════════════════════════════════════
+   폼 채우기 / 비우기
+   ══════════════════════════════════════ */
+function fillForm(p){
+  if(!p){
+    clearForm();
+    return;
+  }
+  $("inName").value          = p.name || "";
+  $("inType").value          = p.type || "매출처";
+  $("inAlias").value         = p.alias || "";
+  $("inRegion").value        = p.region || "";
+  $("inContactName").value   = p.contact_name || "";
+  $("inPhone").value         = GoLabPartnerMaster.formatPhone(p.phone || "");
+  $("inDept").value          = p.dept || "";
+  $("inEmail").value         = p.email || "";
+  $("inBankName").value      = p.bank_name || "";
+  $("inAccountHolder").value = p.account_holder || "";
+  $("inAccountNumber").value = p.account_number || "";
+  $("inBillingEmail").value  = p.billing_email || "";
+  $("inMemo").value          = p.memo || "";
+}
+
+function clearForm(){
+  $("inName").value          = "";
+  $("inType").value          = "매출처";
+  $("inAlias").value         = "";
+  $("inRegion").value        = "";
+  $("inContactName").value   = "";
+  $("inPhone").value         = "";
+  $("inDept").value          = "";
+  $("inEmail").value         = "";
+  $("inBankName").value      = "";
+  $("inAccountHolder").value = "";
+  $("inAccountNumber").value = "";
+  $("inBillingEmail").value  = "";
+  $("inMemo").value          = "";
+  editingId = null;
+}
+
+/* ══════════════════════════════════════
+   CRUD
+   ══════════════════════════════════════ */
 function savePartner(){
   var name = $("inName").value.trim();
   if(!name){ alert("거래처명을 입력해주세요."); $("inName").focus(); return; }
 
   var fields = {
-    name:         name,
-    type:         $("inType").value,
-    alias:        $("inAlias").value,
-    region:       $("inRegion").value,
-    contact_name: $("inContactName").value,
-    phone:        $("inPhone").value,
-    dept:         $("inDept").value,
-    email:        $("inEmail").value,
-    memo:         $("inMemo").value
+    name:           name,
+    type:           $("inType").value,
+    alias:          $("inAlias").value,
+    region:         $("inRegion").value,
+    contact_name:   $("inContactName").value,
+    phone:          $("inPhone").value,
+    dept:           $("inDept").value,
+    email:          $("inEmail").value,
+    bank_name:      $("inBankName").value,
+    account_holder: $("inAccountHolder").value,
+    account_number: $("inAccountNumber").value,
+    billing_email:  $("inBillingEmail").value,
+    memo:           $("inMemo").value
   };
 
   try{
@@ -529,7 +687,7 @@ function savePartner(){
     } else {
       GoLabPartnerMaster.create(fields);
     }
-    clearForm();
+    closePanel();
     computeKPI();
     render();
   } catch(err){
@@ -537,48 +695,15 @@ function savePartner(){
   }
 }
 
-function startEdit(partnerId){
-  var p = GoLabPartnerMaster.getById(partnerId);
-  if(!p) return;
-  editingId = p.partner_id;
-  $("inName").value        = p.name || "";
-  $("inType").value        = p.type || "매출처";
-  $("inAlias").value       = p.alias || "";
-  $("inRegion").value      = p.region || "";
-  $("inContactName").value = p.contact_name || "";
-  /* 전화번호: 포맷된 형태로 input에 표시 */
-  $("inPhone").value       = GoLabPartnerMaster.formatPhone(p.phone || "");
-  $("inDept").value        = p.dept || "";
-  $("inEmail").value       = p.email || "";
-  $("inMemo").value        = p.memo || "";
-  $("btnSave").textContent = "저장";
-  $("btnCancel").style.display = "inline-block";
-  window.scrollTo({top:0, behavior:"smooth"});
-}
-
 function deletePartner(partnerId){
   var p = GoLabPartnerMaster.getById(partnerId);
   if(!p) return;
   if(!confirm('"' + (p.display_name || p.name) + '" 거래처를 삭제하시겠습니까?')) return;
   GoLabPartnerMaster.remove(partnerId);
-  if(_expandedId === partnerId) _expandedId = null;
+  /* 패널 열려있으면 닫기 */
+  if(_panelOpen && editingId === partnerId) closePanel();
   computeKPI();
   render();
-}
-
-function clearForm(){
-  $("inName").value        = "";
-  $("inType").value        = "매출처";
-  $("inAlias").value       = "";
-  $("inRegion").value      = "";
-  $("inContactName").value = "";
-  $("inPhone").value       = "";
-  $("inDept").value        = "";
-  $("inEmail").value       = "";
-  $("inMemo").value        = "";
-  editingId = null;
-  $("btnSave").textContent = "등록";
-  $("btnCancel").style.display = "none";
 }
 
 /* ── 마이그레이션 ── */
@@ -596,20 +721,27 @@ function runMigration(){
   render();
 }
 
-/* ── 복사 / 전화 / 이메일 글로벌 이벤트 ── */
+/* ══════════════════════════════════════
+   글로벌 이벤트
+   ══════════════════════════════════════ */
+
+/* ── Toast 복사 / 전화 / 이메일 ── */
 document.addEventListener("click", function(e){
-  /* 복사 버튼 */
+  /* 복사 버튼 → Toast 표시 */
   var copyBtn = e.target.closest(".copy-btn");
   if(copyBtn){
+    e.stopPropagation();
     var text = copyBtn.dataset.copy;
+    var toast = copyBtn.querySelector(".copy-toast");
     navigator.clipboard.writeText(text).then(function(){
-      var orig = copyBtn.textContent;
-      copyBtn.textContent = "✓";
-      setTimeout(function(){ copyBtn.textContent = orig; }, 1000);
+      if(toast){
+        toast.classList.add("show");
+        setTimeout(function(){ toast.classList.remove("show"); }, 1000);
+      }
     });
     return;
   }
-  /* 전화 링크 (모바일: confirm 후 tel: 실행) */
+  /* 전화 링크 */
   var telLink = e.target.closest(".tel-link");
   if(telLink){
     e.preventDefault();
@@ -619,7 +751,7 @@ document.addEventListener("click", function(e){
     }
     return;
   }
-  /* 이메일 링크 (confirm 후 mailto: 실행) */
+  /* 이메일 링크 */
   var mailLink = e.target.closest(".mailto-link");
   if(mailLink){
     e.preventDefault();
@@ -631,20 +763,37 @@ document.addEventListener("click", function(e){
   }
 });
 
-/* ── 이벤트 ── */
+/* ── 패널 이벤트 ── */
+$("btnNew").addEventListener("click", function(){ openPanel(null); });
 $("btnSave").addEventListener("click", savePartner);
-$("btnCancel").addEventListener("click", clearForm);
+$("btnCancel").addEventListener("click", closePanel);
+$("panelClose").addEventListener("click", closePanel);
+$("panelOverlay").addEventListener("click", closePanel);
 $("btnMigrate").addEventListener("click", runMigration);
 
+/* 패널 내 삭제 버튼 */
+$("btnPanelDelete").addEventListener("click", function(){
+  if(editingId) deletePartner(editingId);
+});
+
+/* ESC → 패널 닫기 */
+document.addEventListener("keydown", function(e){
+  if(e.key === "Escape" && _panelOpen) closePanel();
+});
+
+/* Enter → 저장 (패널 내 입력 필드에서만, textarea 제외) */
+$("sidePanel").addEventListener("keydown", function(e){
+  if(e.key === "Enter" && e.target.tagName !== "TEXTAREA"){
+    e.preventDefault();
+    savePartner();
+  }
+});
+
+/* 검색 디바운스 */
 var _searchTimer = null;
 $("fSearch").addEventListener("input", function(){
   clearTimeout(_searchTimer);
   _searchTimer = setTimeout(render, 200);
-});
-
-/* Enter → 저장 (모든 입력 필드에서) */
-["inName","inAlias","inRegion","inContactName","inPhone","inDept","inEmail","inMemo"].forEach(function(id){
-  $(id).addEventListener("keydown", function(e){ if(e.key==="Enter") savePartner(); });
 });
 
 /* ── Init ── */
