@@ -2980,6 +2980,43 @@ $("inTradeType").dispatchEvent(new Event("change"));
 })();
 computeKPI();
 render();
+
+/* ══════════════════════════════════════════
+   v5.4: Deep Link 수신 — ?deal_id=Txxxx → 해당 거래 패널 자동 오픈
+   ══════════════════════════════════════════ */
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var dealId = params.get("deal_id");
+  if(!dealId) return;
+
+  /* URL 파라미터 제거 (뒤로가기 시 재오픈 방지) */
+  if(window.history && window.history.replaceState){
+    var cleanUrl = window.location.pathname;
+    window.history.replaceState({}, document.title, cleanUrl);
+  }
+
+  /* 해당 거래 존재 확인 */
+  var trade = TE.getById(dealId);
+  if(!trade) return;
+
+  /* 필터 초기화 (해당 거래가 필터에 걸려 안 보일 수 있음) */
+  $("fMonth").value = "";
+  $("fMonth").style.display = "none";
+  $("fSearch").value = "";
+  /* 칩 필터 "전체" 활성화 (data-filter="" 가 전체) */
+  var chipWrap = document.getElementById("fChip");
+  if(chipWrap) chipWrap.querySelectorAll(".chip-btn").forEach(function(b){
+    b.classList.toggle("active", !b.dataset.filter || b.dataset.filter === "all");
+  });
+  /* 기간 프리셋 "전체" 활성화 (data-period="" 가 전체) */
+  $("periodBar").querySelectorAll(".period-btn").forEach(function(b){
+    b.classList.toggle("active", b.dataset.period === "");
+  });
+  render();
+
+  /* 딜레이 후 패널 오픈 (렌더 완료 보장) */
+  setTimeout(function(){ openPanel(dealId); }, 200);
+})();
 </script>
 </body>
 </html>

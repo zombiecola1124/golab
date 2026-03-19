@@ -212,6 +212,11 @@
     .modal-btns .btn-danger{color:var(--warn);border-color:rgba(220,38,38,.3)}
     .modal-btns .btn-danger:hover{background:#fee2e2}
 
+    /* ─ Deal Link Tag (Action 리스트) ─ */
+    .deal-link-tag{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--primary);background:rgba(37,99,235,.08);border-radius:4px;padding:1px 6px;cursor:pointer;text-decoration:none;font-weight:600;transition:background .15s}
+    .deal-link-tag:hover{background:rgba(37,99,235,.16)}
+    .deal-link-tag.inactive{color:var(--muted);background:rgba(100,116,139,.08)}
+
     /* ─ Vendor Search Modal ─ */
     .search-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:80;align-items:flex-start;justify-content:center;padding-top:120px}
     .search-overlay.open{display:flex}
@@ -487,6 +492,10 @@
     </select>
     <label>거래처 (선택)</label>
     <div id="acActVendorWrap"></div>
+    <label>연결 거래 (선택)</label>
+    <select id="actDealSelect" style="width:100%;border-radius:8px;border:1px solid var(--border);background:var(--chip);color:var(--text);padding:8px 10px;font-size:12px;outline:none;font-family:inherit">
+      <option value="">— 거래 없음 —</option>
+    </select>
     <div class="modal-btns">
       <button id="actDelete" class="btn-danger" style="display:none">삭제</button>
       <span style="flex:1"></span>
@@ -856,6 +865,20 @@ function renderActionItem(a, today){
   if(a.vendorId) tags += '<span class="vendor-tag" data-vendor="'+esc(a.vendorId)+'">'+esc(a.vendorId)+'</span>';
   if(a.priority && a.priority !== "NORMAL") tags += '<span class="pri-badge '+a.priority+'">'+a.priority+'</span>';
 
+  /* v5.4: 연결 거래 태그 + Deep Link */
+  if(a.deal_id){
+    var TE = window.GoLabTradeEngine;
+    var linkedTrade = TE ? TE.getById(a.deal_id) : null;
+    if(linkedTrade){
+      var isCancelled = linkedTrade.deal_status === "cancelled";
+      var tagClass = isCancelled ? "deal-link-tag inactive" : "deal-link-tag";
+      var suffix = isCancelled ? " (비활성)" : "";
+      tags += '<a class="'+tagClass+'" href="deals.html?deal_id='+esc(a.deal_id)+'" data-deallink="'+esc(a.deal_id)+'">🔗 '+esc(a.deal_id)+suffix+'</a>';
+    } else {
+      tags += '<span class="deal-link-tag inactive">⚠ 연결 거래 없음</span>';
+    }
+  }
+
   return `<li class="action-item${isDone?' completed':''}">
     <div class="chk${isDone?' done':''}" data-toggle="${a.id}">${isDone?'✓':''}</div>
     <div class="act-body" data-edit="${a.id}">
@@ -878,6 +901,10 @@ function bindActionItems(container){
   });
   container.querySelectorAll("[data-vendor]").forEach(el => {
     el.onclick = e => { e.stopPropagation(); openDrawer(el.dataset.vendor); };
+  });
+  /* v5.4: 거래 Deep Link 클릭 처리 */
+  container.querySelectorAll("[data-deallink]").forEach(el => {
+    el.onclick = e => { e.stopPropagation(); e.preventDefault(); window.location.href = "deals.html?deal_id=" + encodeURIComponent(el.dataset.deallink); };
   });
 }
 
@@ -941,6 +968,10 @@ function openActionModal(id){
     // partner_id 또는 레거시 텍스트 → autocomplete 세팅
     if(a.vendorId) acActVendor.setValue(a.vendorId);
     else acActVendor.clear();
+    /* v5.4: 거래 드롭다운 세팅 */
+    populateDealSelect(a.vendorId || null, id);
+    if(a.deal_id) $("actDealSelect").value = a.deal_id;
+    else $("actDealSelect").value = "";
     $("actDelete").style.display = "inline-block";
   } else {
     editingActionId = null;
@@ -949,6 +980,9 @@ function openActionModal(id){
     $("actDate").value = todayStr();
     $("actPriority").value = "NORMAL";
     acActVendor.clear();
+    /* v5.4: 거래 드롭다운 초기화 */
+    populateDealSelect(null, null);
+    $("actDealSelect").value = "";
     $("actDelete").style.display = "none";
   }
   $("actionModal").classList.add("open");
@@ -960,6 +994,7 @@ function saveActionModal(){
   if(!title){ $("actTitle").focus(); return; }
   const vendorPid = acActVendor.getValue(); // partner_id 또는 null
   const vendorDisplay = resolvePartnerName(vendorPid); // audit용 표시 이름
+  const selectedDealId = $("actDealSelect").value || null; /* v5.4: 연결 거래 */
   const actions = loadActions();
   if(editingActionId){
     const a = actions.find(x => x.id === editingActionId);
@@ -967,13 +1002,14 @@ function saveActionModal(){
       a.title = title; a.dueDate = $("actDate").value;
       a.priority = $("actPriority").value;
       a.vendorId = vendorPid || "";
+      a.deal_id = selectedDealId; /* v5.4: 거래 연결 저장 */
       a.updatedAt = new Date().toISOString();
     }
   } else {
     const a = {
       id: uid(), title, dueDate: $("actDate").value || todayStr(),
       type: "ACTION", status: "OPEN", priority: $("actPriority").value || "NORMAL",
-      vendorId: vendorPid || "", deal_id: null, /* v4: Deal 연결 준비 (UI 미구현) */
+      vendorId: vendorPid || "", deal_id: selectedDealId, /* v5.4: 거래 연결 */
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -2128,6 +2164,149 @@ $("restoreOverlay").onclick = e => { if(e.target===$("restoreOverlay")) closeRes
 /* ── Action Modal 거래처 autocomplete 초기화 ── */
 const acActVendor = GoLabPartnerMaster.createAutocomplete($("acActVendorWrap"), {
   placeholder: "거래처 검색..."
+});
+
+/* ══════════════════════════════════════════
+   v5.4: Action ↔ Deal 연결 UI
+   ══════════════════════════════════════════ */
+
+/**
+ * 거래 드롭다운 옵션 로드
+ * - 최근 3개월 거래 우선 + 미결제/부분결제 상단
+ * - 이미 다른 Action에 연결된 거래는 회색 비활성
+ * - filterPartnerId: 특정 거래처 거래만 필터 (null이면 전체)
+ * - currentActionId: 현재 편집 중인 Action ID (자기 거래는 선택 가능)
+ */
+function populateDealSelect(filterPartnerId, currentActionId){
+  var sel = $("actDealSelect");
+  sel.innerHTML = '<option value="">— 거래 없음 —</option>';
+
+  var TE = window.GoLabTradeEngine;
+  if(!TE) return;
+
+  var allTrades = TE.loadAll();
+  if(!allTrades.length) return;
+
+  /* 이미 다른 Action에 연결된 deal_id 셋 구축 */
+  var usedDealIds = {};
+  loadActions().forEach(function(a){
+    if(a.deal_id && a.id !== currentActionId){
+      usedDealIds[a.deal_id] = true;
+    }
+  });
+
+  /* 거래처 필터 */
+  var trades = allTrades;
+  if(filterPartnerId){
+    trades = trades.filter(function(t){ return t.partner_id === filterPartnerId; });
+  }
+
+  /* 정렬 기준: ① 미결제/부분결제 ② 최근 3개월 ③ 나머지 날짜 역순 */
+  var now = new Date();
+  var threeMonthsAgo = new Date(now.getFullYear(), now.getMonth()-3, now.getDate());
+  var cutoff = threeMonthsAgo.toISOString().slice(0,10);
+
+  trades.sort(function(a,b){
+    /* 정산 상태: 미완료 우선 */
+    var aUnpaid = _isDealUnpaid(a) ? 0 : 1;
+    var bUnpaid = _isDealUnpaid(b) ? 0 : 1;
+    if(aUnpaid !== bUnpaid) return aUnpaid - bUnpaid;
+    /* 날짜 역순 */
+    var ad = a.deal_date || a.created_at || "";
+    var bd = b.deal_date || b.created_at || "";
+    return bd.localeCompare(ad);
+  });
+
+  /* 옵션 렌더링 */
+  trades.forEach(function(t){
+    var opt = document.createElement("option");
+    opt.value = t.id;
+
+    /* 라벨: T20260320-001 | 품목명 | 120,000원 */
+    var itemLabel = "—";
+    if(t.items && t.items.length > 0){
+      itemLabel = t.items.length === 1
+        ? (t.items[0].name || "품목")
+        : (t.items[0].name || "품목") + " 외 " + (t.items.length-1) + "건";
+    }
+    var calc = TE.calcTrade(t);
+    var amtStr = _fmtAmt(calc.total_supply);
+    var dateStr = (t.deal_date || "").slice(5) || "—"; /* MM-DD */
+    var statusTag = "";
+
+    /* 취소/비활성 거래 표시 */
+    if(t.deal_status === "cancelled"){
+      statusTag = " (취소)";
+    }
+
+    /* 이미 연결된 거래 처리 */
+    var isUsed = usedDealIds[t.id];
+    if(isUsed){
+      opt.disabled = true;
+      opt.textContent = t.id + " | " + itemLabel + " | " + amtStr + " · 이미 연결됨";
+      opt.style.color = "#94a3b8";
+    } else {
+      opt.textContent = t.id + " | " + dateStr + " | " + itemLabel + " | " + amtStr + statusTag;
+    }
+
+    sel.appendChild(opt);
+  });
+}
+
+/* 미결제 판정 헬퍼 */
+function _isDealUnpaid(t){
+  var TE = window.GoLabTradeEngine;
+  if(!TE) return false;
+  var ps = TE.calcPaymentStatus(t);
+  return ps.code !== "paid";
+}
+
+/* 금액 포맷 헬퍼 */
+function _fmtAmt(n){
+  if(!n) return "0원";
+  return n.toLocaleString("ko-KR") + "원";
+}
+
+/* ── 거래 ↔ 거래처 양방향 연동 ── */
+
+/* 역방향 연동 시 MutationObserver 재진입 방지 플래그 */
+var _dealSelectingSuppressVendorSync = false;
+
+/* 거래처 변경 시 → 거래 드롭다운 필터 + 초기화 */
+(function(){
+  var vendorWrap = $("acActVendorWrap");
+  var obs = new MutationObserver(function(){
+    /* 거래→거래처 역방향 세팅 중이면 드롭다운 초기화 방지 */
+    if(_dealSelectingSuppressVendorSync) return;
+    var pid = acActVendor.getValue();
+    populateDealSelect(pid || null, editingActionId);
+    /* 거래처 변경 시 거래 선택 초기화 */
+    $("actDealSelect").value = "";
+  });
+  obs.observe(vendorWrap, { childList: true, subtree: true, attributes: true });
+})();
+
+/* 거래 선택 시 → 거래처 자동 세팅 (역방향) */
+$("actDealSelect").addEventListener("change", function(){
+  var dealId = this.value;
+  if(!dealId) return;
+  var TE = window.GoLabTradeEngine;
+  if(!TE) return;
+  var trade = TE.getById(dealId);
+  if(!trade) return;
+  /* 거래처가 비어있거나 다른 거래처면 자동 세팅 */
+  var currentVendor = acActVendor.getValue();
+  if(trade.partner_id && trade.partner_id !== currentVendor){
+    /* 플래그로 MutationObserver 재진입 방지 */
+    _dealSelectingSuppressVendorSync = true;
+    acActVendor.setValue(trade.partner_id);
+    /* 드롭다운 값 복원 (Observer가 초기화할 수 있으므로) */
+    var self = this;
+    setTimeout(function(){
+      self.value = dealId;
+      _dealSelectingSuppressVendorSync = false;
+    }, 50);
+  }
 });
 
 /* ── Init ── */
