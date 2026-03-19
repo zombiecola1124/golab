@@ -74,6 +74,16 @@
     .type-badge.solo{background:rgba(22,163,74,.08);color:#15803d}
     .type-badge.settle{background:rgba(37,99,235,.08);color:#1d4ed8}
     .type-badge.channel{background:rgba(8,145,178,.08);color:#0e7490}
+    /* v4.2: 세경 SAVE */
+    .save-badge{display:inline-flex;align-items:center;padding:2px 7px;border-radius:6px;font-size:9px;font-weight:700;background:rgba(124,58,237,.1);color:#7c3aed;margin-left:4px;letter-spacing:.3px}
+    tr.save-row{background:rgba(124,58,237,.03)}
+    .segyeong-area{margin-top:10px;padding:12px 14px;background:rgba(124,58,237,.04);border:1px solid rgba(124,58,237,.15);border-radius:10px}
+    .segyeong-area label{color:#7c3aed}
+    .segyeong-area .sg-preview{display:grid;grid-template-columns:1fr 1fr 1fr;gap:10px;margin-top:8px}
+    .segyeong-area .sg-preview input{background:#f1f5f9}
+    .sg-warn{color:var(--bad);font-size:10px;font-weight:700;margin-top:4px}
+    .col-save{text-align:right;font-size:11px}
+    @media(max-width:1024px){.col-save{display:none}}
     .type-badge .ch-name{font-weight:400;opacity:.65;font-size:.9em;overflow:hidden;text-overflow:ellipsis;max-width:90px;display:inline-block;vertical-align:bottom}
 
     /* 예상몫 적용 버튼 */
@@ -223,6 +233,7 @@
     .chip-filter[data-chip-filter="no-cost"].active{background:#d97706}
     .chip-filter[data-chip-filter="unsettled"].active{background:#2563eb}
     .chip-filter[data-chip-filter="todo"].active{background:#dc2626}
+    .chip-filter[data-chip-filter="save"].active{background:#7c3aed}
     .chip-filter .cf-count{margin-left:4px;font-weight:800;font-size:10px;opacity:.85}
 
     /* v3.7 비용 빠른입력 */
@@ -413,6 +424,31 @@
         </div>
       </div>
 
+      <!-- v4.2: 세경 SAVE 입력 영역 -->
+      <div class="segyeong-area" style="margin-top:12px">
+        <div style="display:flex;align-items:center;gap:8px">
+          <input type="checkbox" id="inSegyeongSave" style="width:auto;accent-color:#7c3aed" />
+          <label for="inSegyeongSave" style="margin-bottom:0;font-weight:700;cursor:pointer">세경 SAVE 거래</label>
+        </div>
+        <div id="segyeongQuoteRow" style="display:none">
+          <div class="sg-preview">
+            <div>
+              <label>세경 견적가</label>
+              <input id="inSegyeongQuote" type="number" step="1" min="0" placeholder="세경이 고객에게 제시한 가격" />
+            </div>
+            <div>
+              <label>내 매출가 <span class="opt">(자동)</span></label>
+              <input id="inSegyeongMySupply" type="text" readonly disabled style="background:#f1f5f9" />
+            </div>
+            <div>
+              <label>세경 SAVE <span class="opt">(자동)</span></label>
+              <input id="inSegyeongSaveAmt" type="text" readonly disabled style="background:#f1f5f9;color:#7c3aed;font-weight:700" />
+            </div>
+          </div>
+          <div id="sgWarn" class="sg-warn" style="display:none"></div>
+        </div>
+      </div>
+
       <!-- Section 3: 비율 & 정산 -->
       <div class="sec-header" style="margin-top:16px"><span class="sec-num">3</span><span class="sec-title">비율 · 정산</span></div>
 
@@ -512,6 +548,7 @@
       <button class="chip-filter" data-chip-filter="no-cost">🟡 비용미입력 <span class="cf-count" id="cfNoCost">0</span></button>
       <button class="chip-filter" data-chip-filter="unsettled">🔵 정산대기 <span class="cf-count" id="cfUnsettled">0</span></button>
       <button class="chip-filter" data-chip-filter="todo">🔴 할일있음 <span class="cf-count" id="cfTodo">0</span></button>
+      <button class="chip-filter" data-chip-filter="save">💜 세경SAVE <span class="cf-count" id="cfSave">0</span></button>
     </div>
     <!-- v4.1: 기간 프리셋 퀵버튼 -->
     <div class="period-bar" id="periodBar">
@@ -568,6 +605,9 @@
             <th class="col-desk">S지급</th>
             <th class="sortable" data-sort="profit"><b>내 몫</b> <span class="sort-arrow"></span></th>
             <th>입금</th>
+            <th class="col-save col-desk">세경견적</th>
+            <th class="col-save col-desk">세경SAVE</th>
+            <th class="col-save col-desk">세경누적</th>
             <th class="col-desk" style="text-align:right">상세</th>
           </tr>
         </thead>
@@ -584,6 +624,9 @@
             <td class="col-desk num" id="sumS">—</td>
             <td class="num" id="sumMy" style="color:var(--accent)">—</td>
             <td></td>
+            <td class="col-save col-desk num" id="sumSgQuote">—</td>
+            <td class="col-save col-desk num" id="sumSgSave" style="color:#7c3aed">—</td>
+            <td class="col-save col-desk num" id="sumSgBal" style="color:#7c3aed">—</td>
             <td class="col-desk"></td>
           </tr>
         </tfoot>
@@ -1267,6 +1310,30 @@ function updateCockpit(savedTrade) {
   }
   html += '<div class="cockpit-row highlight"><span class="lbl">✨ 내 최종 몫</span><span class="val">' + TE.fmt(c.final_my_amount) + '</span></div>';
 
+  /* v4.2: 세경 SAVE 조종석 프리뷰 */
+  if (!isReplay && $("inSegyeongSave").checked) {
+    var _sgQuote = TE.n($("inSegyeongQuote").value);
+    if (_sgQuote > 0) {
+      var _sgSave = _sgQuote - c.total_supply;
+      html += '<div class="cockpit-divider"></div>';
+      html += '<div style="color:#7c3aed;font-size:10px;font-weight:700;margin-bottom:4px">💜 세경 SAVE</div>';
+      html += _cr("세경 견적가", TE.fmt(_sgQuote));
+      html += _cr("내 매출가", TE.fmt(c.total_supply));
+      if (_sgSave >= 0) {
+        html += '<div class="cockpit-row" style="background:rgba(124,58,237,.06)"><span class="lbl" style="color:#7c3aed;font-weight:700">세경 SAVE</span><span class="val" style="color:#7c3aed;font-weight:800">' + TE.fmt(_sgSave) + '</span></div>';
+      } else {
+        html += '<div class="cockpit-row" style="background:rgba(220,38,38,.06)"><span class="lbl" style="color:var(--bad);font-weight:700">세경 SAVE (음수!)</span><span class="val" style="color:var(--bad);font-weight:800">' + TE.fmt(_sgSave) + '</span></div>';
+      }
+    }
+  }
+  if (isReplay && trade.is_segyeong_save_deal) {
+    html += '<div class="cockpit-divider"></div>';
+    html += '<div style="color:#7c3aed;font-size:10px;font-weight:700;margin-bottom:4px">💜 세경 SAVE</div>';
+    html += _cr("세경 견적가", TE.fmt(TE.n(trade.segyeong_quote_amount)));
+    html += _cr("세경 SAVE", '<span style="color:#7c3aed;font-weight:800">' + TE.fmt(TE.n(trade.segyeong_save_amount)) + '</span>');
+    html += _cr("누적 잔액", '<span style="color:#7c3aed;font-weight:800">' + TE.fmt(TE.n(trade.segyeong_running_balance)) + '</span>');
+  }
+
   /* v2.9: 거래 유형별 한 줄 계산식 요약 */
   html += _buildFormulaLine(trade, c, isChannel);
 
@@ -1305,6 +1372,47 @@ function _buildFormulaLine(trade, c, isChannel) {
 }
 function _cr(label, value) {
   return '<div class="cockpit-row"><span class="lbl">' + label + '</span><span class="val">' + value + '</span></div>';
+}
+
+/* ═══ v4.2: 세경 SAVE 토글 + 프리뷰 ═══ */
+$("inSegyeongSave").addEventListener("change", function() {
+  var on = this.checked;
+  $("segyeongQuoteRow").style.display = on ? "" : "none";
+  if (!on) { $("inSegyeongQuote").value = ""; }
+  _updateSegyeongPreview();
+  updateCockpit();
+});
+$("inSegyeongQuote").addEventListener("input", function() {
+  _updateSegyeongPreview();
+  updateCockpit();
+});
+
+/** 세경 SAVE 실시간 프리뷰 */
+function _updateSegyeongPreview() {
+  if (!$("inSegyeongSave").checked) {
+    $("inSegyeongMySupply").value = "";
+    $("inSegyeongSaveAmt").value = "";
+    $("sgWarn").style.display = "none";
+    return;
+  }
+  var temp = _buildTempTrade();
+  var c = TE.calcTrade(temp);
+  var quote = TE.n($("inSegyeongQuote").value);
+  var saveAmt = quote - c.total_supply;
+  $("inSegyeongMySupply").value = TE.fmt(c.total_supply);
+  if (quote <= 0) {
+    $("inSegyeongSaveAmt").value = "";
+    $("sgWarn").style.display = "none";
+  } else if (saveAmt < 0) {
+    $("inSegyeongSaveAmt").value = TE.fmt(saveAmt);
+    $("inSegyeongSaveAmt").style.color = "var(--bad)";
+    $("sgWarn").textContent = "⚠ 세경 SAVE가 음수입니다. 적립 전용(1차)에서는 저장이 차단됩니다.";
+    $("sgWarn").style.display = "";
+  } else {
+    $("inSegyeongSaveAmt").value = TE.fmt(saveAmt);
+    $("inSegyeongSaveAmt").style.color = "#7c3aed";
+    $("sgWarn").style.display = "none";
+  }
 }
 
 /* 비율 입력 변경 시 조종석 업데이트 + 자동 S지급액 반영 */
@@ -1497,16 +1605,18 @@ function render() {
   }
 
   /* v3.7: 칩 카운트 (전체 기준, 필터 전) */
-  var _cfNoCost = 0, _cfUnsettled = 0, _cfTodo = 0;
+  var _cfNoCost = 0, _cfUnsettled = 0, _cfTodo = 0, _cfSave = 0;
   all.forEach(function(t) {
     if (t.deal_status === "cancelled") return;
     if ((t.items||[]).some(function(it){ return it.cost == null || it.cost === 0; })) _cfNoCost++;
     if (!t.payment_at) _cfUnsettled++;
     if (DealTodo.getByDeal(t.id).some(function(td){ return td.status !== "completed"; })) _cfTodo++;
+    if (t.is_segyeong_save_deal) _cfSave++;
   });
   $("cfNoCost").textContent = _cfNoCost;
   $("cfUnsettled").textContent = _cfUnsettled;
   $("cfTodo").textContent = _cfTodo;
+  $("cfSave").textContent = _cfSave;
 
   /* v3.7: 칩 필터 적용 */
   if (chipFilter === "no-cost") {
@@ -1521,6 +1631,11 @@ function render() {
   } else if (chipFilter === "todo") {
     filtered = filtered.filter(function(t) {
       return DealTodo.getByDeal(t.id).some(function(td){ return td.status !== "completed"; });
+    });
+  } else if (chipFilter === "save") {
+    /* v4.2: 세경 SAVE 칩 필터 */
+    filtered = filtered.filter(function(t) {
+      return t.is_segyeong_save_deal && t.deal_status !== "cancelled";
     });
   }
 
@@ -1559,6 +1674,7 @@ function render() {
 
   /* v4.1: 필터 합계 행 계산 */
   var _sumSupply = 0, _sumCost = 0, _sumProfit = 0, _sumDist = 0, _sumS = 0, _sumMy = 0;
+  var _sumSgQuote = 0, _sumSgSave = 0, _sumSgBal = 0;
   filtered.forEach(function(t) {
     if (t.deal_status === "cancelled") return;
     var c = TE.calcTrade(t);
@@ -1568,6 +1684,12 @@ function render() {
     _sumDist   += c.distributable || 0;
     _sumS      += (t.settlement && t.settlement.actual_S_amount) ? TE.n(t.settlement.actual_S_amount) : 0;
     _sumMy     += c.final_my_amount || 0;
+    /* v4.2: 세경 SAVE 합계 */
+    if (t.is_segyeong_save_deal) {
+      _sumSgQuote += TE.n(t.segyeong_quote_amount);
+      _sumSgSave  += TE.n(t.segyeong_save_amount);
+      _sumSgBal    = TE.n(t.segyeong_running_balance); /* 마지막 거래의 누적잔액 */
+    }
   });
   var _tf = $("tfoot");
   if (filtered.length > 0) {
@@ -1580,6 +1702,10 @@ function render() {
     $("sumMy").textContent     = TE.fmt(_sumMy);
     $("sumMy").style.color     = _sumMy >= 0 ? "var(--accent)" : "var(--bad)";
     $("sumProfit").style.color = _sumProfit >= 0 ? "var(--accent)" : "var(--bad)";
+    /* v4.2: 세경 SAVE 합계 */
+    $("sumSgQuote").textContent = _sumSgQuote ? TE.fmt(_sumSgQuote) : "—";
+    $("sumSgSave").textContent  = _sumSgSave ? TE.fmt(_sumSgSave) : "—";
+    $("sumSgBal").textContent   = _sumSgBal ? TE.fmt(_sumSgBal) : "—";
   } else {
     _tf.style.display = "none";
   }
@@ -1592,16 +1718,17 @@ function render() {
   filtered.forEach(function(t) {
     var calc = TE.calcTrade(t);
     var isCancelled = t.deal_status === "cancelled";
+    var _saveRowCls = t.is_segyeong_save_deal ? ' save-row' : '';
     var rowStyle = isCancelled ? 'style="cursor:pointer;opacity:.5;text-decoration:line-through"' : 'style="cursor:pointer"';
     var dispName = TE.itemDisplayName(t);
 
-    html += '<tr '+rowStyle+' data-id="'+t.id+'" data-toggle="'+t.id+'">';
+    html += '<tr class="'+_saveRowCls+'" '+rowStyle+' data-id="'+t.id+'" data-toggle="'+t.id+'">';
 
     /* ① 날짜 */
     var _dtDisp = (t.deal_date || t.quote_at || t.created_at || "").substring(0,10) || "—";
     html += '<td style="white-space:nowrap;color:var(--muted);font-size:11px">'+_dtDisp+'</td>';
 
-    /* ② 거래처 + 상태 칩 */
+    /* ② 거래처 + 상태 칩 + v4.2 SAVE 배지 */
     var _chips = _getStatusChips(t);
     var _chipHtml = "";
     if (_chips.length) {
@@ -1609,7 +1736,8 @@ function render() {
       _chips.forEach(function(c) { _chipHtml += '<span class="status-chip '+c.type+'">'+c.label+'</span>'; });
       _chipHtml += '</div>';
     }
-    html += '<td class="col-text" title="'+esc(t.partner_name_snapshot)+'"><b>'+esc(t.partner_name_snapshot)+'</b>'+_chipHtml+'</td>';
+    var _saveTag = t.is_segyeong_save_deal ? '<span class="save-badge">SAVE</span>' : '';
+    html += '<td class="col-text" title="'+esc(t.partner_name_snapshot)+'"><b>'+esc(t.partner_name_snapshot)+'</b>'+_saveTag+_chipHtml+'</td>';
 
     /* ③ 품목 — hover 시 전체 텍스트 표시 */
     html += '<td class="col-text" title="'+esc(dispName)+'">'+esc(dispName)+_getItemLinkBadge(t)+'</td>';
@@ -1648,14 +1776,25 @@ function render() {
     var _pStat = TE.calcPaymentStatus(t);
     html += '<td><span class="pay-badge '+_pStat.code+'">'+_pStat.label+'</span></td>';
 
-    /* ⑫ 상세 (데스크톱) */
+    /* v4.2: ⑫⑬⑭ 세경 SAVE 3컬럼 (데스크톱) */
+    if (t.is_segyeong_save_deal) {
+      html += '<td class="col-save col-desk">' + TE.fmt(TE.n(t.segyeong_quote_amount)) + '</td>';
+      html += '<td class="col-save col-desk" style="color:#7c3aed;font-weight:700">' + TE.fmt(TE.n(t.segyeong_save_amount)) + '</td>';
+      html += '<td class="col-save col-desk" style="color:#7c3aed;font-weight:700">' + TE.fmt(TE.n(t.segyeong_running_balance)) + '</td>';
+    } else {
+      html += '<td class="col-save col-desk" style="color:var(--muted)">—</td>';
+      html += '<td class="col-save col-desk" style="color:var(--muted)">—</td>';
+      html += '<td class="col-save col-desk" style="color:var(--muted)">—</td>';
+    }
+
+    /* ⑮ 상세 (데스크톱) */
     html += '<td class="col-desk" style="text-align:right;white-space:nowrap">';
     html += '<button class="secondary" style="padding:4px 8px;font-size:11px" data-detail="'+t.id+'">상세</button>';
     html += '</td></tr>';
 
     /* 상세 행 (v3.8 SaaS 리디자인) */
     if (_expandedId === t.id) {
-      html += '<tr class="detail-row"><td colspan="12"><div class="detail-panel">';
+      html += '<tr class="detail-row"><td colspan="15"><div class="detail-panel">';
 
       /* ═══ Hero 섹션 ═══ */
       var _dtc = TE.classifyTrade(t);
@@ -1807,6 +1946,27 @@ function render() {
 
       html += '</div>'; /* dp-2col */
       html += '</div>'; /* dp-zone */
+
+      /* ═══ 세경 SAVE 존 (v4.2) ═══ */
+      if (t.is_segyeong_save_deal) {
+        html += '<div class="dp-zone" style="border-left:3px solid #7c3aed">';
+        html += '<div class="detail-section-title" style="color:#7c3aed">💜 세경 SAVE</div>';
+        html += '<div class="dp-2col">';
+        /* 좌: SAVE 계산 */
+        html += '<div>';
+        html += '<div class="cockpit-row"><span class="lbl">세경 견적가</span><span class="val">' + TE.fmt(TE.n(t.segyeong_quote_amount)) + '</span></div>';
+        html += '<div class="cockpit-row"><span class="lbl">내 매출가</span><span class="val">' + TE.fmt(calc.total_supply) + '</span></div>';
+        html += '<div class="cockpit-divider"></div>';
+        html += '<div class="cockpit-row"><span class="lbl" style="color:#7c3aed;font-weight:700">세경 SAVE</span><span class="val" style="color:#7c3aed;font-weight:800;font-size:15px">' + TE.fmt(TE.n(t.segyeong_save_amount)) + '</span></div>';
+        html += '</div>';
+        /* 우: 누적 */
+        html += '<div>';
+        html += '<div class="cockpit-row"><span class="lbl">이 거래 SAVE</span><span class="val" style="color:#7c3aed">' + TE.fmt(TE.n(t.segyeong_save_amount)) + '</span></div>';
+        html += '<div class="cockpit-row" style="background:rgba(124,58,237,.06);border-radius:8px;padding:6px 8px"><span class="lbl" style="color:#7c3aed;font-weight:700">누적 SAVE 잔액</span><span class="val" style="color:#7c3aed;font-size:18px;font-weight:800">' + TE.fmt(TE.n(t.segyeong_running_balance)) + '</span></div>';
+        html += '</div>';
+        html += '</div>'; /* dp-2col */
+        html += '</div>'; /* dp-zone */
+      }
 
       /* ═══ Auxiliary 존: 거래 정보 + 메모 ═══ */
       html += '<div class="dp-zone">';
@@ -2259,7 +2419,10 @@ function saveTrade() {
     },
     /* v2.9c: 장부 기준일 */
     deal_date: $("inDealDate").value || new Date().toISOString().substring(0, 10),
-    memo: ($("inMemo").value || "").trim()
+    memo: ($("inMemo").value || "").trim(),
+    /* v4.2: 세경 SAVE */
+    is_segyeong_save_deal: $("inSegyeongSave").checked,
+    segyeong_quote_amount: $("inSegyeongSave").checked ? TE.n($("inSegyeongQuote").value) : 0
   };
 
   try {
@@ -2349,6 +2512,12 @@ function startEdit(tid) {
     $("inSettlementMemo").value = (t.settlement || {}).memo || "";
   }
 
+  /* v4.2: 세경 SAVE 복원 */
+  $("inSegyeongSave").checked = !!t.is_segyeong_save_deal;
+  $("segyeongQuoteRow").style.display = t.is_segyeong_save_deal ? "" : "none";
+  $("inSegyeongQuote").value = t.is_segyeong_save_deal ? (t.segyeong_quote_amount || "") : "";
+  _updateSegyeongPreview();
+
   $("btnSave").textContent = "저장";
   $("btnCancel").style.display = "inline-block";
   updateCockpit();
@@ -2389,6 +2558,14 @@ function clearForm() {
   $("inRebateRate").value = 30;
   $("inSRate_ch").value = 60; $("inMyRate_ch").value = 40;
   $("inActualS_ch").value = 0; $("inSettlementMemo_ch").value = "";
+
+  /* v4.2: 세경 SAVE 초기화 */
+  $("inSegyeongSave").checked = false;
+  $("segyeongQuoteRow").style.display = "none";
+  $("inSegyeongQuote").value = "";
+  $("inSegyeongMySupply").value = "";
+  $("inSegyeongSaveAmt").value = "";
+  $("sgWarn").style.display = "none";
 
   editingId = null;
   $("btnSave").textContent = "등록";

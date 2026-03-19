@@ -293,6 +293,68 @@ window.GoLabTradeEngine = (function () {
     return { unit: m.unit || null, basePrice: bp };
   }
 
+  /* ══════════════════════════════════════
+     v4.2: 세경 SAVE 누적잔액 일괄 재계산
+     ══════════════════════════════════════ */
+
+  /**
+   * 세경 SAVE 누적잔액 재계산 (CUD 시 호출)
+   * is_segyeong_save_deal === true 인 거래만 대상
+   * 정렬: deal_date ASC → created_at ASC
+   * 취소 거래는 누적에서 제외
+   * @param {Array} all — 전체 거래 배열 (참조 수정됨)
+   */
+  function _recalcSegyeongBalances(all) {
+    var saveDocs = [];
+    for (var i = 0; i < all.length; i++) {
+      if (all[i].is_segyeong_save_deal) saveDocs.push(all[i]);
+    }
+    /* 날짜순 정렬 (오름차순) */
+    saveDocs.sort(function (a, b) {
+      var da = a.deal_date || (a.created_at || "").substring(0, 10) || "";
+      var db = b.deal_date || (b.created_at || "").substring(0, 10) || "";
+      if (da !== db) return da < db ? -1 : 1;
+      return (a.created_at || "").localeCompare(b.created_at || "");
+    });
+    var running = 0;
+    for (var j = 0; j < saveDocs.length; j++) {
+      /* 취소 거래는 누적에 반영하지 않으나 running_balance 자체는 기록 */
+      if (saveDocs[j].deal_status !== "cancelled") {
+        running += n(saveDocs[j].segyeong_save_amount);
+      }
+      saveDocs[j].segyeong_running_balance = running;
+    }
+  }
+
+  /**
+   * 세경 SAVE 요약 — 전 기간 또는 기간 필터
+   * @param {string} [fromDate] — YYYY-MM-DD (포함)
+   * @param {string} [toDate]   — YYYY-MM-DD (포함)
+   * @returns {{ totalSave: number, dealCount: number, runningBalance: number, deals: Array }}
+   */
+  function getSegyeongSummary(fromDate, toDate) {
+    var all = loadAll();
+    var totalSave = 0;
+    var dealCount = 0;
+    var runningBalance = 0;
+    var deals = [];
+    for (var i = 0; i < all.length; i++) {
+      var t = all[i];
+      if (!t.is_segyeong_save_deal) continue;
+      if (t.deal_status === "cancelled") continue;
+      /* 전체 누적잔액 (기간 무관) */
+      runningBalance += n(t.segyeong_save_amount);
+      /* 기간 필터 */
+      var dt = t.deal_date || (t.created_at || "").substring(0, 10);
+      if (fromDate && dt < fromDate) continue;
+      if (toDate && dt > toDate) continue;
+      totalSave += n(t.segyeong_save_amount);
+      dealCount++;
+      deals.push(t);
+    }
+    return { totalSave: totalSave, dealCount: dealCount, runningBalance: runningBalance, deals: deals };
+  }
+
   /** 거래 생성 */
   function create(fields) {
     if (!fields.partner_id) throw new Error("거래처를 선택해주세요.");
@@ -373,6 +435,12 @@ window.GoLabTradeEngine = (function () {
       paid_supply:   n(fields.paid_supply),
       paid_vat:      n(fields.paid_vat),
 
+      /* v4.2: 세경 SAVE 추적 */
+      is_segyeong_save_deal:    !!fields.is_segyeong_save_deal,
+      segyeong_quote_amount:    fields.is_segyeong_save_deal ? n(fields.segyeong_quote_amount) : 0,
+      segyeong_save_amount:     0,   /* create 후 계산 */
+      segyeong_running_balance: 0,   /* _recalcSegyeongBalances()에서 계산 */
+
       timeline: [{ step: "create", at: new Date().toISOString(), label: "거래 생성" }],
       source:        fields.source || "manual",
       migrated_from: fields.migrated_from || null,
@@ -384,12 +452,22 @@ window.GoLabTradeEngine = (function () {
     trade.status      = _calcStatus(trade);
     trade.deal_status = _calcDealStatus(trade);
 
+    /* v4.2: 세경 SAVE 금액 계산 (create 직후) */
+    if (trade.is_segyeong_save_deal) {
+      var _sgCalc = calcTrade(trade);
+      var _sgSave = n(trade.segyeong_quote_amount) - _sgCalc.total_supply;
+      if (_sgSave < 0) throw new Error("세경 SAVE가 음수입니다.\n현재 1차에서는 SAVE 적립만 지원합니다.\n차감(사용) 거래는 2차에서 지원 예정입니다.\n세경 견적가 / 내 매출가를 확인해주세요.");
+      trade.segyeong_save_amount = _sgSave;
+    }
+
     all.unshift(trade);
+    _recalcSegyeongBalances(all);
     _save(all);
     emitAudit("CREATE", {
       id: trade.id,
       partner: trade.partner_name_snapshot,
-      items_count: trade.items.length
+      items_count: trade.items.length,
+      is_segyeong_save: trade.is_segyeong_save_deal || false
     });
     return trade;
   }
@@ -473,6 +551,21 @@ window.GoLabTradeEngine = (function () {
     if (fields.paid_supply !== undefined) d.paid_supply = n(fields.paid_supply);
     if (fields.paid_vat    !== undefined) d.paid_vat    = n(fields.paid_vat);
 
+    /* v4.2: 세경 SAVE 필드 */
+    if (fields.is_segyeong_save_deal !== undefined) d.is_segyeong_save_deal = !!fields.is_segyeong_save_deal;
+    if (fields.segyeong_quote_amount !== undefined) d.segyeong_quote_amount = n(fields.segyeong_quote_amount);
+
+    /* 세경 SAVE 금액 재계산 */
+    if (d.is_segyeong_save_deal) {
+      var _sgCalc = calcTrade(d);
+      var _sgSave = n(d.segyeong_quote_amount) - _sgCalc.total_supply;
+      if (_sgSave < 0) throw new Error("세경 SAVE가 음수입니다.\n현재 1차에서는 SAVE 적립만 지원합니다.\n차감(사용) 거래는 2차에서 지원 예정입니다.\n세경 견적가 / 내 매출가를 확인해주세요.");
+      d.segyeong_save_amount = _sgSave;
+    } else {
+      d.segyeong_save_amount = 0;
+      d.segyeong_running_balance = 0;
+    }
+
     /* 날짜 필드 */
     /* v2.9c: 장부 기준일 — 사용자 수정 시 date_inferred 해제 */
     if (fields.deal_date        !== undefined) {
@@ -500,6 +593,7 @@ window.GoLabTradeEngine = (function () {
     d.deal_status = _calcDealStatus(d);
     d.updated_at  = new Date().toISOString();
 
+    _recalcSegyeongBalances(all);
     _save(all);
     emitAudit("UPDATE", { id: tradeId, changed: Object.keys(fields) });
     return d;
@@ -511,6 +605,7 @@ window.GoLabTradeEngine = (function () {
     var idx = all.findIndex(function (t) { return t.id === tradeId; });
     if (idx < 0) return;
     var removed = all.splice(idx, 1)[0];
+    _recalcSegyeongBalances(all);
     _save(all);
     emitAudit("DELETE", { id: tradeId, partner: removed.partner_name_snapshot });
   }
@@ -919,6 +1014,7 @@ window.GoLabTradeEngine = (function () {
     getScorecard:    getScorecard,
     getComparison:   getComparison,
     migrateFromV1:   migrateFromV1,
+    getSegyeongSummary: getSegyeongSummary,   /* v4.2: 세경 SAVE 요약 */
     backfillChannelSnapshot: backfillChannelSnapshot,   /* v5 신규 */
     emitAudit:       emitAudit,
     currentStepIndex: _currentStepIndex,
@@ -978,5 +1074,27 @@ GoLabTradeEngine.migrateFromV1();
     localStorage.setItem(TE.TRADE_KEY, JSON.stringify(all));
     TE.emitAudit("UPGRADE_PAID_FIELDS", { count: all.length });
     console.log("[TRADE ENGINE] v3.9 paid_supply/paid_vat 보정 완료 (" + all.length + "건)");
+  }
+})();
+
+/* v4.2: 세경 SAVE 필드 보정 (기존 데이터 호환) */
+(function () {
+  var TE = GoLabTradeEngine;
+  var all = TE.loadAll();
+  if (all.length === 0) return;
+  var changed = false;
+  all.forEach(function (t) {
+    /* 이미 필드 존재하면 건너뜀 (멱등) */
+    if (t.is_segyeong_save_deal !== undefined) return;
+    t.is_segyeong_save_deal    = false;
+    t.segyeong_quote_amount    = 0;
+    t.segyeong_save_amount     = 0;
+    t.segyeong_running_balance = 0;
+    changed = true;
+  });
+  if (changed) {
+    localStorage.setItem(TE.TRADE_KEY, JSON.stringify(all));
+    TE.emitAudit("UPGRADE_SEGYEONG_FIELDS", { count: all.length });
+    console.log("[TRADE ENGINE] v4.2 세경 SAVE 필드 보정 완료 (" + all.length + "건)");
   }
 })();

@@ -310,6 +310,18 @@
     </div>
   </div>
 
+  <!-- v4.2: 세경 SAVE 요약 스트립 -->
+  <div id="segyeongStrip" style="display:none;margin-bottom:14px">
+    <div style="display:flex;align-items:center;gap:12px;flex-wrap:wrap;padding:10px 16px;background:rgba(124,58,237,.05);border:1px solid rgba(124,58,237,.15);border-radius:10px">
+      <span style="color:#7c3aed;font-weight:800;font-size:12px">💜 세경 SAVE</span>
+      <span style="font-size:11px;color:#64748b">기간 내 합계:</span>
+      <span style="font-size:16px;font-weight:800;color:#7c3aed" id="kSegyeongSave">₩0</span>
+      <span style="font-size:11px;color:#64748b" id="kSegyeongCount">0건</span>
+      <span style="font-size:11px;color:#64748b;margin-left:8px">전체 누적:</span>
+      <span style="font-size:14px;font-weight:700;color:#7c3aed" id="kSegyeongTotal">₩0</span>
+    </div>
+  </div>
+
   <!-- 거래 원장 테이블 -->
   <div class="ledger-card" id="ledgerCard">
     <div class="ledger-header" id="ledgerHeader">
@@ -729,6 +741,15 @@ function renderExpansion(t, calc){
   }
   html += '</div>';
 
+  /* v4.2: 세경 SAVE 표시 */
+  if (t.is_segyeong_save_deal) {
+    html += '<div class="cockpit-divider"></div>';
+    html += '<div style="color:#7c3aed;font-size:10px;font-weight:700;margin-bottom:4px">💜 세경 SAVE</div>';
+    html += _cr("세경 견적가", TE.fmt(n(t.segyeong_quote_amount)));
+    html += _cr("세경 SAVE", '<span style="color:#7c3aed;font-weight:800">' + TE.fmt(n(t.segyeong_save_amount)) + '</span>');
+    html += _cr("누적 잔액", '<span style="color:#7c3aed;font-weight:800">' + TE.fmt(n(t.segyeong_running_balance)) + '</span>');
+  }
+
   html += '</div>'; /* exp-2col */
   html += '</div>'; /* exp-zone */
 
@@ -886,8 +907,10 @@ function renderFlatTable(deals, thisYear){
 
     /* 거래 행 — 12컬럼 */
     html += '<tr data-toggle="'+d.id+'">';
+    /* v4.2: 세경 SAVE 배지 */
+    var _saveTag = d.is_segyeong_save_deal ? '<span style="display:inline-flex;align-items:center;padding:1px 5px;border-radius:4px;font-size:8px;font-weight:700;background:rgba(124,58,237,.1);color:#7c3aed;margin-left:3px">SAVE</span>' : '';
     html += '<td style="white-space:nowrap;color:var(--muted);font-size:11px">'+_dtDisp+'</td>';
-    html += '<td class="name" title="'+esc(d.partner_name_snapshot)+'">'+partner+'</td>';
+    html += '<td class="name" title="'+esc(d.partner_name_snapshot)+'">'+partner+_saveTag+'</td>';
     html += '<td class="name" title="'+esc(dispName)+'">'+esc(dispName)+'</td>';
     html += '<td class="r col-desk">'+fmtW(calc.total_supply)+'</td>';
     html += '<td class="r col-desk">'+costDisp+'</td>';
@@ -1044,6 +1067,24 @@ function render(){
     ? renderDelta(vis.myProfit, prev.myNetProfit, false)
     : '<span class="delta neutral">\u2014</span>';
 
+  /* v4.2: 세경 SAVE 요약 스트립 */
+  var _sgPeriod = 0, _sgCount = 0;
+  filteredDeals.forEach(function(d) {
+    if (d.is_segyeong_save_deal && d.deal_status !== "cancelled") {
+      _sgPeriod += n(d.segyeong_save_amount);
+      _sgCount++;
+    }
+  });
+  var _sgAll = TE.getSegyeongSummary();
+  if (_sgAll.dealCount > 0) {
+    $("segyeongStrip").style.display = "";
+    $("kSegyeongSave").textContent = fmtW(_sgPeriod);
+    $("kSegyeongCount").textContent = _sgCount + "건";
+    $("kSegyeongTotal").textContent = fmtW(_sgAll.runningBalance);
+  } else {
+    $("segyeongStrip").style.display = "none";
+  }
+
   /* -- 거래 원장 테이블 -- */
   var thisYear = new Date().getFullYear().toString();
   var hasFilter = (currentTarget !== "all" || currentSearchQuery || unpaidOnly);
@@ -1125,8 +1166,8 @@ $("btnCsv").addEventListener("click", function(){
     return (b.deal_date||b.quote_at||b.created_at||"").localeCompare(a.deal_date||a.quote_at||a.created_at||"");
   });
 
-  /* v3.15: 새 CSV 헤더 (12컬럼) */
-  var rows = ["날짜,거래처,품목,매출,원가,순이익,관리업체몫,배분대상,S지급,내몫,입금상태"];
+  /* v4.2: CSV 헤더 (13컬럼 — 세경SAVE/세경누적 추가) */
+  var rows = ["날짜,거래처,품목,매출,원가,순이익,관리업체몫,배분대상,S지급,내몫,입금상태,세경SAVE,세경누적"];
   deals.forEach(function(d){
     var calc = d._calc || TE.calcTrade(d);
     var dispName = d._display_name || TE.itemDisplayName(d);
@@ -1137,6 +1178,9 @@ $("btnCsv").addEventListener("click", function(){
     var payLabel = payStatus.code === "paid" ? "완납" : "미정산";
     /* CSV는 YYYY-MM-DD, deal_date 우선 fallback created_at */
     var csvDate = (d.deal_date || d.created_at || "").substring(0,10);
+    /* v4.2: 세경 SAVE */
+    var sgSave = d.is_segyeong_save_deal ? n(d.segyeong_save_amount) : "";
+    var sgBal  = d.is_segyeong_save_deal ? n(d.segyeong_running_balance) : "";
 
     rows.push([
       csvDate,
@@ -1149,7 +1193,9 @@ $("btnCsv").addEventListener("click", function(){
       calc.distributable,
       sPaid,
       calc.final_my_amount,
-      payLabel
+      payLabel,
+      sgSave,
+      sgBal
     ].join(","));
   });
 
