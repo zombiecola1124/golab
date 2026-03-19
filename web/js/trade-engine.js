@@ -461,6 +461,8 @@ window.GoLabTradeEngine = (function () {
       segyeong_deduction_amount: n(fields.segyeong_deduction_amount),
       segyeong_save_amount:     0,   /* create 후 계산 */
       segyeong_running_balance: 0,   /* _recalcSegyeongBalances()에서 계산 */
+      /* v5.3: 차감↔구매 거래 1:1 링크 (optional) */
+      linked_deal_id:           fields.linked_deal_id || null,
 
       timeline: [{ step: "create", at: new Date().toISOString(), label: "거래 생성" }],
       source:        fields.source || "manual",
@@ -488,6 +490,12 @@ window.GoLabTradeEngine = (function () {
         if (_sgSave < 0) throw new Error("세경 SAVE가 음수입니다.\n견적가가 매출가보다 낮습니다.\n세경 견적가 / 내 매출가를 확인해주세요.");
         trade.segyeong_save_amount = _sgSave;
       }
+    }
+
+    /* v5.3: linked_deal_id 존재 검증 */
+    if (trade.linked_deal_id) {
+      var _linked = all.find(function(t) { return t.id === trade.linked_deal_id; });
+      if (!_linked) throw new Error("연결 거래(" + trade.linked_deal_id + ")를 찾을 수 없습니다.");
     }
 
     all.unshift(trade);
@@ -586,6 +594,8 @@ window.GoLabTradeEngine = (function () {
     if (fields.segyeong_save_tx_type !== undefined) d.segyeong_save_tx_type = fields.segyeong_save_tx_type || "accrual";
     if (fields.segyeong_quote_amount !== undefined) d.segyeong_quote_amount = n(fields.segyeong_quote_amount);
     if (fields.segyeong_deduction_amount !== undefined) d.segyeong_deduction_amount = n(fields.segyeong_deduction_amount);
+    /* v5.3: 차감↔구매 거래 1:1 링크 */
+    if (fields.hasOwnProperty("linked_deal_id")) d.linked_deal_id = fields.linked_deal_id || null;
 
     /* 세경 SAVE 금액 재계산 */
     if (d.is_segyeong_save_deal) {

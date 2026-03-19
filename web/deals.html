@@ -570,6 +570,14 @@
                 <div><label style="color:#d97706">차감 금액</label><input id="inSegyeongDeduct" type="number" step="1" min="0" placeholder="차감액" /></div>
                 <div><label style="color:#d97706">차감 후 잔액</label><input id="inSgAfterBal" type="text" readonly disabled style="background:#f1f5f9;font-weight:700" /></div>
               </div>
+              <!-- v5.3: 차감↔구매 거래 연결 -->
+              <div id="sgLinkedDealRow" style="margin-top:8px">
+                <label style="color:#d97706">🔗 연결 거래 <span class="opt">(선택)</span></label>
+                <select id="inSgLinkedDeal" style="border-color:rgba(217,119,6,.3)">
+                  <option value="">(연결 안 함)</option>
+                </select>
+                <div id="sgLinkedDealInfo" style="display:none;margin-top:4px;font-size:11px;color:var(--muted);padding:6px 8px;background:rgba(217,119,6,.04);border-radius:6px"></div>
+              </div>
             </div>
             <div id="sgWarn" class="sg-warn" style="display:none"></div>
           </div>
@@ -846,6 +854,23 @@ function _renderPanelView(tid) {
   if (spfs) spfs.onclick = function() { TE.update(tid, { paid_supply: payCalc.total_supply }); render(); _renderPanelView(tid); };
   var spfv = $("spPayFullVat");
   if (spfv) spfv.onclick = function() { TE.update(tid, { paid_vat: payCalc.vat_amount }); render(); _renderPanelView(tid); };
+
+  /* v5.3: 차감 거래 연결 표시 */
+  if (t.is_segyeong_save_deal && t.segyeong_save_tx_type === "deduction" && t.linked_deal_id) {
+    var _lt = TE.getById(t.linked_deal_id);
+    if (_lt) {
+      var _lc = TE.calcTrade(_lt);
+      var _lItems = (_lt.items || []).map(function(it) { return esc(it.name); }).join(", ");
+      var linkHtml = '<div style="margin-top:8px;padding:8px 10px;background:rgba(217,119,6,.06);border:1px solid rgba(217,119,6,.15);border-radius:8px;font-size:11px">';
+      linkHtml += '<div style="font-weight:700;color:#d97706;margin-bottom:4px">🔗 연결 구매 거래</div>';
+      linkHtml += '<div style="cursor:pointer" id="svLinkedDealClick">';
+      linkHtml += '<b>' + _lt.id + '</b> · ' + _lItems + ' · 매출 ' + TE.fmt(_lc.total_supply);
+      linkHtml += '</div></div>';
+      $("svPayZone").insertAdjacentHTML("beforeend", linkHtml);
+      var _lBtn = document.getElementById("svLinkedDealClick");
+      if (_lBtn) _lBtn.onclick = function() { openPanel(t.linked_deal_id); };
+    }
+  }
 }
 
 /* 패널 Todo 렌더 (편집 시) */
@@ -1757,6 +1782,67 @@ function _updateSegyeongPreview() {
   }
 }
 
+/* ═══ v5.3: 차감↔구매 거래 연결 ═══ */
+/** 세경 관련 연결 가능 거래 목록 (차감 거래가 아닌 세경 거래) */
+function _getSgLinkableTrades() {
+  var all = TE.loadAll();
+  return all.filter(function(t) {
+    /* 세경하이테크 거래 + 일반 거래(SAVE 아닌 것) + 취소 아닌 것 */
+    return (t.partner_name_snapshot || "").indexOf("세경") >= 0
+        && !t.is_segyeong_save_deal
+        && t.deal_status !== "cancelled";
+  }).sort(function(a, b) {
+    return (b.deal_date || "").localeCompare(a.deal_date || "");
+  });
+}
+
+/** 연결 거래 드롭다운 채우기 */
+function _populateSgLinkableTrades(selectedId) {
+  var sel = $("inSgLinkedDeal");
+  if (!sel) return;
+  var trades = _getSgLinkableTrades();
+  sel.innerHTML = '<option value="">(연결 안 함)</option>';
+  trades.forEach(function(t) {
+    var c = TE.calcTrade(t);
+    var dispName = TE.itemDisplayName(t);
+    var opt = document.createElement("option");
+    opt.value = t.id;
+    opt.textContent = (t.deal_date || "—") + " " + dispName + " " + TE.fmt(c.total_supply);
+    if (selectedId && t.id === selectedId) opt.selected = true;
+    sel.appendChild(opt);
+  });
+  _showSgLinkedDealInfo();
+}
+
+/** 선택된 연결 거래 정보 표시 */
+function _showSgLinkedDealInfo() {
+  var sel = $("inSgLinkedDeal");
+  var info = $("sgLinkedDealInfo");
+  if (!sel || !info) return;
+  var tid = sel.value;
+  if (!tid) { info.style.display = "none"; return; }
+  var t = TE.getById(tid);
+  if (!t) { info.style.display = "none"; return; }
+  var c = TE.calcTrade(t);
+  var items = (t.items || []).map(function(it) { return esc(it.name) + " × " + it.qty; }).join(", ");
+  info.innerHTML = '<b>' + t.id + '</b> · ' + items + ' · 매출 ' + TE.fmt(c.total_supply) + ' · 내몫 ' + TE.fmt(c.final_my_amount);
+  info.style.display = "";
+}
+
+/* 연결 거래 드롭다운 변경 이벤트 */
+$("inSgLinkedDeal").addEventListener("change", _showSgLinkedDealInfo);
+
+/* v5.3: 차감 모드 전환 시 드롭다운 채움 */
+var _origToggleSgMode = _toggleSgMode;
+_toggleSgMode = function() {
+  _origToggleSgMode();
+  var on = $("inSegyeongSave").checked;
+  var isDeduct = on && $("sgTxDeduction").checked;
+  if (isDeduct) {
+    _populateSgLinkableTrades(editingId ? (TE.getById(editingId) || {}).linked_deal_id : null);
+  }
+};
+
 /* 비율 입력 변경 시 조종석 업데이트 + 자동 S지급액 반영 */
 ["inSaveRate","inSRate","inMyRate",
  "inRebateRate","inSRate_ch","inMyRate_ch","inActualS_ch"].forEach(function(id) {
@@ -2610,7 +2696,9 @@ function saveTrade() {
     is_segyeong_save_deal: $("inSegyeongSave").checked,
     segyeong_save_tx_type: $("inSegyeongSave").checked ? ($("sgTxDeduction").checked ? "deduction" : "accrual") : "accrual",
     segyeong_quote_amount: ($("inSegyeongSave").checked && !$("sgTxDeduction").checked) ? TE.n($("inSegyeongQuote").value) : 0,
-    segyeong_deduction_amount: ($("inSegyeongSave").checked && $("sgTxDeduction").checked) ? TE.n($("inSegyeongDeduct").value) : 0
+    segyeong_deduction_amount: ($("inSegyeongSave").checked && $("sgTxDeduction").checked) ? TE.n($("inSegyeongDeduct").value) : 0,
+    /* v5.3: 차감↔구매 거래 1:1 링크 */
+    linked_deal_id: ($("inSegyeongSave").checked && $("sgTxDeduction").checked && $("inSgLinkedDeal")) ? ($("inSgLinkedDeal").value || null) : null
   };
 
   try {
@@ -2711,6 +2799,10 @@ function startEdit(tid) {
   $("inSegyeongDeduct").value = (_isTxDeduct && t.is_segyeong_save_deal) ? (t.segyeong_deduction_amount || "") : "";
   _toggleSgMode();
   _updateSegyeongPreview();
+  /* v5.3: linked_deal_id 복원 */
+  if (_isTxDeduct && t.is_segyeong_save_deal && t.linked_deal_id) {
+    _populateSgLinkableTrades(t.linked_deal_id);
+  }
 
   $("btnSave").textContent = "저장";
   $("btnCancel").style.display = "inline-block";
@@ -2767,6 +2859,9 @@ function clearForm() {
   $("inSgCurrentBal").value = "";
   $("inSgAfterBal").value = "";
   $("sgWarn").style.display = "none";
+  /* v5.3: 연결 거래 드롭다운 초기화 */
+  if ($("inSgLinkedDeal")) { $("inSgLinkedDeal").innerHTML = '<option value="">(연결 안 함)</option>'; }
+  if ($("sgLinkedDealInfo")) { $("sgLinkedDealInfo").style.display = "none"; }
 
   editingId = null;
   $("btnSave").textContent = "등록";
