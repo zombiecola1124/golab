@@ -432,7 +432,8 @@ function render(){
   tb.querySelectorAll("tr[data-pid]").forEach(function(tr){
     tr.onclick = function(e){
       /* 삭제 버튼이나 복사 버튼 클릭은 무시 */
-      if(e.target.closest("button[data-del]") || e.target.closest(".copy-btn")) return;
+      /* 삭제·복사·전화링크 클릭은 행 클릭 무시 */
+      if(e.target.closest("button[data-del]") || e.target.closest(".copy-btn") || e.target.closest(".tel-link")) return;
       openPanel(tr.dataset.pid);
     };
   });

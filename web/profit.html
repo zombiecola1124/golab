@@ -381,20 +381,28 @@ var CM = window.GoLabChannelMaster;
 var IM = window.GoLabItemMaster;
 var PM = window.GoLabPartnerMaster;
 
-/* -- v3.15: 사업축 필터용 대성금속 partner_id 목록 자동 수집 -- */
-var DAESUNG_PARTNER_IDS = (function(){
-  if(!PM) return [];
+/* v5.4: partner_tag 기반 주요거래처 판별 — 이름 하드코딩 제거 */
+var KEY_PARTNER_IDS = (function(){
+  if(!PM) return {};
   var all = PM.loadAll();
-  var ids = [];
+  var map = {}; /* tag → [partner_id, ...] */
   for(var i=0; i<all.length; i++){
-    if((all[i].name||"").indexOf("대성") >= 0) ids.push(all[i].partner_id);
+    var tag = all[i].partner_tag;
+    if(!tag) continue;
+    if(!map[tag]) map[tag] = [];
+    map[tag].push(all[i].partner_id);
   }
-  return ids;
+  return map;
 })();
 
-/* 거래가 대성금속 거래인지 판별 */
+/* 거래가 특정 태그의 거래처인지 판별 */
+function hasPartnerTag(deal, tag){
+  var ids = KEY_PARTNER_IDS[tag] || [];
+  return ids.indexOf(deal.partner_id) >= 0;
+}
+/* 하위 호환: isDaesung → partner_tag:"daesung" 기반 */
 function isDaesung(deal){
-  return DAESUNG_PARTNER_IDS.indexOf(deal.partner_id) >= 0;
+  return hasPartnerTag(deal, "daesung");
 }
 
 /* 거래 품목 중 해당 카테고리가 있는지 판별 */
