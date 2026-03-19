@@ -263,24 +263,84 @@
     .todo-add button{padding:6px 10px;font-size:11px}
     .todo-empty{font-size:11px;color:var(--muted);padding:4px 0}
 
+    /* ══ v5.2: 사이드 패널 (partner-master 패턴) ══ */
+    .panel-overlay{
+      position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:90;
+      opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s;
+    }
+    .panel-overlay.open{opacity:1;visibility:visible}
+    .side-panel{
+      position:fixed;top:0;right:0;bottom:0;width:520px;
+      background:var(--card);border-left:1px solid var(--line);
+      box-shadow:-8px 0 30px rgba(0,0,0,.1);z-index:100;
+      transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
+      display:flex;flex-direction:column;overflow:hidden;
+    }
+    .side-panel.open{transform:translateX(0)}
+    .sp-top{
+      display:flex;align-items:center;justify-content:space-between;
+      padding:14px 20px;border-bottom:1px solid var(--line);flex-shrink:0;
+    }
+    .sp-top h3{margin:0;font-size:14px;font-weight:800;color:var(--deal)}
+    .sp-close{background:none;border:none;font-size:20px;color:var(--muted);cursor:pointer;padding:4px 8px;border-radius:6px}
+    .sp-close:hover{background:rgba(0,0,0,.05);color:var(--text)}
+    .sp-body{flex:1;overflow-y:auto;padding:0}
+    .sp-form-btns{
+      display:flex;gap:8px;padding:12px 20px;border-top:1px solid var(--line);flex-shrink:0;background:var(--card);
+    }
+    .sp-form-btns button{flex:1}
+
+    /* ══ v5.2: 아코디언 ══ */
+    .acc-section{border-bottom:1px solid var(--line)}
+    .acc-header{
+      cursor:pointer;padding:12px 20px;font-weight:700;font-size:12px;
+      display:flex;align-items:center;gap:8px;transition:background .15s;user-select:none;
+    }
+    .acc-header:hover{background:rgba(0,0,0,.02)}
+    .acc-num{width:22px;height:22px;border-radius:50%;background:var(--deal);color:#fff;display:flex;align-items:center;justify-content:center;font-size:10px;font-weight:800;flex-shrink:0}
+    .acc-arrow{margin-left:auto;font-size:10px;color:var(--muted);transition:transform .2s}
+    .acc-body{display:none;padding:0 20px 16px}
+    .acc-section.open .acc-body{display:block}
+    .acc-section.open .acc-arrow{transform:rotate(180deg)}
+
+    /* ══ v5.2: View 섹션 (패널 상단 요약) ══ */
+    .sp-view{padding:16px 20px;background:linear-gradient(135deg,rgba(8,145,178,.04),rgba(8,145,178,.01));border-bottom:1px solid var(--line)}
+    .sp-view-top{display:flex;align-items:center;gap:10px;flex-wrap:wrap;margin-bottom:6px}
+    .sp-view .sv-name{font-size:16px;font-weight:800;color:var(--text)}
+    .sp-view .sv-amount{font-size:13px;font-weight:800;color:var(--deal)}
+    .sp-view-meta{display:flex;gap:10px;flex-wrap:wrap;font-size:11px;color:var(--muted)}
+    .sp-view-meta b{color:var(--text);font-weight:600}
+
+    /* ══ v5.2: Action Bar ══ */
+    .action-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .btn-new-deal{
+      display:flex;align-items:center;gap:6px;
+      padding:10px 18px;border-radius:10px;border:2px dashed var(--deal);
+      background:rgba(8,145,178,.04);color:var(--deal);font-size:12px;
+      font-weight:800;cursor:pointer;white-space:nowrap;transition:background .2s;
+    }
+    .btn-new-deal:hover{background:rgba(8,145,178,.12)}
+
+    /* v5.2: 패널 내부 입금 추적 */
+    .sp-pay-zone{margin-top:10px;padding:12px;background:rgba(0,0,0,.02);border-radius:10px}
+
     @media(max-width:900px){
       .kpi-grid{grid-template-columns:1fr 1fr}
-      .reg-layout{grid-template-columns:1fr}
-      .cockpit{position:static}
       .r4{grid-template-columns:1fr 1fr}
       .pb-dot{width:24px;height:24px;font-size:10px}
       .cost-quick{grid-template-columns:1fr 1fr}
       .dp-2col{grid-template-columns:1fr}
       .dp-kpi-row{grid-template-columns:1fr 1fr}
+      .side-panel{width:100%;border-left:none}
     }
     @media(max-width:600px){
       .r4,.r3,.r2{grid-template-columns:1fr}
       .kpi-grid{grid-template-columns:1fr}
       .cost-quick{grid-template-columns:1fr}
       .dp-zone{padding:12px 16px}
-      .detail-hero{padding:16px}
       .dp-kpi-row{grid-template-columns:1fr}
-      .dp-actions{padding:12px 16px}
+      .side-panel{width:100%}
+      .acc-body .r2,.acc-body .r3,.acc-body .r4{grid-template-columns:1fr}
     }
 
     /* -- v3.8: 품목 참고 칩 (기준가/구매가) -- */
@@ -333,241 +393,214 @@
     <div class="kpi"><div class="t">✅ 완료</div><div class="v" id="kComplete" style="color:var(--accent)">0</div></div>
   </div>
 
-  <!-- ═══ 등록 폼 + 조종석 2열 레이아웃 ═══ -->
-  <div class="reg-layout">
-    <!-- 왼쪽: 폼 -->
-    <div class="card" style="margin-bottom:0">
-      <h2>➕ 거래 등록</h2>
-
-      <!-- Section 1: 기본정보 -->
-      <div class="sec-header"><span class="sec-num">1</span><span class="sec-title">기본정보</span></div>
-      <div class="row r3">
-        <div>
-          <label>거래처 *</label>
-          <div id="acPartnerWrap"></div>
-        </div>
-        <div>
-          <label>거래 유형</label>
-          <select id="inTradeType">
-            <option value="solo">직접-단독</option>
-            <option value="settle">직접-정산</option>
-            <option value="channel">관리업체</option>
-          </select>
-        </div>
-        <div id="channelWrap" style="display:none">
-          <label>관리업체 *</label>
-          <select id="inChannel">
-            <option value="">선택...</option>
-          </select>
-        </div>
-      </div>
-      <div class="row r3" style="align-items:end">
-        <div>
-          <label>📅 거래일 (장부 기준)</label>
-          <input type="date" id="inDealDate" />
-        </div>
-        <div>
-          <label>메모 <span class="opt">(선택)</span></label>
-          <input id="inMemo" placeholder="거래 메모" />
-        </div>
-        <div></div>
-      </div>
-
-      <!-- Section 2: 품목 -->
-      <div class="sec-header" style="margin-top:16px"><span class="sec-num">2</span><span class="sec-title">품목 목록</span></div>
-      <div style="overflow:auto">
-        <table class="item-table">
-          <thead>
-            <tr>
-              <th style="min-width:140px">품목명 *</th>
-              <th style="width:80px">수량 *</th>
-              <th style="width:100px">단가 *</th>
-              <th style="width:100px">공급가</th>
-              <th style="width:100px" id="costHeader">원가</th>
-              <th style="width:100px">메모</th>
-              <th style="width:36px"></th>
-            </tr>
-          </thead>
-          <tbody id="itemsBody"></tbody>
-        </table>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-        <button class="secondary" id="btnAddItem" style="padding:6px 12px;font-size:11px">+ 품목 추가</button>
-        <div class="item-total">
-          총 공급가: <span id="totalSupply" style="color:var(--deal)">₩0</span>
-          <span id="totalCostWrap"> | 품목 원가: <span id="totalCost">₩0</span></span>
-        </div>
-      </div>
-
-      <!-- Section 2.5: 부대비용 (v2.8) -->
-      <div class="sec-header" style="margin-top:16px">
-        <span class="sec-num" style="background:var(--warn)">+</span>
-        <span class="sec-title">부대비용</span>
-      </div>
-      <div style="overflow:auto">
-        <table class="extra-table">
-          <thead>
-            <tr>
-              <th style="min-width:120px">비용 유형</th>
-              <th style="width:120px">금액 *</th>
-              <th style="width:70px;text-align:center">수익 반영</th>
-              <th style="width:140px">메모</th>
-              <th style="width:36px"></th>
-            </tr>
-          </thead>
-          <tbody id="extraCostsBody"></tbody>
-        </table>
-      </div>
-      <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
-        <button class="secondary" id="btnAddExtra" style="padding:6px 12px;font-size:11px;background:rgba(217,119,6,.06);border-color:rgba(217,119,6,.25);color:#92400e">+ 부대비용 추가</button>
-        <div class="extra-total">
-          부대비용 합계: <span id="extraCostTotal">₩0</span>
-        </div>
-      </div>
-
-      <!-- v4.2→v5.1: 세경 SAVE 입력 영역 -->
-      <div class="segyeong-area" style="margin-top:12px">
-        <div style="display:flex;align-items:center;gap:8px">
-          <input type="checkbox" id="inSegyeongSave" style="width:auto;accent-color:#7c3aed" />
-          <label for="inSegyeongSave" style="margin-bottom:0;font-weight:700;cursor:pointer">세경 SAVE 거래</label>
-        </div>
-        <!-- v5.1: 적립/차감 라디오 -->
-        <div id="sgTypeRow" style="display:none;margin-top:8px;display:none">
-          <div style="display:flex;gap:16px;align-items:center">
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:#7c3aed">
-              <input type="radio" name="sgTxType" id="sgTxAccrual" value="accrual" checked style="width:auto;accent-color:#7c3aed" /> 적립 (Accrual)
-            </label>
-            <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:#d97706">
-              <input type="radio" name="sgTxType" id="sgTxDeduction" value="deduction" style="width:auto;accent-color:#d97706" /> 차감 (Deduction)
-            </label>
-          </div>
-        </div>
-        <!-- 적립 모드 -->
-        <div id="segyeongQuoteRow" style="display:none">
-          <div class="sg-preview">
-            <div>
-              <label>세경 견적가</label>
-              <input id="inSegyeongQuote" type="number" step="1" min="0" placeholder="세경이 고객에게 제시한 가격" />
-            </div>
-            <div>
-              <label>내 매출가 <span class="opt">(자동)</span></label>
-              <input id="inSegyeongMySupply" type="text" readonly disabled style="background:#f1f5f9" />
-            </div>
-            <div>
-              <label>세경 SAVE <span class="opt">(자동)</span></label>
-              <input id="inSegyeongSaveAmt" type="text" readonly disabled style="background:#f1f5f9;color:#7c3aed;font-weight:700" />
-            </div>
-          </div>
-        </div>
-        <!-- v5.1: 차감 모드 -->
-        <div id="segyeongDeductRow" style="display:none">
-          <div class="sg-preview">
-            <div>
-              <label style="color:#d97706">현재 SAVE 잔액</label>
-              <input id="inSgCurrentBal" type="text" readonly disabled style="background:#f1f5f9;color:#7c3aed;font-weight:700" />
-            </div>
-            <div>
-              <label style="color:#d97706">차감 금액</label>
-              <input id="inSegyeongDeduct" type="number" step="1" min="0" placeholder="차감할 금액 (양수)" />
-            </div>
-            <div>
-              <label style="color:#d97706">차감 후 잔액 <span class="opt">(자동)</span></label>
-              <input id="inSgAfterBal" type="text" readonly disabled style="background:#f1f5f9;font-weight:700" />
-            </div>
-          </div>
-        </div>
-        <div id="sgWarn" class="sg-warn" style="display:none"></div>
-      </div>
-
-      <!-- Section 3: 비율 & 정산 -->
-      <div class="sec-header" style="margin-top:16px"><span class="sec-num">3</span><span class="sec-title">비율 · 정산</span></div>
-
-      <!-- 내 거래 비율 -->
-      <div id="directRates">
-        <div class="row r4">
-          <div>
-            <label>SAVE율 (%)</label>
-            <input id="inSaveRate" type="number" step="1" min="0" max="100" value="30" />
-          </div>
-          <div>
-            <label>S 배분 (%)</label>
-            <input id="inSRate" type="number" step="1" min="0" max="100" value="60" />
-          </div>
-          <div>
-            <label>내 배분 (%)</label>
-            <input id="inMyRate" type="number" step="1" min="0" max="100" value="40" />
-          </div>
-          <div>
-            <label>S 실제 지급액</label>
-            <div style="display:flex;gap:4px;align-items:center">
-              <input id="inActualS_direct" type="number" step="1" value="0" style="flex:1" />
-              <button class="btn-apply-est" id="btnApplyEst_direct" title="예상값을 다시 반영합니다">예상값 다시 넣기</button>
-            </div>
-          </div>
-        </div>
-      </div>
-
-      <!-- 관리업체 비율 -->
-      <div id="channelRates" style="display:none">
-        <div class="row r4">
-          <div>
-            <label>리베이트율 (%)</label>
-            <input id="inRebateRate" type="number" step="0.1" min="0" max="100" value="30" />
-          </div>
-          <div>
-            <label>S 배분 (%)</label>
-            <input id="inSRate_ch" type="number" step="1" min="0" max="100" value="60" />
-          </div>
-          <div>
-            <label>내 배분 (%)</label>
-            <input id="inMyRate_ch" type="number" step="1" min="0" max="100" value="40" />
-          </div>
-        </div>
-        <div class="row r4">
-          <div>
-            <label>S 실제 지급액</label>
-            <div style="display:flex;gap:4px;align-items:center">
-              <input id="inActualS_ch" type="number" step="1" value="0" style="flex:1" />
-              <button class="btn-apply-est" id="btnApplyEst_ch" title="예상 S몫을 복사">예상 몫 적용</button>
-            </div>
-          </div>
-          <div style="grid-column:span 3">
-            <label>정산 메모 <span class="opt">(선택)</span></label>
-            <input id="inSettlementMemo_ch" placeholder="정산 관련 메모" />
-          </div>
-        </div>
-      </div>
-
-      <!-- 정산 메모 (직접 거래) -->
-      <div id="directSettlementMemo">
-        <div class="row r4">
-          <div style="grid-column:span 4">
-            <label>정산 메모 <span class="opt">(선택)</span></label>
-            <input id="inSettlementMemo" placeholder="정산 관련 메모" />
-          </div>
-        </div>
-      </div>
-
-      <!-- 버튼 -->
-      <div style="display:flex;gap:8px;margin-top:12px">
-        <button id="btnSave" class="save" style="flex:1">등록</button>
-        <button id="btnCancel" class="secondary" style="display:none">취소</button>
-      </div>
-    </div>
-
-    <!-- 오른쪽: 조종석 -->
-    <div class="cockpit" id="cockpit">
-      <h3 id="cockpitTitle">📊 수익 분석</h3>
-      <div id="cockpitBody">
-        <div style="text-align:center;padding:20px;color:var(--muted);font-size:11px">
-          품목을 추가하면 실시간 수익이 표시됩니다
-        </div>
-      </div>
-    </div>
+  <!-- ═══ v5.2: Action Bar ═══ -->
+  <div class="action-bar">
+    <button class="btn-new-deal" id="btnNewDeal">＋ 거래 등록</button>
   </div>
 
-  <!-- 공유 품목 드롭다운 -->
-  <div class="item-dd" id="itemDropdown"></div>
+  <!-- ═══ v5.2: 사이드 패널 ═══ -->
+  <div class="panel-overlay" id="panelOverlay"></div>
+  <div class="side-panel" id="sidePanel">
+    <div class="sp-top">
+      <h3 id="spTitle">거래 등록</h3>
+      <button class="sp-close" id="spClose">✕</button>
+    </div>
+    <div class="sp-body" id="spBody">
+      <!-- View 섹션: 편집 시만 표시 -->
+      <div class="sp-view" id="spView" style="display:none">
+        <div class="sp-view-top">
+          <span class="sv-name" id="svName">—</span>
+          <span id="svTypeBadge"></span>
+          <span class="sv-amount" id="svAmount"></span>
+        </div>
+        <div class="sp-view-meta" id="svMeta"></div>
+        <!-- 진행 바 -->
+        <div id="svProgress" style="margin-top:6px"></div>
+        <!-- 입금 추적 (View 통합) -->
+        <div class="sp-pay-zone" id="svPayZone" style="display:none"></div>
+      </div>
+
+      <!-- ① 기본정보 (펼침) -->
+      <div class="acc-section open" data-acc="basic">
+        <div class="acc-header"><span class="acc-num">1</span> 기본정보 <span class="acc-arrow">▼</span></div>
+        <div class="acc-body">
+          <div class="row r3">
+            <div><label>거래처 *</label><div id="acPartnerWrap"></div></div>
+            <div>
+              <label>거래 유형</label>
+              <select id="inTradeType">
+                <option value="solo">직접-단독</option>
+                <option value="settle">직접-정산</option>
+                <option value="channel">관리업체</option>
+              </select>
+            </div>
+            <div id="channelWrap" style="display:none">
+              <label>관리업체 *</label>
+              <select id="inChannel"><option value="">선택...</option></select>
+            </div>
+          </div>
+          <div class="row r3" style="align-items:end">
+            <div><label>📅 거래일</label><input type="date" id="inDealDate" /></div>
+            <div><label>메모 <span class="opt">(선택)</span></label><input id="inMemo" placeholder="거래 메모" /></div>
+            <div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ② 품목 -->
+      <div class="acc-section" data-acc="items">
+        <div class="acc-header"><span class="acc-num">2</span> 품목 <span class="acc-arrow">▼</span></div>
+        <div class="acc-body">
+          <div style="overflow:auto">
+            <table class="item-table">
+              <thead><tr>
+                <th style="min-width:140px">품목명 *</th>
+                <th style="width:80px">수량 *</th>
+                <th style="width:100px">단가 *</th>
+                <th style="width:100px">공급가</th>
+                <th style="width:100px" id="costHeader">원가</th>
+                <th style="width:100px">메모</th>
+                <th style="width:36px"></th>
+              </tr></thead>
+              <tbody id="itemsBody"></tbody>
+            </table>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+            <button class="secondary" id="btnAddItem" style="padding:6px 12px;font-size:11px">+ 품목 추가</button>
+            <div class="item-total">총 공급가: <span id="totalSupply" style="color:var(--deal)">₩0</span>
+              <span id="totalCostWrap"> | 원가: <span id="totalCost">₩0</span></span>
+            </div>
+          </div>
+          <!-- 공유 품목 드롭다운 -->
+          <div class="item-dd" id="itemDropdown"></div>
+        </div>
+      </div>
+
+      <!-- ③ 부대비용 -->
+      <div class="acc-section" data-acc="extra">
+        <div class="acc-header"><span class="acc-num" style="background:var(--warn)">+</span> 부대비용 <span class="acc-arrow">▼</span></div>
+        <div class="acc-body">
+          <div style="overflow:auto">
+            <table class="extra-table">
+              <thead><tr>
+                <th style="min-width:120px">비용 유형</th>
+                <th style="width:120px">금액 *</th>
+                <th style="width:70px;text-align:center">수익 반영</th>
+                <th style="width:140px">메모</th>
+                <th style="width:36px"></th>
+              </tr></thead>
+              <tbody id="extraCostsBody"></tbody>
+            </table>
+          </div>
+          <div style="display:flex;align-items:center;gap:12px;margin-bottom:8px">
+            <button class="secondary" id="btnAddExtra" style="padding:6px 12px;font-size:11px;background:rgba(217,119,6,.06);border-color:rgba(217,119,6,.25);color:#92400e">+ 부대비용 추가</button>
+            <div class="extra-total">합계: <span id="extraCostTotal">₩0</span></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ④ 비율·정산 -->
+      <div class="acc-section" data-acc="rates">
+        <div class="acc-header"><span class="acc-num">3</span> 비율 · 정산 <span class="acc-arrow">▼</span></div>
+        <div class="acc-body">
+          <div id="directRates">
+            <div class="row r4">
+              <div><label>SAVE율 (%)</label><input id="inSaveRate" type="number" step="1" min="0" max="100" value="30" /></div>
+              <div><label>S 배분 (%)</label><input id="inSRate" type="number" step="1" min="0" max="100" value="60" /></div>
+              <div><label>내 배분 (%)</label><input id="inMyRate" type="number" step="1" min="0" max="100" value="40" /></div>
+              <div><label>S 실제 지급액</label>
+                <div style="display:flex;gap:4px;align-items:center">
+                  <input id="inActualS_direct" type="number" step="1" value="0" style="flex:1" />
+                  <button class="btn-apply-est" id="btnApplyEst_direct" title="예상값 반영">예상값</button>
+                </div>
+              </div>
+            </div>
+          </div>
+          <div id="channelRates" style="display:none">
+            <div class="row r4">
+              <div><label>리베이트율 (%)</label><input id="inRebateRate" type="number" step="0.1" min="0" max="100" value="30" /></div>
+              <div><label>S 배분 (%)</label><input id="inSRate_ch" type="number" step="1" min="0" max="100" value="60" /></div>
+              <div><label>내 배분 (%)</label><input id="inMyRate_ch" type="number" step="1" min="0" max="100" value="40" /></div>
+            </div>
+            <div class="row r4">
+              <div><label>S 실제 지급액</label>
+                <div style="display:flex;gap:4px;align-items:center">
+                  <input id="inActualS_ch" type="number" step="1" value="0" style="flex:1" />
+                  <button class="btn-apply-est" id="btnApplyEst_ch" title="예상 몫 적용">예상값</button>
+                </div>
+              </div>
+              <div style="grid-column:span 3"><label>정산 메모</label><input id="inSettlementMemo_ch" placeholder="정산 관련 메모" /></div>
+            </div>
+          </div>
+          <div id="directSettlementMemo">
+            <div class="row" style="margin-top:8px"><div><label>정산 메모</label><input id="inSettlementMemo" placeholder="정산 관련 메모" /></div></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑤ 세경 SAVE -->
+      <div class="acc-section" data-acc="save">
+        <div class="acc-header"><span class="acc-num" style="background:#7c3aed">S</span> 세경 SAVE <span class="acc-arrow">▼</span></div>
+        <div class="acc-body">
+          <div class="segyeong-area" style="margin-top:0">
+            <div style="display:flex;align-items:center;gap:8px">
+              <input type="checkbox" id="inSegyeongSave" style="width:auto;accent-color:#7c3aed" />
+              <label for="inSegyeongSave" style="margin-bottom:0;font-weight:700;cursor:pointer">세경 SAVE 거래</label>
+            </div>
+            <div id="sgTypeRow" style="display:none;margin-top:8px">
+              <div style="display:flex;gap:16px;align-items:center">
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:#7c3aed">
+                  <input type="radio" name="sgTxType" id="sgTxAccrual" value="accrual" checked style="width:auto;accent-color:#7c3aed" /> 적립
+                </label>
+                <label style="display:flex;align-items:center;gap:4px;cursor:pointer;font-size:12px;color:#d97706">
+                  <input type="radio" name="sgTxType" id="sgTxDeduction" value="deduction" style="width:auto;accent-color:#d97706" /> 차감
+                </label>
+              </div>
+            </div>
+            <div id="segyeongQuoteRow" style="display:none">
+              <div class="sg-preview">
+                <div><label>세경 견적가</label><input id="inSegyeongQuote" type="number" step="1" min="0" placeholder="견적가" /></div>
+                <div><label>내 매출가 <span class="opt">(자동)</span></label><input id="inSegyeongMySupply" type="text" readonly disabled style="background:#f1f5f9" /></div>
+                <div><label>세경 SAVE <span class="opt">(자동)</span></label><input id="inSegyeongSaveAmt" type="text" readonly disabled style="background:#f1f5f9;color:#7c3aed;font-weight:700" /></div>
+              </div>
+            </div>
+            <div id="segyeongDeductRow" style="display:none">
+              <div class="sg-preview">
+                <div><label style="color:#d97706">현재 잔액</label><input id="inSgCurrentBal" type="text" readonly disabled style="background:#f1f5f9;color:#7c3aed;font-weight:700" /></div>
+                <div><label style="color:#d97706">차감 금액</label><input id="inSegyeongDeduct" type="number" step="1" min="0" placeholder="차감액" /></div>
+                <div><label style="color:#d97706">차감 후 잔액</label><input id="inSgAfterBal" type="text" readonly disabled style="background:#f1f5f9;font-weight:700" /></div>
+              </div>
+            </div>
+            <div id="sgWarn" class="sg-warn" style="display:none"></div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑥ 수익 분석 (펼침) = cockpit -->
+      <div class="acc-section open" data-acc="cockpit">
+        <div class="acc-header"><span class="acc-num">📊</span> 수익 분석 <span class="acc-arrow">▼</span></div>
+        <div class="acc-body">
+          <div id="cockpitBody">
+            <div style="text-align:center;padding:20px;color:var(--muted);font-size:11px">품목을 추가하면 실시간 수익이 표시됩니다</div>
+          </div>
+        </div>
+      </div>
+
+      <!-- ⑦ Todo·타임라인 -->
+      <div class="acc-section" data-acc="todo">
+        <div class="acc-header"><span class="acc-num" style="background:var(--bad)">!</span> Todo · 타임라인 <span class="acc-arrow">▼</span></div>
+        <div class="acc-body" id="spTodoBody">
+          <div class="todo-empty">거래를 저장한 후 할일을 추가할 수 있습니다.</div>
+        </div>
+      </div>
+    </div>
+    <!-- 패널 하단 버튼 -->
+    <div class="sp-form-btns">
+      <button id="btnSave" class="save">등록</button>
+      <button id="btnCancel" class="secondary" style="display:none">취소</button>
+      <button id="btnPanelDel" class="danger" style="display:none">삭제</button>
+    </div>
+  </div>
 
   <!-- ═══ 거래 목록 ═══ -->
   <div class="card">
@@ -638,7 +671,6 @@
             <th class="col-save col-desk">세경견적</th>
             <th class="col-save col-desk">세경SAVE</th>
             <th class="col-save col-desk">세경누적</th>
-            <th class="col-desk" style="text-align:right">상세</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -657,7 +689,6 @@
             <td class="col-save col-desk num" id="sumSgQuote">—</td>
             <td class="col-save col-desk num" id="sumSgSave" style="color:#7c3aed">—</td>
             <td class="col-save col-desk num" id="sumSgBal" style="color:#7c3aed">—</td>
-            <td class="col-desk"></td>
           </tr>
         </tfoot>
       </table>
@@ -683,10 +714,203 @@ var TE = GoLabTradeEngine;
 var CM = GoLabChannelMaster;
 
 var editingId = null;
-var _expandedId = null;
+var _expandedId = null; /* v5.2: 사용 안함 (패널 대체) */
 var _restoreId = null; /* v2.9: 현재 리플레이 중인 거래 ID */
 var _sManuallyEdited = false; /* v3.0: S 실제 지급액 수동 편집 플래그 */
 var chipFilter = ""; /* v3.7: 상태 칩 필터 (""|"no-cost"|"unsettled"|"todo") */
+var _panelTradeId = null; /* v5.2: 현재 패널에 열린 거래 ID (null=신규) */
+
+/* ══════ v5.2: 아코디언 토글 ══════ */
+function _toggleAccordion(headerEl) {
+  var sec = headerEl.closest(".acc-section");
+  if (sec) sec.classList.toggle("open");
+}
+document.querySelectorAll(".acc-header").forEach(function(h) {
+  h.addEventListener("click", function() { _toggleAccordion(h); });
+});
+
+/* ══════ v5.2: 패널 open/close ══════ */
+function openPanel(tradeId) {
+  _panelTradeId = tradeId || null;
+  var panel = $("sidePanel");
+  var overlay = $("panelOverlay");
+
+  if (_panelTradeId) {
+    /* 편집 모드 */
+    $("spTitle").textContent = "거래 편집";
+    $("btnSave").textContent = "저장";
+    $("btnCancel").style.display = "inline-block";
+    $("btnPanelDel").style.display = "inline-block";
+    startEdit(_panelTradeId);
+    _renderPanelView(_panelTradeId);
+    _renderPanelTodo(_panelTradeId);
+  } else {
+    /* 신규 모드 */
+    $("spTitle").textContent = "거래 등록";
+    $("btnSave").textContent = "등록";
+    $("btnCancel").style.display = "none";
+    $("btnPanelDel").style.display = "none";
+    clearForm();
+    $("spView").style.display = "none";
+    $("spTodoBody").innerHTML = '<div class="todo-empty">거래를 저장한 후 할일을 추가할 수 있습니다.</div>';
+  }
+
+  panel.classList.add("open");
+  overlay.classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closePanel() {
+  $("sidePanel").classList.remove("open");
+  $("panelOverlay").classList.remove("open");
+  document.body.style.overflow = "";
+  _panelTradeId = null;
+  editingId = null;
+  /* 아코디언 기본 상태로 복원 */
+  document.querySelectorAll(".acc-section").forEach(function(s) {
+    var key = s.dataset.acc;
+    if (key === "basic" || key === "cockpit") s.classList.add("open");
+    else s.classList.remove("open");
+  });
+}
+
+/* 패널 View 섹션 렌더 (편집 시) */
+function _renderPanelView(tid) {
+  var t = TE.getById(tid);
+  if (!t) { $("spView").style.display = "none"; return; }
+  $("spView").style.display = "";
+  var calc = TE.calcTrade(t);
+  var _tc = TE.classifyTrade(t);
+  var _tcLabel = _tc === "channel" ? "관리업체" : (_tc === "settle" ? "직접-정산" : "직접-단독");
+  $("svName").textContent = t.partner_name_snapshot || "—";
+  $("svTypeBadge").innerHTML = '<span class="type-badge ' + _tc + '">' + _tcLabel + '</span>';
+  $("svAmount").textContent = "내 최종 " + TE.fmt(calc.final_my_amount);
+  var meta = '';
+  meta += '<span><b>매출</b> ' + TE.fmt(calc.total_supply) + '</span>';
+  if (t.deal_date) meta += '<span><b>거래일</b> ' + t.deal_date + '</span>';
+  meta += '<span><b>ID</b> ' + t.id + '</span>';
+  $("svMeta").innerHTML = meta;
+  /* 진행 바 */
+  $("svProgress").innerHTML = renderProgressBar(t, true);
+  /* 진행 바 이벤트 */
+  $("svProgress").querySelectorAll("[data-step-tid]").forEach(function(dot) {
+    dot.onclick = function(e) {
+      e.stopPropagation();
+      var stepKey = dot.dataset.stepKey;
+      var trade = TE.getById(tid);
+      if (!trade) return;
+      var field = TE.STEP_MAP[stepKey].field;
+      if (trade[field]) TE.unstampStep(tid, stepKey);
+      else TE.stampStep(tid, stepKey);
+      computeKPI(); render(); _renderPanelView(tid);
+    };
+  });
+  /* 입금 추적 */
+  var payS = TE.calcPaymentStatus(t);
+  var payCalc = calc;
+  var barColor = payS.code === "paid" ? "var(--accent)" : (payS.code === "vat_pending" ? "var(--point)" : "var(--warn)");
+  var payHtml = '';
+  payHtml += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+  payHtml += '<span class="pay-badge ' + payS.code + '">' + payS.label + '</span>';
+  payHtml += '<span style="font-size:16px;font-weight:800">' + payS.progress + '%</span>';
+  payHtml += '</div>';
+  payHtml += '<div class="pay-input-grid">';
+  payHtml += '<div><label>공급가 입금</label><input type="number" step="1" id="spPaySupply" value="' + TE.n(t.paid_supply) + '" /></div>';
+  payHtml += '<div><label>VAT 입금</label><input type="number" step="1" id="spPayVat" value="' + TE.n(t.paid_vat) + '" /></div>';
+  payHtml += '</div>';
+  payHtml += '<div class="pay-quick-btns" style="margin-top:6px">';
+  payHtml += '<button class="pay-quick-btn supply" id="spPayFullSupply">공급가 완납 (' + TE.fmt(payCalc.total_supply) + ')</button>';
+  payHtml += '<button class="pay-quick-btn vat" id="spPayFullVat">VAT 완납 (' + TE.fmt(payCalc.vat_amount) + ')</button>';
+  payHtml += '</div>';
+  payHtml += '<div class="pay-progress-bar" style="margin-top:6px"><div class="pay-progress-fill" style="width:' + payS.progress + '%;background:' + barColor + '"></div></div>';
+  payHtml += '<div class="pay-summary" style="margin-top:4px">공급가: <b>' + TE.fmt(TE.n(t.paid_supply)) + '</b>/' + TE.fmt(payCalc.total_supply) + ' · VAT: <b>' + TE.fmt(TE.n(t.paid_vat)) + '</b>/' + TE.fmt(payCalc.vat_amount) + '</div>';
+  $("svPayZone").innerHTML = payHtml;
+  $("svPayZone").style.display = "";
+  /* 입금 이벤트 */
+  var _payTimer2 = null;
+  ["spPaySupply","spPayVat"].forEach(function(pid) {
+    var el = $(pid);
+    if (!el) return;
+    el.addEventListener("input", function() {
+      clearTimeout(_payTimer2);
+      _payTimer2 = setTimeout(function() {
+        var fields = {};
+        if (pid === "spPaySupply") fields.paid_supply = Number(el.value) || 0;
+        if (pid === "spPayVat") fields.paid_vat = Number(el.value) || 0;
+        TE.update(tid, fields);
+        render(); _renderPanelView(tid);
+      }, 500);
+    });
+  });
+  var spfs = $("spPayFullSupply");
+  if (spfs) spfs.onclick = function() { TE.update(tid, { paid_supply: payCalc.total_supply }); render(); _renderPanelView(tid); };
+  var spfv = $("spPayFullVat");
+  if (spfv) spfv.onclick = function() { TE.update(tid, { paid_vat: payCalc.vat_amount }); render(); _renderPanelView(tid); };
+}
+
+/* 패널 Todo 렌더 (편집 시) */
+function _renderPanelTodo(tid) {
+  var body = $("spTodoBody");
+  var t = TE.getById(tid);
+  if (!t) { body.innerHTML = '<div class="todo-empty">—</div>'; return; }
+  var todos = DealTodo.getByDeal(tid);
+  var _today = new Date().toISOString().substring(0, 10);
+  var html = '';
+  if (todos.length > 0) {
+    html += '<div class="todo-list">';
+    todos.forEach(function(td) {
+      var isDone = td.status === "completed";
+      var isOverdue = !isDone && td.due_date && td.due_date <= _today;
+      html += '<div class="todo-item">';
+      html += '<input type="checkbox" data-sp-todo-toggle="' + td.id + '"' + (isDone ? ' checked' : '') + '>';
+      html += '<span class="t-title ' + (isDone ? 'done' : '') + '">' + esc(td.title) + '</span>';
+      if (td.due_date) html += '<span class="todo-due' + (isOverdue ? ' overdue' : '') + '">' + td.due_date.substring(5) + '</span>';
+      html += '<button class="todo-del" data-sp-todo-del="' + td.id + '">×</button>';
+      html += '</div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div class="todo-empty">등록된 할일이 없습니다.</div>';
+  }
+  html += '<div class="todo-add">';
+  html += '<input type="text" placeholder="할일 추가..." id="spTodoInput">';
+  html += '<input type="date" id="spTodoDate">';
+  html += '<button class="secondary" id="spTodoAdd">추가</button>';
+  html += '</div>';
+  /* 타임라인 */
+  if (t.timeline && t.timeline.length > 0) {
+    html += '<div style="margin-top:12px"><div class="detail-section-title">타임라인</div>';
+    html += '<ul class="timeline">';
+    t.timeline.slice().reverse().forEach(function(tl) {
+      var ts = tl.at ? tl.at.substring(0, 10) + " " + tl.at.substring(11, 16) : "";
+      html += '<li><span class="tl-dot"></span><span class="tl-date">' + ts + '</span><span>' + esc(tl.label) + '</span></li>';
+    });
+    html += '</ul></div>';
+  }
+  body.innerHTML = html;
+  /* 이벤트 */
+  body.querySelectorAll("[data-sp-todo-toggle]").forEach(function(chk) {
+    chk.onchange = function() { DealTodo.toggle(chk.dataset.spTodoToggle); _renderPanelTodo(tid); render(); };
+  });
+  body.querySelectorAll("[data-sp-todo-del]").forEach(function(btn) {
+    btn.onclick = function() { DealTodo.remove(btn.dataset.spTodoDel); _renderPanelTodo(tid); render(); };
+  });
+  var addBtn = $("spTodoAdd");
+  if (addBtn) addBtn.onclick = function() {
+    var inp = $("spTodoInput");
+    if (!inp || !inp.value.trim()) return;
+    DealTodo.create({ deal_id: tid, title: inp.value.trim(), due_date: $("spTodoDate") ? $("spTodoDate").value || null : null });
+    _renderPanelTodo(tid); render();
+  };
+  var todoInp = $("spTodoInput");
+  if (todoInp) todoInp.onkeydown = function(e) { if (e.key === "Enter") { e.preventDefault(); if (addBtn) addBtn.click(); } };
+}
+
+/* 패널 이벤트 바인딩 */
+$("panelOverlay").addEventListener("click", closePanel);
+$("spClose").addEventListener("click", closePanel);
+document.addEventListener("keydown", function(e) { if (e.key === "Escape" && $("sidePanel").classList.contains("open")) closePanel(); });
+$("btnNewDeal").addEventListener("click", function() { openPanel(null); });
 
 /* ══════ v3.7 DealTodo 모듈 ══════ */
 var DealTodo = (function() {
@@ -999,9 +1223,18 @@ function _showItemDropdown(inputEl) {
     dd.appendChild(row);
   });
 
+  /* v5.2: 패널 내부 드롭다운 — 상대 위치 계산 */
   var rect = inputEl.getBoundingClientRect();
-  dd.style.left = rect.left + "px";
-  dd.style.top = (rect.bottom + 4) + "px";
+  var panelBody = inputEl.closest(".sp-body") || inputEl.closest(".acc-body");
+  if (panelBody) {
+    var pRect = panelBody.getBoundingClientRect();
+    dd.style.position = "absolute";
+    dd.style.left = (rect.left - pRect.left) + "px";
+    dd.style.top = (rect.bottom - pRect.top + panelBody.scrollTop + 4) + "px";
+  } else {
+    dd.style.left = rect.left + "px";
+    dd.style.top = (rect.bottom + 4) + "px";
+  }
   dd.style.width = Math.max(rect.width, 200) + "px";
   dd.style.display = "block";
 }
@@ -1262,7 +1495,7 @@ function updateCockpit(savedTrade) {
   var c = TE.calcTrade(trade);
   var isChannel = trade.trade_type === "channel";
   var body = $("cockpitBody");
-  var title = $("cockpitTitle");
+  var title = document.getElementById("cockpitTitle"); /* v5.2: 패널 구조에서는 없을 수 있음 */
 
   /* 라이브 모드 진입 시 리플레이 상태 자동 해제 */
   if (!isReplay && _restoreId) {
@@ -1271,11 +1504,11 @@ function updateCockpit(savedTrade) {
   }
 
   /* 제목 동적 변경 */
-  if (isReplay) {
+  if (title && isReplay) {
     var tName = trade.partner_name_snapshot || "";
     var itemSummary = TE.itemDisplayName(trade);
     title.textContent = "📊 수익 분석 — " + tName + " / " + itemSummary;
-  } else {
+  } else if (title) {
     title.textContent = "📊 수익 분석";
   }
 
@@ -1907,13 +2140,10 @@ function render() {
       html += '<td class="col-save col-desk" style="color:var(--muted)">—</td>';
     }
 
-    /* ⑮ 상세 (데스크톱) */
-    html += '<td class="col-desk" style="text-align:right;white-space:nowrap">';
-    html += '<button class="secondary" style="padding:4px 8px;font-size:11px" data-detail="'+t.id+'">상세</button>';
-    html += '</td></tr>';
+    html += '</tr>';
 
-    /* 상세 행 (v3.8 SaaS 리디자인) */
-    if (_expandedId === t.id) {
+    /* v5.2: 상세 확장행 제거 — 패널로 대체 */
+    if (false) { /* 비활성화 */
       html += '<tr class="detail-row"><td colspan="15"><div class="detail-panel">';
 
       /* ═══ Hero 섹션 ═══ */
@@ -2192,192 +2422,14 @@ function render() {
   });
   tb.innerHTML = html;
 
-  /* ── 이벤트 바인딩 ── */
+  /* ── v5.2: 이벤트 바인딩 — 행 클릭 → 패널 오픈 ── */
   tb.querySelectorAll("[data-toggle]").forEach(function(tr) {
     tr.addEventListener("click", function(e) {
-      if (e.target.closest("button") || e.target.closest(".pb-dot")) return;
-      toggleDetail(tr.dataset.toggle);
+      if (e.target.closest("button")) return;
+      openPanel(tr.dataset.toggle);
     });
   });
-  tb.querySelectorAll("[data-detail]").forEach(function(btn) {
-    btn.onclick = function(e) { e.stopPropagation(); toggleDetail(btn.dataset.detail); };
-  });
-  tb.querySelectorAll("[data-del]").forEach(function(btn) {
-    btn.onclick = function(e) { e.stopPropagation(); deleteTrade(btn.dataset.del); };
-  });
-  tb.querySelectorAll("[data-del2]").forEach(function(btn) {
-    btn.onclick = function() { deleteTrade(btn.dataset.del2); };
-  });
-  tb.querySelectorAll("[data-edit]").forEach(function(btn) {
-    btn.onclick = function() { startEdit(btn.dataset.edit); };
-  });
-  tb.querySelectorAll("[data-step-tid]").forEach(function(dot) {
-    dot.onclick = function(e) {
-      e.stopPropagation();
-      var tid = dot.dataset.stepTid;
-      var stepKey = dot.dataset.stepKey;
-      var trade = TE.getById(tid);
-      if (!trade) return;
-      var field = TE.STEP_MAP[stepKey].field;
-      if (trade[field]) TE.unstampStep(tid, stepKey);
-      else TE.stampStep(tid, stepKey);
-      computeKPI(); render();
-    };
-  });
-  /* v3.0: owner toggle 제거 */
-  tb.querySelectorAll("[data-toggle-cancel]").forEach(function(btn) {
-    btn.onclick = function(e) {
-      e.stopPropagation();
-      var t = TE.getById(btn.dataset.toggleCancel);
-      if (!t) return;
-      if (t.deal_status === "cancelled") {
-        if (!confirm("거래를 복구하시겠습니까?")) return;
-        TE.update(t.id, { deal_status: "active" });
-      } else {
-        if (!confirm("거래를 취소 처리하시겠습니까?")) return;
-        TE.update(t.id, { deal_status: "cancelled" });
-      }
-      computeKPI(); render();
-    };
-  });
-
-  /* v2.9: 리플레이 버튼 이벤트 바인딩 */
-  tb.querySelectorAll("[data-restore-id]").forEach(function(btn) {
-    btn.onclick = function(e) {
-      e.stopPropagation();
-      var tid = btn.dataset.restoreId;
-      var trade = TE.getById(tid);
-      if (!trade) return;
-      _restoreId = tid;
-      updateCockpit(trade);
-      /* 하이라이트 갱신 */
-      _applyReplayHighlight(tid);
-      /* smooth scroll to cockpit */
-      document.getElementById("cockpit").scrollIntoView({ behavior:"smooth", block:"start" });
-    };
-  });
-
-  /* v3.3: 메모 저장 이벤트 */
-  tb.querySelectorAll("[data-memo-save]").forEach(function(btn) {
-    btn.onclick = function(e) {
-      e.stopPropagation();
-      var tid = btn.dataset.memoSave;
-      var textarea = tb.querySelector('[data-memo-tid="'+tid+'"]');
-      if (!textarea) return;
-      var val = textarea.value.trim();
-      /* 기존 메모가 있는데 전부 비운 경우 — 확인 1회 */
-      var trade = TE.getById(tid);
-      if (trade && trade.memo && !val) {
-        if (!confirm("메모를 비우시겠습니까?")) return;
-      }
-      TE.update(tid, { memo: val });
-      /* 저장 피드백: 버튼 텍스트 변경 1초 */
-      btn.textContent = "저장됨 ✓";
-      btn.classList.add("saved");
-      setTimeout(function() {
-        btn.textContent = "저장";
-        btn.classList.remove("saved");
-      }, 1000);
-    };
-  });
-
-  /* v3.7: 비용 빠른입력 이벤트 — debounce 로 즉시 저장 */
-  var _costTimer = null;
-  tb.querySelectorAll("[data-qcost]").forEach(function(inp) {
-    inp.addEventListener("input", function(e) {
-      e.stopPropagation();
-      var tid = inp.dataset.qcostTid;
-      var field = inp.dataset.qcost;
-      clearTimeout(_costTimer);
-      _costTimer = setTimeout(function() {
-        _saveQuickCost(tid, field, Number(inp.value) || 0);
-      }, 400);
-    });
-  });
-
-  /* v3.7: Todo 토글 (체크박스) */
-  tb.querySelectorAll("[data-todo-toggle]").forEach(function(chk) {
-    chk.onchange = function(e) {
-      e.stopPropagation();
-      DealTodo.toggle(chk.dataset.todoToggle);
-      render();
-    };
-  });
-  /* v3.7: Todo 삭제 */
-  tb.querySelectorAll("[data-todo-del]").forEach(function(btn) {
-    btn.onclick = function(e) {
-      e.stopPropagation();
-      DealTodo.remove(btn.dataset.todoDel);
-      render();
-    };
-  });
-  /* v3.7: Todo 추가 */
-  tb.querySelectorAll("[data-todo-add]").forEach(function(btn) {
-    btn.onclick = function(e) {
-      e.stopPropagation();
-      var tid = btn.dataset.todoAdd;
-      var titleInput = tb.querySelector('[data-todo-input="'+tid+'"]');
-      var dateInput = tb.querySelector('[data-todo-date="'+tid+'"]');
-      if (!titleInput || !titleInput.value.trim()) return;
-      DealTodo.create({
-        deal_id: tid,
-        title: titleInput.value.trim(),
-        due_date: dateInput ? dateInput.value || null : null
-      });
-      render();
-    };
-  });
-  /* v3.7: Todo 입력에서 Enter 키로 추가 */
-  tb.querySelectorAll("[data-todo-input]").forEach(function(inp) {
-    inp.onkeydown = function(e) {
-      if (e.key === "Enter") {
-        e.preventDefault();
-        var addBtn = tb.querySelector('[data-todo-add="'+inp.dataset.todoInput+'"]');
-        if (addBtn) addBtn.click();
-      }
-    };
-  });
-
-  /* v3.9: 입금 입력 이벤트 — debounce로 즉시 저장 */
-  var _payTimer = null;
-  tb.querySelectorAll("[data-pay-supply],[data-pay-vat]").forEach(function(inp) {
-    inp.addEventListener("input", function(e) {
-      e.stopPropagation();
-      clearTimeout(_payTimer);
-      _payTimer = setTimeout(function() {
-        var tid = inp.dataset.paySupply || inp.dataset.payVat;
-        var fields = {};
-        if (inp.dataset.paySupply) fields.paid_supply = Number(inp.value) || 0;
-        if (inp.dataset.payVat) fields.paid_vat = Number(inp.value) || 0;
-        TE.update(tid, fields);
-        render();
-      }, 500);
-    });
-  });
-  /* v3.9: 공급가 완납 퀵버튼 */
-  tb.querySelectorAll("[data-pay-full-supply]").forEach(function(btn) {
-    btn.onclick = function(e) {
-      e.stopPropagation();
-      var tid = btn.dataset.payFullSupply;
-      var trade = TE.getById(tid);
-      if (!trade) return;
-      var c = TE.calcTrade(trade);
-      TE.update(tid, { paid_supply: c.total_supply });
-      render();
-    };
-  });
-  /* v3.9: VAT 완납 퀵버튼 */
-  tb.querySelectorAll("[data-pay-full-vat]").forEach(function(btn) {
-    btn.onclick = function(e) {
-      e.stopPropagation();
-      var tid = btn.dataset.payFullVat;
-      var trade = TE.getById(tid);
-      if (!trade) return;
-      var c = TE.calcTrade(trade);
-      TE.update(tid, { paid_vat: c.vat_amount });
-      render();
-    };
-  });
+  /* v5.2: 상세행 이벤트 제거 — 패널에서 처리 */
 
   /* v3.3: 정렬 UI 동기화 */
   updateSortUI();
@@ -2567,7 +2619,8 @@ function saveTrade() {
     } else {
       TE.create(fields);
     }
-    clearForm();
+    /* v5.2: 패널 닫기 + 목록 갱신 */
+    closePanel();
     computeKPI();
     render();
   } catch (err) {
@@ -2662,7 +2715,7 @@ function startEdit(tid) {
   $("btnSave").textContent = "저장";
   $("btnCancel").style.display = "inline-block";
   updateCockpit();
-  window.scrollTo({ top: 0, behavior: "smooth" });
+  /* v5.2: scroll 제거 — 패널 내부에서 동작 */
 }
 
 function deleteTrade(tid) {
@@ -2723,7 +2776,13 @@ function clearForm() {
 
 /* ── 이벤트 ── */
 $("btnSave").addEventListener("click", saveTrade);
-$("btnCancel").addEventListener("click", clearForm);
+$("btnCancel").addEventListener("click", function() { closePanel(); });
+/* v5.2: 패널 삭제 버튼 */
+$("btnPanelDel").addEventListener("click", function() {
+  if (!_panelTradeId) return;
+  deleteTrade(_panelTradeId);
+  closePanel();
+});
 
 var _searchTimer = null;
 $("fSearch").addEventListener("input", function() { clearTimeout(_searchTimer); _searchTimer = setTimeout(render, 200); });
@@ -2813,6 +2872,17 @@ window.addEventListener("storage", function(e) {
 $("inDealDate").value = new Date().toISOString().substring(0, 10);
 /* v3.0: 초기 유형 상태 반영 (solo → 비율 필드 숨김) */
 $("inTradeType").dispatchEvent(new Event("change"));
+/* v5.2: 진입 시 "이번 달" 자동 필터 적용 */
+(function() {
+  var _now = new Date();
+  var _thisM = _now.getFullYear() + "-" + String(_now.getMonth() + 1).padStart(2, "0");
+  $("fMonth").value = _thisM;
+  /* 기간 프리셋 "이번 달" 활성화 */
+  $("periodBar").querySelectorAll(".period-btn").forEach(function(b) {
+    b.classList.toggle("active", b.dataset.period === "this");
+  });
+  $("fMonth").style.display = "none";
+})();
 computeKPI();
 render();
 </script>
