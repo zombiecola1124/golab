@@ -322,6 +322,10 @@ window.GoLabTradeEngine = (function () {
       if (saveDocs[j].deal_status !== "cancelled") {
         running += n(saveDocs[j].segyeong_save_amount);
       }
+      /* v5.1: 잔액이 음수가 되면 차감 초과 — 저장 차단 */
+      if (running < 0) {
+        throw new Error("세경 SAVE 잔액 부족: " + saveDocs[j].id + " 거래에서 잔액이 음수(" + running + ")가 됩니다.\n차감 금액을 확인해주세요.");
+      }
       saveDocs[j].segyeong_running_balance = running;
     }
   }
@@ -337,6 +341,8 @@ window.GoLabTradeEngine = (function () {
     var totalSave = 0;
     var dealCount = 0;
     var runningBalance = 0;
+    var totalAccrual = 0, accrualCount = 0;
+    var totalDeduction = 0, deductionCount = 0;
     var deals = [];
     for (var i = 0; i < all.length; i++) {
       var t = all[i];
@@ -350,9 +356,22 @@ window.GoLabTradeEngine = (function () {
       if (toDate && dt > toDate) continue;
       totalSave += n(t.segyeong_save_amount);
       dealCount++;
+      /* v5.1: 적립/차감 분리 집계 */
+      if (t.segyeong_save_tx_type === "deduction") {
+        totalDeduction += Math.abs(n(t.segyeong_save_amount));
+        deductionCount++;
+      } else {
+        totalAccrual += n(t.segyeong_save_amount);
+        accrualCount++;
+      }
       deals.push(t);
     }
-    return { totalSave: totalSave, dealCount: dealCount, runningBalance: runningBalance, deals: deals };
+    return {
+      totalSave: totalSave, dealCount: dealCount, runningBalance: runningBalance,
+      totalAccrual: totalAccrual, accrualCount: accrualCount,
+      totalDeduction: totalDeduction, deductionCount: deductionCount,
+      deals: deals
+    };
   }
 
   /** 거래 생성 */
@@ -435,9 +454,11 @@ window.GoLabTradeEngine = (function () {
       paid_supply:   n(fields.paid_supply),
       paid_vat:      n(fields.paid_vat),
 
-      /* v4.2: 세경 SAVE 추적 */
+      /* v4.2→v5.1: 세경 SAVE 추적 */
       is_segyeong_save_deal:    !!fields.is_segyeong_save_deal,
+      segyeong_save_tx_type:    fields.is_segyeong_save_deal ? (fields.segyeong_save_tx_type || "accrual") : "accrual",
       segyeong_quote_amount:    fields.is_segyeong_save_deal ? n(fields.segyeong_quote_amount) : 0,
+      segyeong_deduction_amount: n(fields.segyeong_deduction_amount),
       segyeong_save_amount:     0,   /* create 후 계산 */
       segyeong_running_balance: 0,   /* _recalcSegyeongBalances()에서 계산 */
 
@@ -452,12 +473,21 @@ window.GoLabTradeEngine = (function () {
     trade.status      = _calcStatus(trade);
     trade.deal_status = _calcDealStatus(trade);
 
-    /* v4.2: 세경 SAVE 금액 계산 (create 직후) */
+    /* v4.2→v5.1: 세경 SAVE 금액 계산 (create 직후) */
     if (trade.is_segyeong_save_deal) {
-      var _sgCalc = calcTrade(trade);
-      var _sgSave = n(trade.segyeong_quote_amount) - _sgCalc.total_supply;
-      if (_sgSave < 0) throw new Error("세경 SAVE가 음수입니다.\n현재 1차에서는 SAVE 적립만 지원합니다.\n차감(사용) 거래는 2차에서 지원 예정입니다.\n세경 견적가 / 내 매출가를 확인해주세요.");
-      trade.segyeong_save_amount = _sgSave;
+      if (trade.segyeong_save_tx_type === "deduction") {
+        /* 차감: 사용자 입력 금액(양수)을 음수 delta로 변환 */
+        var _dedAmt = n(trade.segyeong_deduction_amount);
+        if (_dedAmt <= 0) throw new Error("차감 금액을 입력해주세요.");
+        trade.segyeong_save_amount = -_dedAmt;
+        /* 잔액 검증은 _recalcSegyeongBalances() 에서 수행 */
+      } else {
+        /* 적립: 견적가 - 매출가 */
+        var _sgCalc = calcTrade(trade);
+        var _sgSave = n(trade.segyeong_quote_amount) - _sgCalc.total_supply;
+        if (_sgSave < 0) throw new Error("세경 SAVE가 음수입니다.\n견적가가 매출가보다 낮습니다.\n세경 견적가 / 내 매출가를 확인해주세요.");
+        trade.segyeong_save_amount = _sgSave;
+      }
     }
 
     all.unshift(trade);
@@ -551,16 +581,26 @@ window.GoLabTradeEngine = (function () {
     if (fields.paid_supply !== undefined) d.paid_supply = n(fields.paid_supply);
     if (fields.paid_vat    !== undefined) d.paid_vat    = n(fields.paid_vat);
 
-    /* v4.2: 세경 SAVE 필드 */
+    /* v4.2→v5.1: 세경 SAVE 필드 */
     if (fields.is_segyeong_save_deal !== undefined) d.is_segyeong_save_deal = !!fields.is_segyeong_save_deal;
+    if (fields.segyeong_save_tx_type !== undefined) d.segyeong_save_tx_type = fields.segyeong_save_tx_type || "accrual";
     if (fields.segyeong_quote_amount !== undefined) d.segyeong_quote_amount = n(fields.segyeong_quote_amount);
+    if (fields.segyeong_deduction_amount !== undefined) d.segyeong_deduction_amount = n(fields.segyeong_deduction_amount);
 
     /* 세경 SAVE 금액 재계산 */
     if (d.is_segyeong_save_deal) {
-      var _sgCalc = calcTrade(d);
-      var _sgSave = n(d.segyeong_quote_amount) - _sgCalc.total_supply;
-      if (_sgSave < 0) throw new Error("세경 SAVE가 음수입니다.\n현재 1차에서는 SAVE 적립만 지원합니다.\n차감(사용) 거래는 2차에서 지원 예정입니다.\n세경 견적가 / 내 매출가를 확인해주세요.");
-      d.segyeong_save_amount = _sgSave;
+      if (d.segyeong_save_tx_type === "deduction") {
+        /* 차감: 양수 입력 → 음수 delta */
+        var _dedAmt = n(d.segyeong_deduction_amount);
+        if (_dedAmt <= 0) throw new Error("차감 금액을 입력해주세요.");
+        d.segyeong_save_amount = -_dedAmt;
+      } else {
+        /* 적립: 견적가 - 매출가 */
+        var _sgCalc = calcTrade(d);
+        var _sgSave = n(d.segyeong_quote_amount) - _sgCalc.total_supply;
+        if (_sgSave < 0) throw new Error("세경 SAVE가 음수입니다.\n견적가가 매출가보다 낮습니다.\n세경 견적가 / 내 매출가를 확인해주세요.");
+        d.segyeong_save_amount = _sgSave;
+      }
     } else {
       d.segyeong_save_amount = 0;
       d.segyeong_running_balance = 0;
@@ -1096,5 +1136,25 @@ GoLabTradeEngine.migrateFromV1();
     localStorage.setItem(TE.TRADE_KEY, JSON.stringify(all));
     TE.emitAudit("UPGRADE_SEGYEONG_FIELDS", { count: all.length });
     console.log("[TRADE ENGINE] v4.2 세경 SAVE 필드 보정 완료 (" + all.length + "건)");
+  }
+})();
+
+/* v5.1: 세경 SAVE tx_type / deduction_amount 필드 보정 */
+(function () {
+  var TE = GoLabTradeEngine;
+  var all = TE.loadAll();
+  if (all.length === 0) return;
+  var changed = false;
+  all.forEach(function (t) {
+    /* 이미 tx_type 존재하면 건너뜀 (멱등) */
+    if (t.segyeong_save_tx_type !== undefined) return;
+    t.segyeong_save_tx_type    = "accrual";
+    t.segyeong_deduction_amount = 0;
+    changed = true;
+  });
+  if (changed) {
+    localStorage.setItem(TE.TRADE_KEY, JSON.stringify(all));
+    TE.emitAudit("UPGRADE_SEGYEONG_TX_TYPE", { count: all.length });
+    console.log("[TRADE ENGINE] v5.1 세경 tx_type/deduction 필드 보정 완료 (" + all.length + "건)");
   }
 })();
