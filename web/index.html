@@ -120,6 +120,21 @@
     .modal .topRow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
     .closeX{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:10px;padding:8px 10px;cursor:pointer}
     .closeX:hover{border-color:#cbd5e1;background:#f8fafc}
+    /* v7: deal_id 클릭 링크 */
+    .deal-link{color:var(--point);text-decoration:underline;cursor:pointer;font-weight:600}
+    .deal-link:hover{color:#1d4ed8}
+    /* v7: 거래 요약 팝업 내부 */
+    .deal-popup-row{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
+    .deal-popup-row .dp-label{color:var(--muted);font-size:12px;min-width:70px}
+    .deal-popup-row .dp-value{font-weight:700;font-size:12px;text-align:right}
+    .deal-popup-items{margin-top:8px;font-size:11px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
+    .deal-popup-items table{min-width:auto;width:100%;font-size:11px}
+    .deal-popup-items th{font-size:10px;padding:6px 8px;background:#f8fafc}
+    .deal-popup-items td{padding:6px 8px;font-size:11px}
+    .deal-popup-footer{text-align:right;margin-top:12px}
+    .deal-popup-footer a{display:inline-block;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;color:var(--point);background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);text-decoration:none}
+    .deal-popup-footer a:hover{background:rgba(37,99,235,.12)}
+    .deal-popup-none{padding:16px;text-align:center;color:var(--muted);font-size:12px}
   </style>
 </head>
 <body>
@@ -251,7 +266,8 @@
               <button id="detailEdit" class="secondary">이 품목 수정</button>
               <button id="detailDelete" class="danger">이 품목 삭제</button>
             </div>
-            <div class="detail-mini" style="margin-top:10px;font-weight:600">최근 입고/변경 히스토리</div>
+            <!-- v6: 입출고 통합 이력 -->
+            <div class="detail-mini" style="margin-top:10px;font-weight:600">📋 최근 입출고 이력</div>
             <div id="detailHist" class="detail-mini"></div>
           </div>
         </aside>
@@ -285,6 +301,19 @@
       </table>
     </div>
     <div class="mini">※ 이 기록은 재고 수량/단가가 자동 변경된 "증빙 로그" 역할입니다.</div>
+  </div>
+</div>
+<!-- v7: 거래 요약 팝업 -->
+<div id="dealPopupBack" class="modalBack" style="display:none">
+  <div class="modal" style="width:min(520px,90vw);max-height:80vh">
+    <div class="topRow">
+      <h3 id="dealPopupTitle">거래 요약</h3>
+      <button id="dealPopupClose" class="closeX">닫기</button>
+    </div>
+    <div id="dealPopupBody"></div>
+    <div id="dealPopupFooter" class="deal-popup-footer">
+      <a id="dealPopupLink" href="deals.html">거래 탭에서 보기 →</a>
+    </div>
   </div>
 </div>
 <script src="js/item-master.js"></script>
@@ -392,19 +421,97 @@
     $("detailPrice").textContent = "₩" + Math.round(price).toLocaleString();
     $("detailTotal").textContent = "₩" + Math.round(total).toLocaleString();
     $("detailNote").textContent = it.note || "-";
+    /* v6: 입출고 통합 이력 — inbound_history + stock_log 병합 */
     const histBox = $("detailHist");
     if(histBox){
-      const list = loadHist();
-      const related = list.filter(h => h.inventoryItemId ? h.inventoryItemId === it.id : (h.name||"") === (it.name||"")).slice(0,5);
-      if(related.length === 0){
-        histBox.textContent = "관련 입고/변경 히스토리가 없습니다.";
-      }else{
-        const lines = related.map(h => {
-          const at = (h.at||"").replace("T"," ").slice(0,16);
-          const qtyText = (Math.round(n(h.qty)*100)/100).toLocaleString() + " " + (h.unit||"");
-          return `${at} · ${qtyText} · ₩${Math.round(n(h.unitPriceKrw)).toLocaleString()}`;
+      const _STOCK_LOG_KEY = "golab_stock_log_v1";
+      const _txIcons = {
+        "inbound":        "📥 입고",
+        "sale_out":       "📤 판매출고",
+        "edit_reverse":   "🔄 수정복원",
+        "cancel_reverse": "❌ 삭제복원"
+      };
+      let merged = [];
+
+      /* 1) 기존 입고 이력 (inbound_history) */
+      const inList = loadHist();
+      const inRelated = inList.filter(h => h.inventoryItemId ? h.inventoryItemId === it.id : (h.name||"") === (it.name||""));
+      inRelated.forEach(h => {
+        merged.push({
+          at: h.at || "",
+          type: "inbound",
+          qty: n(h.qty),
+          unit: h.unit || "",
+          price: n(h.unitPriceKrw),
+          ref: ""
         });
-        histBox.innerHTML = lines.map(t=>`<div>${t}</div>`).join("");
+      });
+
+      /* 2) stock_log (거래 연동 이력) — item_id 매칭 */
+      try {
+        const stockLogs = JSON.parse(localStorage.getItem(_STOCK_LOG_KEY) || "[]");
+        const itemRelated = stockLogs.filter(l => l.item_id === it.item_id);
+        itemRelated.forEach(l => {
+          merged.push({
+            at: l.created_at || "",
+            type: l.tx_type || "sale_out",
+            qty: n(l.qty_change),
+            unit: "",
+            price: 0,
+            ref: l.deal_id || ""
+          });
+        });
+      } catch(_e) {}
+
+      /* 3) 시간순 내림차순 정렬 */
+      merged.sort((a, b) => (b.at || "").localeCompare(a.at || ""));
+      const totalCount = merged.length;
+      const visible = merged.slice(0, 8);
+
+      if(visible.length === 0){
+        histBox.textContent = "이력이 없습니다.";
+      } else {
+        let html = visible.map(m => {
+          const dateStr = (m.at || "").replace("T", " ").slice(5, 16); /* MM-DD HH:MM */
+          const icon = _txIcons[m.type] || m.type;
+          let qtyStr = "";
+          if (m.type === "inbound") {
+            qtyStr = "+" + (Math.round(n(m.qty)*100)/100).toLocaleString() + (m.unit ? " " + m.unit : "");
+          } else {
+            const v = n(m.qty);
+            qtyStr = (v >= 0 ? "+" : "") + v;
+          }
+          let detail = "";
+          if (m.type === "inbound" && m.price > 0) {
+            detail = " · ₩" + Math.round(m.price).toLocaleString();
+          }
+          if (m.ref) {
+            /* v7: deal_id를 클릭 가능한 링크로 렌더링 */
+            detail += ' · <a href="#" class="deal-link" data-deal-id="' + m.ref.replace(/"/g, '&quot;') + '">' + m.ref + '</a>';
+          }
+          const color = m.type === "inbound" ? "var(--accent)"
+                      : m.type === "sale_out" ? "var(--bad)"
+                      : "var(--muted)";
+          return `<div style="padding:2px 0;border-bottom:1px solid var(--line)">`
+            + `<span style="color:var(--muted)">${dateStr}</span> `
+            + `${icon} `
+            + `<span style="font-weight:700;color:${color}">${qtyStr}</span>`
+            + `<span style="color:var(--muted);font-size:10px">${detail}</span>`
+            + `</div>`;
+        }).join("");
+        if (totalCount > 8) {
+          html += `<div style="padding:4px 0;font-size:10px;color:var(--point);font-weight:600">전체 ${totalCount}건 중 8건 표시</div>`;
+        }
+        histBox.innerHTML = html;
+        /* v7: deal_id 클릭 이벤트 위임 — histBox 단위 바인딩 */
+        histBox.onclick = function(e) {
+          var link = e.target.closest(".deal-link");
+          if (!link) return;
+          e.preventDefault();
+          e.stopPropagation();
+          var dealId = link.dataset.dealId;
+          if (dealId) _showDealPopup(dealId);
+        };
       }
     }
     const btnEdit = $("detailEdit");
@@ -672,6 +779,106 @@
       setSaveErrorState("치명적 오류(전송 실패 등)가 발생했습니다. 잠시 후 다시 시도하거나 관리자에게 문의해주세요.");
     }
   }
+  /* ══════════════════════════════════════
+     v7: 거래 요약 팝업 (deal_id 클릭 → 거래 정보 표시)
+     — trade-engine.js 미로드, golab_trade_v2 직접 조회
+     ══════════════════════════════════════ */
+
+  /** golab_trade_v2에서 id 기준 거래 조회 (deal_id 아님) */
+  function _loadTradeById(tradeId) {
+    try {
+      var trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]");
+      for (var i = 0; i < trades.length; i++) {
+        if (trades[i].id === tradeId) return trades[i];
+      }
+    } catch(_e) {}
+    return null;
+  }
+
+  /** 거래 요약 팝업 열기 */
+  function _showDealPopup(dealId) {
+    var trade = _loadTradeById(dealId);
+    var bodyEl = $("dealPopupBody");
+    var footerEl = $("dealPopupFooter");
+    var titleEl = $("dealPopupTitle");
+    var linkEl = $("dealPopupLink");
+    if (!bodyEl) return;
+
+    if (!trade) {
+      /* 조회 실패 */
+      titleEl.textContent = "거래 요약";
+      bodyEl.innerHTML = '<div class="deal-popup-none">거래 데이터를 찾을 수 없습니다.<br><span style="font-size:11px">(삭제되었거나 ID 오류)</span></div>';
+      footerEl.style.display = "none";
+    } else {
+      /* 조회 성공 — raw 데이터에서 직접 합산 */
+      var items = trade.items || [];
+      var totalSupply = 0;
+      var totalCost = 0;
+      var hasCost = false;
+      items.forEach(function(it) {
+        totalSupply += Math.round(n(it.qty) * n(it.unit_price));
+        if (it.cost != null && it.cost !== "") {
+          totalCost += n(it.cost);
+          hasCost = true;
+        }
+      });
+      /* 부대비용 합산 */
+      var extraCosts = trade.extra_costs || [];
+      extraCosts.forEach(function(ec) {
+        if (ec.affects_profit !== false) {
+          totalCost += n(ec.amount);
+        }
+      });
+
+      var typeLabel = trade.trade_type === "channel" ? "관리업체" : "직접";
+      var channelInfo = trade.channel_name_snapshot ? (" (" + trade.channel_name_snapshot + ")") : "";
+
+      titleEl.textContent = "거래 요약 · " + (trade.id || "");
+
+      var html = "";
+      /* 기본 정보 행들 */
+      html += '<div class="deal-popup-row"><div class="dp-label">거래일</div><div class="dp-value">' + (trade.deal_date || "-") + '</div></div>';
+      html += '<div class="deal-popup-row"><div class="dp-label">거래처</div><div class="dp-value">' + (trade.partner_name_snapshot || "-") + '</div></div>';
+      html += '<div class="deal-popup-row"><div class="dp-label">유형</div><div class="dp-value">' + typeLabel + channelInfo + '</div></div>';
+      html += '<div class="deal-popup-row"><div class="dp-label">총 매출</div><div class="dp-value">₩' + Math.round(totalSupply).toLocaleString() + '</div></div>';
+      if (hasCost) {
+        html += '<div class="deal-popup-row"><div class="dp-label">총 원가</div><div class="dp-value">₩' + Math.round(totalCost).toLocaleString() + '</div></div>';
+        var gross = totalSupply - totalCost;
+        html += '<div class="deal-popup-row"><div class="dp-label">총이익</div><div class="dp-value" style="color:' + (gross >= 0 ? "var(--accent)" : "var(--bad)") + '">₩' + Math.round(gross).toLocaleString() + '</div></div>';
+      }
+      if (trade.memo) {
+        html += '<div class="deal-popup-row"><div class="dp-label">메모</div><div class="dp-value" style="font-weight:400;color:var(--muted)">' + (trade.memo || "").replace(/</g, "&lt;") + '</div></div>';
+      }
+
+      /* 품목 테이블 */
+      if (items.length > 0) {
+        html += '<div style="margin-top:10px;font-size:11px;font-weight:600;color:var(--muted)">품목 (' + items.length + '건)</div>';
+        html += '<div class="deal-popup-items"><table><thead><tr><th>품목명</th><th style="text-align:right">수량</th><th style="text-align:right">단가</th><th style="text-align:right">매출</th></tr></thead><tbody>';
+        items.forEach(function(it) {
+          var sa = Math.round(n(it.qty) * n(it.unit_price));
+          html += '<tr>';
+          html += '<td>' + ((it.name || "").replace(/</g, "&lt;") || "-") + '</td>';
+          html += '<td style="text-align:right">' + n(it.qty) + '</td>';
+          html += '<td style="text-align:right">₩' + Math.round(n(it.unit_price)).toLocaleString() + '</td>';
+          html += '<td style="text-align:right;font-weight:600">₩' + Math.round(sa).toLocaleString() + '</td>';
+          html += '</tr>';
+        });
+        html += '</tbody></table></div>';
+      }
+
+      bodyEl.innerHTML = html;
+      footerEl.style.display = "block";
+      linkEl.href = "deals.html";
+    }
+
+    $("dealPopupBack").style.display = "flex";
+  }
+
+  /** 거래 요약 팝업 닫기 */
+  function _closeDealPopup() {
+    $("dealPopupBack").style.display = "none";
+  }
+
   function bindEvents(){
     if(isEventBound) return;
     isEventBound = true;
@@ -694,6 +901,11 @@
     $("btnClose").onclick = closeHistory;
     $("modalBack").addEventListener("click", (e)=>{
       if(e.target.id === "modalBack") closeHistory();
+    });
+    /* v7: 거래 요약 팝업 닫기 이벤트 */
+    $("dealPopupClose").onclick = _closeDealPopup;
+    $("dealPopupBack").addEventListener("click", (e)=>{
+      if(e.target.id === "dealPopupBack") _closeDealPopup();
     });
     $("inPrice").addEventListener("input", validateForm);
     $("inQty").addEventListener("input", validateForm);

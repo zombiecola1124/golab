@@ -253,6 +253,13 @@
           <input id="inRegion" placeholder="예: 시흥, 도쿄" />
         </div>
       </div>
+      <!-- v5.4: partner_tag 입력 (수익탭 주요거래처 분류용) -->
+      <div class="row">
+        <div>
+          <label>태그 <span class="opt">(선택)</span></label>
+          <input id="inPartnerTag" placeholder="예: daesung (수익탭 분류용)" />
+        </div>
+      </div>
 
       <div class="sp-section-title" style="margin-top:12px">연락 정보</div>
       <div class="row r2">
@@ -523,6 +530,7 @@ function buildPanelView(p){
   if(p.dept)         html += '<span><b>부서:</b> ' + esc(p.dept) + '</span>';
   if(p.phone)        html += '<span><b>전화:</b> ' + renderPhone(p.phone) + '</span>';
   if(p.email)        html += '<span><b>이메일:</b> ' + renderEmail(p.email) + '</span>';
+  if(p.partner_tag)  html += '<span><b>태그:</b> ' + esc(p.partner_tag) + '</span>';
   if(p.memo)         html += '<span><b>메모:</b> ' + esc(p.memo) + '</span>';
   var regDate = p.created_at ? p.created_at.substring(0,10) : "-";
   html += '<span><b>등록일:</b> ' + regDate + '</span>';
@@ -639,6 +647,7 @@ function fillForm(p){
   $("inAccountHolder").value = p.account_holder || "";
   $("inAccountNumber").value = p.account_number || "";
   $("inBillingEmail").value  = p.billing_email || "";
+  $("inPartnerTag").value    = p.partner_tag || "";
   $("inMemo").value          = p.memo || "";
 }
 
@@ -655,6 +664,7 @@ function clearForm(){
   $("inAccountHolder").value = "";
   $("inAccountNumber").value = "";
   $("inBillingEmail").value  = "";
+  $("inPartnerTag").value    = "";
   $("inMemo").value          = "";
   editingId = null;
 }
@@ -679,6 +689,7 @@ function savePartner(){
     account_holder: $("inAccountHolder").value,
     account_number: $("inAccountNumber").value,
     billing_email:  $("inBillingEmail").value,
+    partner_tag:    $("inPartnerTag").value,
     memo:           $("inMemo").value
   };
 

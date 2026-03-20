@@ -100,6 +100,26 @@
     .search-input:focus{border-color:var(--primary)}
     .search-input::placeholder{color:var(--muted);font-size:11px}
 
+    /* -- v5.6: 품목 필터 드롭다운 -- */
+    .item-filter-select{padding:6px 10px;border-radius:8px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:11px;font-family:inherit;outline:none;min-width:120px;max-width:200px;cursor:pointer;transition:border-color .15s}
+    .item-filter-select:focus{border-color:var(--primary)}
+    .item-filter-select.active{color:var(--primary);border-color:rgba(37,99,235,.3);background:rgba(37,99,235,.06)}
+
+    /* -- v5.6: 품목 TOP 5 카드 -- */
+    .item-top5-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.04);margin-bottom:16px}
+    .item-top5-header{display:flex;align-items:center;justify-content:space-between;cursor:pointer;user-select:none}
+    .item-top5-header h4{font-size:12px;font-weight:700;display:flex;align-items:center;gap:6px;margin:0}
+    .item-top5-header .toggle-arrow{font-size:11px;color:var(--muted);transition:transform .2s}
+    .item-top5-body{margin-top:12px}
+    .item-top5-table{width:100%;border-collapse:collapse;font-size:11px}
+    .item-top5-table thead th{text-align:left;padding:5px 8px;border-bottom:2px solid var(--border);color:var(--muted);font-weight:700;font-size:10px;text-transform:uppercase;letter-spacing:.3px;white-space:nowrap}
+    .item-top5-table thead th.r{text-align:right}
+    .item-top5-table tbody td{padding:4px 8px;border-bottom:1px solid var(--border);font-variant-numeric:tabular-nums}
+    .item-top5-table tbody td.r{text-align:right;font-weight:600}
+    .item-top5-table tbody td.name{font-weight:600;max-width:160px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap}
+    .item-top5-foot{font-size:10px;color:var(--muted);margin-top:8px;padding-top:6px;border-top:1px solid var(--border)}
+    .unlinked-badge{display:inline-block;padding:1px 6px;border-radius:4px;font-size:9px;font-weight:700;background:rgba(220,38,38,.08);color:var(--warn)}
+
     /* -- v3.2: 미입금 토글 -- */
     .unpaid-toggle.active{color:#b45309;background:rgba(217,119,6,.1);border-color:rgba(217,119,6,.3)}
 
@@ -275,6 +295,8 @@
   <!-- v3.2: 검색 + 미입금 필터 + 정렬 -->
   <div class="filter-bar" id="searchSortBar" style="gap:8px;align-items:center;flex-wrap:wrap">
     <input type="text" class="search-input" id="profitSearch" placeholder="🔍 거래처, 품목, 관리업체 검색" />
+    <!-- v5.6: 품목 퀵 필터 -->
+    <select class="item-filter-select" id="itemFilterSelect"><option value="">📦 품목 전체</option></select>
     <button class="fbtn unpaid-toggle" id="btnUnpaidOnly">📋 미입금만</button>
     <span class="sort-sep">|</span>
     <span class="sort-label">정렬:</span>
@@ -323,6 +345,14 @@
       <span style="font-size:11px;color:#64748b;margin-left:8px">순잔액:</span>
       <span style="font-size:16px;font-weight:800;color:#7c3aed" id="kSegyeongTotal">₩0</span>
     </div>
+  </div>
+
+  <!-- v5.6: 품목 TOP 5 요약 카드 -->
+  <div class="item-top5-card" id="itemTop5Card" style="display:none">
+    <div class="item-top5-header" id="itemTop5Toggle">
+      <h4>📦 품목 매출 TOP 5 <span class="toggle-arrow" id="itemTop5Arrow">▼</span></h4>
+    </div>
+    <div class="item-top5-body" id="itemTop5Body" style="display:none"></div>
   </div>
 
   <!-- 거래 원장 테이블 -->
@@ -561,6 +591,107 @@ var currentSortKey = "date";        // "date"|"revenue"|"myProfit"|"unpaid"
 var currentSortDir = "desc";        // "desc"|"asc"
 var unpaidOnly = false;             // 미입금만 필터
 var _searchTimer = null;            // 검색 debounce 타이머
+var currentItemFilter = "";         // v5.6: 품목 필터 (품목명, ""=전체)
+var _itemTop5Open = false;          // v5.6: TOP 5 카드 접힘 상태
+
+/* ══════════════════════════════════════════════════════
+   v5.6: 품목별 집계 유틸
+   — item_id 우선, null이면 name 보조 (하이브리드)
+   ══════════════════════════════════════════════════════ */
+function _aggregateItems(deals) {
+  var map = {}; /* key → { key, name, item_id, deals, qty, supply, cost, costKnown } */
+  deals.forEach(function(d) {
+    var items = d.items || [];
+    items.forEach(function(it) {
+      /* 집계 키: item_id 우선, 없으면 name trim */
+      var key = it.item_id || ("__name__" + (it.name || "").trim());
+      if (!map[key]) {
+        map[key] = {
+          key: key,
+          name: (it.name || "(미지정)").trim(),
+          item_id: it.item_id || null,
+          dealCount: 0,
+          qty: 0,
+          supply: 0,
+          cost: 0,
+          costKnown: 0, /* 원가 입력된 건수 */
+          _dealIds: {}   /* 중복 제거용 */
+        };
+      }
+      var agg = map[key];
+      if (!agg._dealIds[d.id]) { agg.dealCount++; agg._dealIds[d.id] = true; }
+      agg.qty += n(it.qty);
+      agg.supply += Math.round(n(it.qty) * n(it.unit_price));
+      if (it.cost != null && it.cost !== "") {
+        agg.cost += Math.round(n(it.cost));
+        agg.costKnown++;
+      }
+    });
+  });
+  /* 배열 변환 + 매출 기준 내림차순 정렬 */
+  var arr = [];
+  for (var k in map) { delete map[k]._dealIds; arr.push(map[k]); }
+  arr.sort(function(a, b) { return b.supply - a.supply; });
+  return arr;
+}
+
+/* v5.6: 품목 필터 드롭다운 갱신 (매출 상위 20개) */
+function _buildItemFilterOptions(deals) {
+  var sel = $("itemFilterSelect");
+  var prev = sel.value; /* 현재 선택값 유지 */
+  var agg = _aggregateItems(deals);
+  var top20 = agg.slice(0, 20);
+  var html = '<option value="">📦 품목 전체</option>';
+  top20.forEach(function(it) {
+    var label = it.name + " (" + it.dealCount + "건)";
+    if (!it.item_id) label = "⚠ " + label;
+    html += '<option value="' + esc(it.key) + '">' + esc(label) + '</option>';
+  });
+  sel.innerHTML = html;
+  /* 이전 선택값 복원 (옵션에 아직 있으면) */
+  if (prev && sel.querySelector('option[value="' + prev + '"]')) {
+    sel.value = prev;
+  } else {
+    sel.value = "";
+    currentItemFilter = "";
+  }
+  sel.classList.toggle("active", !!sel.value);
+}
+
+/* v5.6: 품목 TOP 5 카드 렌더 */
+function _renderItemTop5(deals) {
+  var card = $("itemTop5Card");
+  var body = $("itemTop5Body");
+  var agg = _aggregateItems(deals);
+  if (agg.length === 0) { card.style.display = "none"; return; }
+  card.style.display = "";
+  if (!_itemTop5Open) { body.style.display = "none"; return; }
+  body.style.display = "";
+  var top5 = agg.slice(0, 5);
+  var unlinkCount = 0;
+  agg.forEach(function(it) { if (!it.item_id) unlinkCount++; });
+  var html = '<table class="item-top5-table"><thead><tr>';
+  html += '<th>#</th><th>품목명</th><th class="r">건수</th><th class="r">수량</th><th class="r">매출</th><th class="r">원가</th>';
+  html += '</tr></thead><tbody>';
+  top5.forEach(function(it, i) {
+    html += '<tr>';
+    html += '<td style="color:var(--muted)">' + (i + 1) + '</td>';
+    html += '<td class="name">';
+    if (!it.item_id) html += '<span class="unlinked-badge">미연결</span> ';
+    html += esc(it.name) + '</td>';
+    html += '<td class="r">' + it.dealCount + '</td>';
+    html += '<td class="r">' + it.qty.toLocaleString() + '</td>';
+    html += '<td class="r">' + fmtW(it.supply) + '</td>';
+    html += '<td class="r">' + (it.costKnown > 0 ? fmtW(it.cost) : '<span style="color:var(--muted)">—</span>') + '</td>';
+    html += '</tr>';
+  });
+  html += '</tbody></table>';
+  html += '<div class="item-top5-foot">';
+  html += '* 품목명 기준 집계 · item_id 우선, 미연결 품목은 이름 기준 그룹';
+  if (unlinkCount > 0) html += ' · <span class="unlinked-badge">미연결</span> ' + unlinkCount + '건 별도 표시';
+  html += '</div>';
+  body.innerHTML = html;
+}
 
 /* ======================================================
    델타 계산 (전월 대비 ▲/▼)
@@ -1015,12 +1146,15 @@ function render(){
   /* v3.15: 사업축 탭 동적 생성 (항상 전체 기간 deals 기준) */
   buildBusinessFilterTabs(cur.deals);
 
+  /* v5.6: 품목 필터 드롭다운 갱신 (사업축 필터 전, 전체 deals 기준) */
+  _buildItemFilterOptions(cur.deals);
+
   /* ── 관제 화면 (항상 표시) ── */
   $("emptyState").style.display = "none";
   $("ledgerHeader").style.display = "flex";
   $("ledgerTable").style.display = "table";
 
-  /* ── v3.15: 필터 파이프라인 (사업축→검색→미입금) ── */
+  /* ── v3.15→v5.6: 필터 파이프라인 (사업축→품목→검색→미입금) ── */
   var filteredDeals = cur.deals;
 
   /* 1) 사업축 필터 */
@@ -1029,6 +1163,18 @@ function render(){
     if (tabDef) {
       filteredDeals = filteredDeals.filter(tabDef.filter);
     }
+  }
+
+  /* 1.5) v5.6: 품목 필터 — 선택된 품목이 포함된 거래만 */
+  if (currentItemFilter) {
+    filteredDeals = filteredDeals.filter(function(d) {
+      var items = d.items || [];
+      for (var i = 0; i < items.length; i++) {
+        var key = items[i].item_id || ("__name__" + (items[i].name || "").trim());
+        if (key === currentItemFilter) return true;
+      }
+      return false;
+    });
   }
 
   /* 2) v5: 검색 3필드 — partner + items + channel (정규화: trim + toLowerCase) */
@@ -1112,9 +1258,12 @@ function render(){
     $("segyeongStrip").style.display = "none";
   }
 
+  /* v5.6: 품목 TOP 5 카드 (filteredDeals 기준) */
+  _renderItemTop5(filteredDeals);
+
   /* -- 거래 원장 테이블 -- */
   var thisYear = new Date().getFullYear().toString();
-  var hasFilter = (currentTarget !== "all" || currentSearchQuery || unpaidOnly);
+  var hasFilter = (currentTarget !== "all" || currentSearchQuery || unpaidOnly || currentItemFilter);
   $("ledgerCount").textContent = filteredDeals.length + (hasFilter ? " / " + cur.dealCount : "");
 
   if(!filteredDeals.length){
@@ -1247,6 +1396,25 @@ $("profitSearch").addEventListener("input", function(){
     _expandedId = null;
     render();
   }, 200);
+});
+
+/* ======================================================
+   v5.6: 품목 필터 드롭다운 이벤트
+   ====================================================== */
+$("itemFilterSelect").addEventListener("change", function(){
+  currentItemFilter = this.value;
+  this.classList.toggle("active", !!this.value);
+  _expandedId = null;
+  render();
+});
+
+/* ======================================================
+   v5.6: 품목 TOP 5 토글 이벤트
+   ====================================================== */
+$("itemTop5Toggle").addEventListener("click", function(){
+  _itemTop5Open = !_itemTop5Open;
+  $("itemTop5Arrow").textContent = _itemTop5Open ? "▲" : "▼";
+  render();
 });
 
 /* ======================================================

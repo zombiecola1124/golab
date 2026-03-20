@@ -1120,6 +1120,34 @@ function renderItems() {
       /* v3.11: focus 시 2글자 이상이면 드롭다운 표시 */
       if ((el.value || "").length >= 2) _showItemDropdown(el);
     });
+    /* v5.5: blur 시 품목 자동 매칭 — item_id null이고 정확히 1건 매칭 시 자동 연결 */
+    el.addEventListener("blur", function() {
+      var idx = +el.dataset.idx;
+      if (_items[idx].item_id) return; /* 이미 연결됨 */
+      var typed = (el.value || "").trim();
+      if (!typed) return;
+      if (typeof GoLabItemMaster === "undefined") return;
+      var all = GoLabItemMaster.loadAll();
+      var exactMatches = all.filter(function(m) {
+        return (m.item_name || "").trim() === typed;
+      });
+      if (exactMatches.length !== 1) return; /* 0건 또는 2건 이상이면 미연결 유지 */
+      var matched = exactMatches[0];
+      _items[idx].item_id = matched.item_id;
+      _items[idx].name = matched.item_name;
+      /* 원가 자동 채움 + 참고 칩 표시 (드롭다운 선택과 동일) */
+      var purchaseInfo = null;
+      if (GoLabItemMaster.getLatestPurchaseCost) {
+        purchaseInfo = GoLabItemMaster.getLatestPurchaseCost(matched.item_id);
+      }
+      _showItemRefInfo(idx, matched, purchaseInfo);
+      if (purchaseInfo && purchaseInfo.cost > 0 && (_items[idx].cost == null || _items[idx].cost === "")) {
+        _items[idx].cost = purchaseInfo.cost;
+        var costInput = $("itemsBody").querySelector('.it-cost[data-idx="' + idx + '"]');
+        if (costInput) costInput.value = purchaseInfo.cost;
+      }
+      updateCockpit();
+    });
     /* v3.11: 키보드 네비게이션 (↑↓ Enter Esc) */
     el.addEventListener("keydown", function(e) {
       var dd = $("itemDropdown");
@@ -2616,6 +2644,246 @@ function toggleDetail(tid) {
 }
 
 
+/* ══════════════════════════════════════════════════════
+   v6: 재고↔거래 연동 — Phase 1
+   ══════════════════════════════════════════════════════ */
+var _STOCK_LOG_KEY = "golab_stock_log_v1";
+var _INV_KEY = "golab_inventory_v01";
+
+/* 재고 목록 로드/저장 */
+function _loadInv() {
+  try { return JSON.parse(localStorage.getItem(_INV_KEY) || "[]"); }
+  catch(e) { return []; }
+}
+function _saveInv(arr) {
+  localStorage.setItem(_INV_KEY, JSON.stringify(arr));
+}
+
+/* stock_log 로드/저장 */
+function _loadStockLog() {
+  try { return JSON.parse(localStorage.getItem(_STOCK_LOG_KEY) || "[]"); }
+  catch(e) { return []; }
+}
+function _saveStockLog(arr) {
+  localStorage.setItem(_STOCK_LOG_KEY, JSON.stringify(arr));
+}
+
+/* stock_log ID 생성: SL20260320-001 (세션 내 카운터로 중복 방지) */
+var _stockLogSeqCounter = 0;
+function _genStockLogId() {
+  var d = new Date();
+  var prefix = "SL" + d.getFullYear()
+    + String(d.getMonth() + 1).padStart(2, "0")
+    + String(d.getDate()).padStart(2, "0") + "-";
+  var logs = _loadStockLog();
+  var max = _stockLogSeqCounter;
+  logs.forEach(function(l) {
+    if (l.log_id && l.log_id.indexOf(prefix) === 0) {
+      var seq = parseInt(l.log_id.substring(prefix.length), 10);
+      if (seq > max) max = seq;
+    }
+  });
+  _stockLogSeqCounter = max + 1;
+  return prefix + String(_stockLogSeqCounter).padStart(3, "0");
+}
+
+/**
+ * v6: 판매 거래 저장 시 재고 차감 처리
+ * - solo/settle만 대상 (channel 제외)
+ * - item_id 있는 품목만 대상
+ * - 재고 레코드 없는 품목은 스킵 (사전 경고 별도)
+ * - 재고 부족 시에도 차감 진행 (사전 confirm 별도)
+ * @param {object} trade - 저장 완료된 거래 객체
+ */
+function _applyStockDeduction(trade) {
+  if (!trade || !trade.items) return;
+  /* channel(중개)은 재고 변동 없음 */
+  if (trade.trade_type === "channel") return;
+
+  var inv = _loadInv();
+  var logs = _loadStockLog();
+  var changed = false;
+
+  trade.items.forEach(function(it) {
+    if (!it.item_id) return; /* 미연결 품목 → 재고 연동 제외 */
+    /* 재고 레코드에서 item_id 매칭 */
+    var invItem = null;
+    for (var i = 0; i < inv.length; i++) {
+      if (inv[i].item_id === it.item_id) { invItem = inv[i]; break; }
+    }
+    if (!invItem) return; /* 재고 레코드 없음 → 스킵 */
+
+    var qtyBefore = TE.n(invItem.qty);
+    var qtyChange = -Math.abs(TE.n(it.qty)); /* 판매 = 차감 */
+    invItem.qty = qtyBefore + qtyChange;
+    invItem.updatedAt = new Date().toISOString();
+    changed = true;
+
+    /* stock_log 기록 */
+    logs.push({
+      log_id:     _genStockLogId(),
+      deal_id:    trade.id,
+      item_id:    it.item_id,
+      item_name:  it.name || "",
+      tx_type:    "sale_out",
+      qty_before: qtyBefore,
+      qty_change: qtyChange,
+      qty_after:  invItem.qty,
+      created_at: new Date().toISOString()
+    });
+  });
+
+  if (changed) {
+    _saveInv(inv);
+    _saveStockLog(logs);
+  }
+}
+
+/**
+ * v6: 거래 삭제 시 stock_log 기반 역분개로 재고 복원
+ * @param {string} dealId - 삭제할 거래 ID
+ */
+function _reverseStockForDeal(dealId) {
+  var logs = _loadStockLog();
+  /* 아직 복원되지 않은 sale_out만 대상 */
+  var targetLogs = logs.filter(function(l) {
+    return l.deal_id === dealId && l.tx_type === "sale_out" && !l._reversed;
+  });
+  if (targetLogs.length === 0) return;
+
+  var inv = _loadInv();
+
+  targetLogs.forEach(function(orig) {
+    /* 재고 레코드 찾기 */
+    var invItem = null;
+    for (var i = 0; i < inv.length; i++) {
+      if (inv[i].item_id === orig.item_id) { invItem = inv[i]; break; }
+    }
+    if (!invItem) return; /* 재고 레코드 삭제된 경우 스킵 */
+
+    var qtyBefore = TE.n(invItem.qty);
+    var qtyRestore = Math.abs(orig.qty_change); /* 차감의 절대값 = 복원량 */
+    invItem.qty = qtyBefore + qtyRestore;
+    invItem.updatedAt = new Date().toISOString();
+
+    /* 원본 sale_out에 복원 완료 마커 */
+    orig._reversed = true;
+
+    /* 역분개 로그 기록 */
+    logs.push({
+      log_id:     _genStockLogId(),
+      deal_id:    dealId,
+      item_id:    orig.item_id,
+      item_name:  orig.item_name || "",
+      tx_type:    "cancel_reverse",
+      qty_before: qtyBefore,
+      qty_change: qtyRestore,
+      qty_after:  invItem.qty,
+      created_at: new Date().toISOString()
+    });
+  });
+
+  _saveInv(inv);
+  _saveStockLog(logs);
+}
+
+/**
+ * v6 Phase 2: 수정 저장 시 기존 차감분 복원 (edit_reverse)
+ * — _reverseStockForDeal과 동일 로직, tx_type만 "edit_reverse"
+ * @param {string} dealId - 수정 대상 거래 ID
+ */
+function _reverseStockForEdit(dealId) {
+  var logs = _loadStockLog();
+  /* 아직 복원(reversed)되지 않은 sale_out만 대상 */
+  var targetLogs = logs.filter(function(l) {
+    return l.deal_id === dealId && l.tx_type === "sale_out" && !l._reversed;
+  });
+  if (targetLogs.length === 0) return;
+
+  var inv = _loadInv();
+
+  targetLogs.forEach(function(orig) {
+    var invItem = null;
+    for (var i = 0; i < inv.length; i++) {
+      if (inv[i].item_id === orig.item_id) { invItem = inv[i]; break; }
+    }
+    if (!invItem) return;
+
+    var qtyBefore = TE.n(invItem.qty);
+    var qtyRestore = Math.abs(orig.qty_change);
+    invItem.qty = qtyBefore + qtyRestore;
+    invItem.updatedAt = new Date().toISOString();
+
+    /* 원본 sale_out에 복원 완료 마커 */
+    orig._reversed = true;
+
+    logs.push({
+      log_id:     _genStockLogId(),
+      deal_id:    dealId,
+      item_id:    orig.item_id,
+      item_name:  orig.item_name || "",
+      tx_type:    "edit_reverse",
+      qty_before: qtyBefore,
+      qty_change: qtyRestore,
+      qty_after:  invItem.qty,
+      created_at: new Date().toISOString()
+    });
+  });
+
+  _saveInv(inv);
+  _saveStockLog(logs);
+}
+
+/**
+ * v6: 저장 전 재고 사전 검증 — 경고만, 차단 안 함
+ * @param {array} validItems - 유효 품목 배열
+ * @param {string} tradeType - "solo" | "settle" | "channel"
+ * @returns {boolean} true=저장 진행, false=사용자 취소
+ */
+function _checkStockBeforeSave(validItems, tradeType) {
+  /* channel은 재고 변동 없으므로 검증 불필요 */
+  if (tradeType === "channel") return true;
+
+  var inv = _loadInv();
+  var noRecordNames = [];   /* 재고 레코드 없음 */
+  var shortageNames = [];   /* 재고 부족 */
+
+  validItems.forEach(function(it) {
+    if (!it.item_id) return; /* 미연결 품목 → 재고 연동 대상 아님 */
+    var invItem = null;
+    for (var i = 0; i < inv.length; i++) {
+      if (inv[i].item_id === it.item_id) { invItem = inv[i]; break; }
+    }
+    if (!invItem) {
+      noRecordNames.push("• " + (it.name || "") + " (재고 레코드 없음)");
+      return;
+    }
+    var currentQty = TE.n(invItem.qty);
+    var needQty = TE.n(it.qty);
+    if (currentQty < needQty) {
+      shortageNames.push("• " + (it.name || "") + " (현재 " + currentQty + " / 필요 " + needQty + ")");
+    }
+  });
+
+  /* 경고 1: 재고 레코드 없음 */
+  if (noRecordNames.length > 0) {
+    var msg1 = "📦 재고 레코드가 없는 품목 " + noRecordNames.length + "건:\n\n" +
+               noRecordNames.join("\n") +
+               "\n\n→ 이 품목은 재고 차감 없이 저장됩니다.\n계속하시겠습니까?";
+    if (!confirm(msg1)) return false;
+  }
+
+  /* 경고 2: 재고 부족 */
+  if (shortageNames.length > 0) {
+    var msg2 = "⚠️ 재고 부족 " + shortageNames.length + "건:\n\n" +
+               shortageNames.join("\n") +
+               "\n\n재고가 마이너스가 됩니다.\n이대로 저장하시겠습니까?";
+    if (!confirm(msg2)) return false;
+  }
+
+  return true;
+}
+
 /* ══════ CRUD ══════ */
 function saveTrade() {
   var partnerId = acPartner.getValue();
@@ -2627,11 +2895,38 @@ function saveTrade() {
   });
   if (validItems.length === 0) { alert("품목을 1개 이상 입력해주세요.\n(품목명, 수량, 단가 필수)"); return; }
 
-  var partner = GoLabPartnerMaster.getById(partnerId);
+  /* v5.5: 미연결 품목 경고 — item_id null인 품목 검출 */
+  var _unlinkNames = [];
+  var _firstUnlinkIdx = -1;
+  validItems.forEach(function(it) {
+    if (!it.item_id) {
+      _unlinkNames.push("• " + (it.name || "(이름없음)"));
+      if (_firstUnlinkIdx < 0) _firstUnlinkIdx = _items.indexOf(it);
+    }
+  });
+  if (_unlinkNames.length > 0) {
+    var _msg = "⚠️ 품목 " + _unlinkNames.length + "건이 품목 마스터에 연결되지 않았습니다:\n\n" +
+               _unlinkNames.join("\n") +
+               "\n\n이대로 저장하시겠습니까?";
+    if (!confirm(_msg)) {
+      /* 취소 → 첫 번째 미연결 품목으로 포커스 */
+      if (_firstUnlinkIdx >= 0) {
+        var _focusEl = $("itemsBody").querySelector('.it-name[data-idx="' + _firstUnlinkIdx + '"]');
+        if (_focusEl) _focusEl.focus();
+      }
+      return;
+    }
+  }
+
   /* v3.0: 3-way 유형 (solo/settle/channel) */
   var typeVal   = $("inTradeType").value;
   var isChannel = typeVal === "channel";
   var isSolo    = typeVal === "solo";
+
+  /* v6: 재고 사전 검증 (신규 + 수정 공통, channel 제외) */
+  if (!_checkStockBeforeSave(validItems, typeVal)) return;
+
+  var partner = GoLabPartnerMaster.getById(partnerId);
   var channelId = isChannel ? ($("inChannel").value || null) : null;
 
   if (isChannel && !channelId) { alert("관리업체를 선택해주세요."); return; }
@@ -2702,10 +2997,41 @@ function saveTrade() {
   };
 
   try {
+    var _savedTrade;
     if (editingId) {
-      TE.update(editingId, fields);
+      /* v6 Phase 2: 수정 저장 — 복원 후 재차감 방식 */
+      var _oldTrade = TE.getById(editingId);
+      var _oldType = _oldTrade ? _oldTrade.trade_type : null;
+      var _newIsChannel = (typeVal === "channel");
+      var _oldHasStockLog = false;
+
+      /* 1) 기존 거래가 solo/settle(direct)이면 → 기존 차감분 복원 */
+      if (_oldType !== "channel") {
+        var _existLogs = _loadStockLog().filter(function(l) {
+          return l.deal_id === editingId && l.tx_type === "sale_out";
+        });
+        if (_existLogs.length > 0) {
+          _oldHasStockLog = true;
+          _reverseStockForEdit(editingId);
+        } else {
+          /* 기존 출고 기록 없음 — 경고 후 진행 */
+          alert("ℹ️ 기존 출고 기록을 찾을 수 없어 복원 없이 진행합니다.");
+        }
+      }
+
+      /* 2) TE.update 실행 */
+      _savedTrade = TE.update(editingId, fields);
+
+      /* 3) 수정 후 solo/settle이면 → 새 거래 기준으로 재차감 */
+      if (!_newIsChannel && _savedTrade) {
+        _applyStockDeduction(_savedTrade);
+      }
+      /* channel→channel: 무변동, solo→channel: 복원만, channel→solo: 차감만 */
     } else {
-      TE.create(fields);
+      /* v6: 신규 저장 — 재고 검증은 위에서 완료 */
+      _savedTrade = TE.create(fields);
+      /* v6: 신규 거래 저장 성공 후 재고 자동 차감 */
+      if (_savedTrade) _applyStockDeduction(_savedTrade);
     }
     /* v5.2: 패널 닫기 + 목록 갱신 */
     closePanel();
@@ -2815,6 +3141,8 @@ function deleteTrade(tid) {
   if (!t) return;
   var dispName = TE.itemDisplayName(t);
   if (!confirm('"'+esc(t.partner_name_snapshot)+" - "+esc(dispName)+'" 거래를 삭제하시겠습니까?')) return;
+  /* v6: 삭제 전 stock_log 기반 역분개로 재고 복원 */
+  _reverseStockForDeal(tid);
   TE.remove(tid);
   if (_expandedId === tid) _expandedId = null;
   computeKPI(); render();
