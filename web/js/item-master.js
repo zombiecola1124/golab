@@ -44,13 +44,13 @@ window.GoLabItemMaster = (function () {
 
   /** 전체 품목 마스터 로드 */
   function loadAll() {
-    try { return JSON.parse(localStorage.getItem(MASTER_KEY) || "[]"); }
+    try { return JSON.parse(GoLabStorage.getItem(MASTER_KEY) || "[]"); }
     catch { return []; }
   }
 
   /** 저장 */
   function _save(arr) {
-    localStorage.setItem(MASTER_KEY, JSON.stringify(arr));
+    GoLabStorage.setItem(MASTER_KEY, JSON.stringify(arr));
   }
 
   /** 단건 조회 (by item_id) */
@@ -827,7 +827,7 @@ window.GoLabItemMaster = (function () {
     if (!itemId) return empty;
 
     let trades = [];
-    try { trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
+    try { trades = JSON.parse(GoLabStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
 
     /* 거래처별 집계 맵 */
     const buyerMap = {};   // partner_id → { name, lastDate, lastPrice, totalQty, txCount }
@@ -967,7 +967,7 @@ window.GoLabItemMaster = (function () {
   function getDealsByItem(itemId) {
     if (!itemId) return [];
     let trades = [];
-    try { trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
+    try { trades = JSON.parse(GoLabStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
     return trades.filter(function(deal) {
       if (deal.deal_status === "cancelled") return false;
       return (deal.items || []).some(function(it) { return it.item_id === itemId; });
@@ -984,7 +984,7 @@ window.GoLabItemMaster = (function () {
     if (!itemName) return [];
     const q = itemName.trim().toLowerCase();
     let trades = [];
-    try { trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
+    try { trades = JSON.parse(GoLabStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
     return trades.filter(function(deal) {
       if (deal.deal_status === "cancelled") return false;
       return (deal.items || []).some(function(it) {
@@ -1004,7 +1004,7 @@ window.GoLabItemMaster = (function () {
    */
   function extractUnlinkedItems() {
     let trades = [];
-    try { trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
+    try { trades = JSON.parse(GoLabStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
 
     const groups = {}; // nameKey → { name, count, dealIds:Set }
     trades.forEach(function(deal) {
@@ -1044,7 +1044,7 @@ window.GoLabItemMaster = (function () {
     const pattern = namePattern.trim().toLowerCase();
 
     let trades = [];
-    try { trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
+    try { trades = JSON.parse(GoLabStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
 
     let linked = 0;
     trades.forEach(function(deal) {
@@ -1064,7 +1064,7 @@ window.GoLabItemMaster = (function () {
     });
 
     if (linked > 0) {
-      localStorage.setItem("golab_trade_v2", JSON.stringify(trades));
+      GoLabStorage.setItem("golab_trade_v2", JSON.stringify(trades));
       emitAudit("LINK_TRADES", { item_id: itemId, namePattern: namePattern, linked: linked });
     }
 
@@ -1174,7 +1174,7 @@ window.GoLabItemMaster = (function () {
 (function _migratePriceFields() {
   var KEY = GoLabItemMaster.MASTER_KEY;
   var all;
-  try { all = JSON.parse(localStorage.getItem(KEY) || "[]"); }
+  try { all = JSON.parse(GoLabStorage.getItem(KEY) || "[]"); }
   catch(e) { return; }
   if (all.length === 0) return;
   var changed = false;
@@ -1209,7 +1209,7 @@ window.GoLabItemMaster = (function () {
     }
   });
   if (changed) {
-    localStorage.setItem(KEY, JSON.stringify(all));
+    GoLabStorage.setItem(KEY, JSON.stringify(all));
     GoLabItemMaster.emitAudit("MIGRATE_PRICE_V312", { count: all.length });
     console.log("[ITEM-MASTER] v3.12 가격 필드 마이그레이션 완료 (" + all.length + "건)");
   }

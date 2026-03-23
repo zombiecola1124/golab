@@ -316,6 +316,12 @@
     </div>
   </div>
 </div>
+<!-- Firebase SDK (CDN) — 미로드 시 local 모드로 자동 fallback -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/storage-adapter.js"></script>
 <script src="js/item-master.js"></script>
 <script>
   const INV_KEY = "golab_inventory_v01";
@@ -787,7 +793,7 @@
   /** golab_trade_v2에서 id 기준 거래 조회 (deal_id 아님) */
   function _loadTradeById(tradeId) {
     try {
-      var trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]");
+      var trades = JSON.parse(GoLabStorage.getItem("golab_trade_v2") || "[]");
       for (var i = 0; i < trades.length; i++) {
         if (trades[i].id === tradeId) return trades[i];
       }

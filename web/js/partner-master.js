@@ -120,7 +120,7 @@ window.GoLabPartnerMaster = (function () {
   /** 전체 거래처 마스터 로드 — v2.2 자동 마이그레이션 포함 */
   function loadAll() {
     try {
-      const arr = JSON.parse(localStorage.getItem(MASTER_KEY) || "[]");
+      const arr = JSON.parse(GoLabStorage.getItem(MASTER_KEY) || "[]");
       /* v2.2 런타임 보정 — search_text 없는 레코드만 마이그레이션 */
       let needSave = false;
       arr.forEach(function(p) {
@@ -139,7 +139,7 @@ window.GoLabPartnerMaster = (function () {
 
   /** 저장 */
   function _save(arr) {
-    localStorage.setItem(MASTER_KEY, JSON.stringify(arr));
+    GoLabStorage.setItem(MASTER_KEY, JSON.stringify(arr));
   }
 
   /** 단건 조회 (by partner_id) */

@@ -270,12 +270,12 @@ window.GoLabTradeEngine = (function () {
      ══════════════════════════════════════ */
 
   function loadAll() {
-    try { return JSON.parse(localStorage.getItem(TRADE_KEY) || "[]"); }
+    try { return JSON.parse(GoLabStorage.getItem(TRADE_KEY) || "[]"); }
     catch (e) { return []; }
   }
 
   function _save(arr) {
-    localStorage.setItem(TRADE_KEY, JSON.stringify(arr));
+    GoLabStorage.setItem(TRADE_KEY, JSON.stringify(arr));
   }
 
   function getById(tradeId) {
@@ -857,7 +857,7 @@ window.GoLabTradeEngine = (function () {
 
     /* v1 읽기 (수정 금지) */
     var v1Data;
-    try { v1Data = JSON.parse(localStorage.getItem(V1_KEY) || "[]"); }
+    try { v1Data = JSON.parse(GoLabStorage.getItem(V1_KEY) || "[]"); }
     catch (e) { return { error: "v1 파싱 실패: " + e.message }; }
 
     if (v1Data.length === 0) {
@@ -1090,7 +1090,7 @@ GoLabTradeEngine.migrateFromV1();
     });
   });
   if (changed) {
-    localStorage.setItem(GoLabTradeEngine.TRADE_KEY, JSON.stringify(all));
+    GoLabStorage.setItem(GoLabTradeEngine.TRADE_KEY, JSON.stringify(all));
     GoLabTradeEngine.emitAudit("UPGRADE_V2_TO_V28A", { count: all.length });
     console.log("[TRADE ENGINE] v2→v2.8a 필드 보강 완료 (" + all.length + "건)");
   }
@@ -1121,7 +1121,7 @@ GoLabTradeEngine.migrateFromV1();
     changed = true;
   });
   if (changed) {
-    localStorage.setItem(TE.TRADE_KEY, JSON.stringify(all));
+    GoLabStorage.setItem(TE.TRADE_KEY, JSON.stringify(all));
     TE.emitAudit("UPGRADE_PAID_FIELDS", { count: all.length });
     console.log("[TRADE ENGINE] v3.9 paid_supply/paid_vat 보정 완료 (" + all.length + "건)");
   }
@@ -1143,7 +1143,7 @@ GoLabTradeEngine.migrateFromV1();
     changed = true;
   });
   if (changed) {
-    localStorage.setItem(TE.TRADE_KEY, JSON.stringify(all));
+    GoLabStorage.setItem(TE.TRADE_KEY, JSON.stringify(all));
     TE.emitAudit("UPGRADE_SEGYEONG_FIELDS", { count: all.length });
     console.log("[TRADE ENGINE] v4.2 세경 SAVE 필드 보정 완료 (" + all.length + "건)");
   }
@@ -1163,7 +1163,7 @@ GoLabTradeEngine.migrateFromV1();
     changed = true;
   });
   if (changed) {
-    localStorage.setItem(TE.TRADE_KEY, JSON.stringify(all));
+    GoLabStorage.setItem(TE.TRADE_KEY, JSON.stringify(all));
     TE.emitAudit("UPGRADE_SEGYEONG_TX_TYPE", { count: all.length });
     console.log("[TRADE ENGINE] v5.1 세경 tx_type/deduction 필드 보정 완료 (" + all.length + "건)");
   }

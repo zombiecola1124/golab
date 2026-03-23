@@ -301,6 +301,12 @@
 </div>
 
 <!-- 엔진 로드 -->
+<!-- Firebase SDK (CDN) — 미로드 시 local 모드로 자동 fallback -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/storage-adapter.js"></script>
 <script src="js/item-master.js?v=312"></script>
 <script src="js/partner-master.js"></script>
 <script src="js/trade-engine.js?v=312"></script>
@@ -333,7 +339,7 @@ function computeKPI(){
   var all = GoLabItemMaster.loadAll();
   $("kTotal").textContent = all.length;
   var trades = [];
-  try { trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
+  try { trades = JSON.parse(GoLabStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
   var linkedIds = {};
   var unlinkedCount = 0;
   trades.forEach(function(deal){
@@ -353,7 +359,7 @@ function computeKPI(){
    ══════════════════════════════════════ */
 function _buildQuickStats(){
   var trades = [];
-  try { trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
+  try { trades = JSON.parse(GoLabStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
   /* 거래처 타입 캐시 */
   var pTypeCache = {};
   function getPType(pid){

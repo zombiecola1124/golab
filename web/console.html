@@ -599,6 +599,12 @@
   </div>
 </div>
 
+<!-- Firebase SDK (CDN) — 미로드 시 local 모드로 자동 fallback -->
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/storage-adapter.js"></script>
 <script src="js/channel-master.js"></script>
 <script src="js/trade-engine.js?v=30"></script>
 <script src="js/partner-master.js"></script>
@@ -679,8 +685,8 @@ function getEndOfMonth(today){
    SINGLE SOURCE: Actions CRUD
    ══════════════════════════════════════════ */
 /* v2.5: deal_id 없는 레거시 Action에 null 기본값 런타임 보강 */
-function loadActions(){ try{return JSON.parse(localStorage.getItem(ACTION_KEY)||"[]").map(a=>({deal_id:null,...a}))}catch{return[]} }
-function saveActions(arr){ localStorage.setItem(ACTION_KEY, JSON.stringify(arr)); }
+function loadActions(){ try{return JSON.parse(GoLabStorage.getItem(ACTION_KEY)||"[]").map(a=>({deal_id:null,...a}))}catch{return[]} }
+function saveActions(arr){ GoLabStorage.setItem(ACTION_KEY, JSON.stringify(arr)); }
 
 /* ── Legacy Migration (one-time, non-destructive) ── */
 function migrateLegacyTasks(){
@@ -1212,7 +1218,7 @@ function buildCalendarEvents(){
 
   /* v2.4.1: 거래 SSoT를 golab_trade_v2로 교체 */
   try{
-    const trades = JSON.parse(localStorage.getItem("golab_trade_v2") || "[]");
+    const trades = JSON.parse(GoLabStorage.getItem("golab_trade_v2") || "[]");
     trades.forEach(trade => {
       if(trade.deal_status === "cancelled") return;
       const did = trade.id;   /* v2: id (v1은 deal_id) */

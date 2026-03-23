@@ -47,13 +47,13 @@ window.GoLabChannelMaster = (function () {
 
   /** 전체 로드 */
   function loadAll() {
-    try { return JSON.parse(localStorage.getItem(MASTER_KEY) || "[]"); }
+    try { return JSON.parse(GoLabStorage.getItem(MASTER_KEY) || "[]"); }
     catch (e) { return []; }
   }
 
   /** 저장 */
   function _save(arr) {
-    localStorage.setItem(MASTER_KEY, JSON.stringify(arr));
+    GoLabStorage.setItem(MASTER_KEY, JSON.stringify(arr));
   }
 
   /** 초기 데이터 세팅 — 데이터 없을 때만 실행 (멱등) */
