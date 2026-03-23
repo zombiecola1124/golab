@@ -175,6 +175,8 @@
   </style>
 </head>
 <body>
+<!-- GoLab Auth Guard — 인증 전 화면 차단 -->
+<div id="golab-auth-wall" style="position:fixed;inset:0;z-index:9999;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .3s,visibility .3s"></div>
 <header data-title="GoLab · 품목 조종석"></header>
 <script src="./js/navbar.js"></script>
 
@@ -307,6 +309,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/storage-adapter.js"></script>
+<script src="js/auth-guard.js"></script>
 <script src="js/item-master.js?v=312"></script>
 <script src="js/partner-master.js"></script>
 <script src="js/trade-engine.js?v=312"></script>
