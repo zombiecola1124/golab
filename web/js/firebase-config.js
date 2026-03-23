@@ -1,7 +1,7 @@
 /**
  * GoLab v5 — Firebase Configuration & Firestore Bridge
  *
- * Phase B: Firebase SDK 초기화 + Anonymous Auth + Firestore push/pull
+ * Phase B+: Firebase SDK 초기화 + Email/Password Auth + Firestore push/pull
  *
  * 의존성:
  *   firebase-app-compat.js   (CDN, 페이지에서 로드)
@@ -103,15 +103,39 @@ window._GoLabFirebase = (function () {
   }
 
   /* ══════════════════════════════════════
-     인증 — Anonymous Auth
+     인증 — Email/Password (v5 Auth 전환)
      ──────────────────────────────────────
      단일 사용자(고대표) 전용.
-     Anonymous UID는 브라우저별로 유지된다.
-     브라우저 데이터 초기화 시 UID 변경됨 → pullAll로 복구.
+     Email/Password → 모든 기기에서 동일 UID 보장.
+     Anonymous는 개발/테스트 전용 fallback.
      ══════════════════════════════════════ */
 
   /**
-   * 익명 로그인 (이미 로그인 상태면 건너뜀)
+   * Email/Password 로그인 (실사용)
+   * 실패 시 Anonymous fallback 없이 명확히 실패 반환.
+   * @param {string} email
+   * @param {string} password
+   * @returns {Promise<{uid: string|null, error: string|null}>}
+   */
+  function signInWithEmail(email, password) {
+    if (!_ready || !_auth) {
+      return Promise.resolve({ uid: null, error: "Firebase 미초기화" });
+    }
+
+    return _auth.signInWithEmailAndPassword(email, password)
+      .then(function (cred) {
+        console.log("[Firebase] Email 로그인 완료 — uid: " + cred.user.uid);
+        return { uid: cred.user.uid, error: null };
+      })
+      .catch(function (e) {
+        console.warn("[Firebase] Email 로그인 실패: " + e.code + " — " + e.message);
+        return { uid: null, error: e.code + ": " + e.message };
+      });
+  }
+
+  /**
+   * 익명 로그인 (개발/테스트 전용 fallback)
+   * 실사용에서는 signInWithEmail()을 사용한다.
    * @returns {Promise<string|null>} uid 또는 null
    */
   function signIn() {
@@ -126,17 +150,39 @@ window._GoLabFirebase = (function () {
 
     return _auth.signInAnonymously()
       .then(function (cred) {
-        console.log("[Firebase] 익명 로그인 완료 — uid: " + cred.user.uid);
+        console.log("[Firebase] 익명 로그인 완료 (개발용) — uid: " + cred.user.uid);
         return cred.user.uid;
       })
       .catch(function (e) {
-        console.warn("[Firebase] 로그인 실패: " + e.message);
+        console.warn("[Firebase] 익명 로그인 실패: " + e.message);
         return null;
       });
   }
 
   /**
+   * 로그아웃
+   * @returns {Promise<boolean>} 성공 여부
+   */
+  function signOut() {
+    if (!_ready || !_auth) {
+      return Promise.resolve(false);
+    }
+
+    return _auth.signOut()
+      .then(function () {
+        console.log("[Firebase] 로그아웃 완료");
+        return true;
+      })
+      .catch(function (e) {
+        console.warn("[Firebase] 로그아웃 실패: " + e.message);
+        return false;
+      });
+  }
+
+  /**
    * 현재 인증 상태 대기 (Auth state 안정화)
+   * 기존 세션이 있으면 그대로 유지.
+   * 세션 없으면 null 반환 (자동 로그인 하지 않음).
    * @returns {Promise<string|null>} uid 또는 null
    */
   function waitForAuth() {
@@ -148,10 +194,11 @@ window._GoLabFirebase = (function () {
       var unsubscribe = _auth.onAuthStateChanged(function (user) {
         unsubscribe();
         if (user) {
+          console.log("[Firebase] 기존 세션 복원 — uid: " + user.uid + " (" + (user.isAnonymous ? "anonymous" : "email") + ")");
           resolve(user.uid);
         } else {
-          /* 인증 안 됨 → 자동 익명 로그인 시도 */
-          signIn().then(resolve);
+          console.log("[Firebase] 인증 세션 없음 — 로그인 필요");
+          resolve(null);
         }
       });
     });
@@ -280,6 +327,11 @@ window._GoLabFirebase = (function () {
      ══════════════════════════════════════ */
   var _initResult = init();
 
+  /* 초기화 성공 시 기존 세션 자동 복원 (재로그인 불필요) */
+  if (_initResult) {
+    waitForAuth();
+  }
+
   /* ══════════════════════════════════════
      Public API
      ══════════════════════════════════════ */
@@ -289,8 +341,10 @@ window._GoLabFirebase = (function () {
     pull:   pull,
 
     /* 인증 */
-    signIn:      signIn,
-    waitForAuth: waitForAuth,
+    signInWithEmail: signInWithEmail,
+    signIn:          signIn,         /* 개발/테스트 전용 (Anonymous) */
+    signOut:         signOut,
+    waitForAuth:     waitForAuth,
 
     /* 상태 */
     isReady: isReady,
