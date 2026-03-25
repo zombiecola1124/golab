@@ -108,9 +108,31 @@
   if (typeof window._GoLabFirebase !== "undefined" && window._GoLabFirebase.waitForAuth) {
     window._GoLabFirebase.waitForAuth().then(function (uid) {
       if (uid) {
-        /* ✅ 기존 세션 복원 성공 → 잠금 해제 (wall은 비가시 상태이므로 즉시 제거) */
+        /* ✅ 기존 세션 복원 성공 → 즉시 잠금 해제 + 백그라운드 동기화 */
         console.log("[AuthGuard] 세션 복원 — uid: " + uid);
         _unlock(false);
+
+        /* sync 모드 활성화 (push가 동작하도록) */
+        if (typeof window.GoLabStorage !== "undefined") {
+          window.GoLabStorage.setMode("sync");
+
+          /* 이번 탭 세션에서 이미 pull 했으면 건너뜀 (무한 reload 방지) */
+          if (!sessionStorage.getItem("golab_pull_done")) {
+            window.GoLabStorage.pullAll().then(function (results) {
+              var changed = results.filter(function (r) { return r.changed; });
+              console.log("[AuthGuard] 세션복원 pull 완료 — 변경 " + changed.length + "건");
+              sessionStorage.setItem("golab_pull_done", Date.now().toString());
+              /* Firebase에 더 최신 데이터가 있었으면 페이지 새로고침 */
+              if (changed.length > 0) {
+                console.log("[AuthGuard] 변경 감지 → 페이지 새로고침");
+                location.reload();
+              }
+            }).catch(function (err) {
+              console.warn("[AuthGuard] 세션복원 pull 실패: " + (err.message || err));
+              sessionStorage.setItem("golab_pull_done", Date.now().toString());
+            });
+          }
+        }
       } else {
         /* ❌ 세션 없음 → wall 가시화 + 로그인 폼 표시 */
         console.log("[AuthGuard] 세션 없음 — 로그인 필요");
@@ -164,10 +186,31 @@
 
     window._GoLabFirebase.signInWithEmail(email, pw).then(function (result) {
       if (result.uid) {
-        /* ✅ 로그인 성공 → 페이드아웃 후 잠금 해제 */
-        msgEl.textContent = "로그인 성공";
-        msgEl.className = "auth-msg success";
-        setTimeout(function () { _unlock(true); }, 300);
+        /* ✅ 로그인 성공 → sync 모드 전환 + Firebase 데이터 다운로드 */
+        msgEl.textContent = "데이터 동기화 중…";
+        msgEl.className = "auth-msg info";
+
+        if (typeof window.GoLabStorage !== "undefined") {
+          window.GoLabStorage.setMode("sync");
+          window.GoLabStorage.pullAll().then(function (results) {
+            var pulled = results.filter(function (r) { return r.changed; });
+            console.log("[AuthGuard] 로그인 pull 완료 — 변경 " + pulled.length + "건");
+            /* pull 완료 플래그 → reload 후 세션복원 시 재pull 방지 */
+            sessionStorage.setItem("golab_pull_done", Date.now().toString());
+            msgEl.textContent = "로그인 성공";
+            msgEl.className = "auth-msg success";
+            /* 데이터 반영을 위해 페이지 새로고침 */
+            setTimeout(function () { location.reload(); }, 300);
+          }).catch(function () {
+            /* pull 실패해도 로그인은 진행 */
+            console.warn("[AuthGuard] pull 실패 — 로컬 데이터로 진행");
+            sessionStorage.setItem("golab_pull_done", Date.now().toString());
+            setTimeout(function () { _unlock(true); }, 300);
+          });
+        } else {
+          /* GoLabStorage 미로드 시 기존 동작 */
+          setTimeout(function () { _unlock(true); }, 300);
+        }
       } else {
         /* ❌ 로그인 실패 */
         var errMsg = _translateError(result.error);

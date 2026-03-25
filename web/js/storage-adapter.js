@@ -141,25 +141,37 @@ window.GoLabStorage = (function () {
 
   /**
    * pullFromFirebase — 수동 다운로드 (Firebase → localStorage)
+   * Firebase 데이터와 localStorage 비교 후 다를 때만 덮어쓰기
    * @param {string} key
-   * @returns {Promise<string|null>}
+   * @returns {Promise<{data: string|null, changed: boolean}>}
    */
   function pullFromFirebase(key) {
     if (!_isFirebaseKey(key)) {
-      return Promise.resolve(null);
+      return Promise.resolve({ data: null, changed: false });
     }
 
-    /* Phase B: Firebase 구현 자리 */
     if (typeof window._GoLabFirebase !== "undefined" && window._GoLabFirebase.pull) {
+      var currentLocal = localStorage.getItem(key);
+
       return window._GoLabFirebase.pull(key).then(function (data) {
         if (data !== null && data !== undefined) {
-          localStorage.setItem(key, typeof data === "string" ? data : JSON.stringify(data));
+          var incoming = typeof data === "string" ? data : JSON.stringify(data);
+          /* 기존 localStorage와 다를 때만 덮어쓰기 */
+          if (currentLocal !== incoming) {
+            localStorage.setItem(key, incoming);
+            console.log("[StorageAdapter] pull 반영 — " + key + " (변경됨)");
+            return { data: incoming, changed: true };
+          }
+          return { data: incoming, changed: false };
         }
-        return data;
+        return { data: null, changed: false };
+      }).catch(function (err) {
+        console.warn("[StorageAdapter] pull 실패 — " + key + ": " + err.message);
+        return { data: null, changed: false };
       });
     }
 
-    return Promise.resolve(null);
+    return Promise.resolve({ data: null, changed: false });
   }
 
   /**
@@ -177,12 +189,12 @@ window.GoLabStorage = (function () {
 
   /**
    * pullAll — 핵심 5키 전체 pull
-   * @returns {Promise<object[]>}
+   * @returns {Promise<{key: string, data: string|null, changed: boolean}[]>}
    */
   function pullAll() {
     var promises = FIREBASE_KEYS.map(function (key) {
-      return pullFromFirebase(key).then(function (data) {
-        return { key: key, data: data };
+      return pullFromFirebase(key).then(function (result) {
+        return { key: key, data: result.data, changed: result.changed };
       });
     });
     return Promise.all(promises);
