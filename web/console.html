@@ -5,32 +5,27 @@
   <meta name="viewport" content="width=device-width,initial-scale=1" />
   <title>GoLab · 콘솔</title>
   <link rel="stylesheet" href="./css/ui.css">
+  <link rel="stylesheet" href="https://cdn.jsdelivr.net/gh/orioncactus/pretendard@v1.3.9/dist/web/variable/pretendardvariable-dynamic-subset.min.css">
   <style>
     :root{
-      --bg:#f5f7fa;--card:#ffffff;--border:#e5e7eb;
+      --bg:#f3f4f6;--card:#ffffff;--border:#e5e7eb;
       --text:#0f172a;--text-kpi:#0f172a;--muted:#64748b;
       --primary:#2563eb;--warn:#dc2626;--accent:#16a34a;--orange:#d97706;
       --purple:#7c3aed;--chip:#f8fafc;
     }
     *{box-sizing:border-box;margin:0;padding:0}
     body{background:var(--bg);color:var(--text);
-      font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
+      font-family:"Pretendard Variable",Pretendard,ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
       font-size:13px;line-height:1.5}
 
-    /* [GoLab v4.1] header/tabs → ui.css로 이동 */
+    /* [GoLab v6] 메인 콘솔 리뉴얼 */
 
-    /* ─ Layout: 3 Column ─ */
-    .bento{display:grid;grid-template-columns:1fr 280px;gap:20px;max-width:1440px;margin:0 auto;padding:20px 20px 40px;min-height:calc(100vh - 50px)}
-
-    /* ─ Left Sidebar ─ */
-    .sidebar{display:none;flex-direction:column;gap:12px}
-    .quick-btn{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-    .quick-btn:hover{border-color:rgba(37,99,235,.3);background:rgba(37,99,235,.04)}
-    .quick-btn .icon{font-size:16px;width:24px;text-align:center;flex-shrink:0}
+    /* ─ Layout: 2 Column ─ */
+    .bento{display:grid;grid-template-columns:1fr 320px;gap:24px;max-width:1440px;margin:0 auto;padding:24px 24px 40px;min-height:calc(100vh - 50px)}
 
     /* ─ Center ─ */
     .center{display:flex;flex-direction:column;gap:20px;min-width:0}
-    .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .card-header{display:flex;align-items:center;gap:8px;margin-bottom:14px}
     .card-header h2{font-size:14px;font-weight:700;color:var(--text)}
     .card-header .badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700}
@@ -38,18 +33,63 @@
     .card-header .badge.green{background:#dcfce7;color:var(--accent)}
     .card-header .badge.blue{background:#dbeafe;color:var(--primary)}
     .card-header .count{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400}
+    .card-header .link{margin-left:auto;font-size:11px;color:var(--primary);cursor:pointer;font-weight:600;text-decoration:none}
+    .card-header .link:hover{text-decoration:underline}
 
-    /* ─ TODAY ZONE ─ */
-    .today-zone{border:2px solid var(--primary);border-radius:12px;background:var(--card);padding:20px;box-shadow:0 2px 8px rgba(37,99,235,.06)}
-    .today-zone .zone-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-    .today-zone .zone-title{font-size:16px;font-weight:800;color:var(--text)}
-    .today-zone .zone-count{font-size:12px;font-weight:700;color:var(--primary);background:rgba(37,99,235,.08);padding:3px 10px;border-radius:6px}
-    .today-zone .zone-overdue{font-size:11px;font-weight:700;color:var(--warn);background:#fee2e2;padding:3px 10px;border-radius:6px}
-    .today-zone .add-row{display:flex;gap:8px;margin-bottom:16px}
-    .today-zone .add-row input{flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;outline:none;background:var(--chip);color:var(--text);font-family:inherit}
-    .today-zone .add-row input:focus{border-color:var(--primary)}
-    .today-zone .add-row button{background:var(--primary);border:none;color:#fff;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap}
-    .today-zone .add-row button:hover{background:#1d4ed8}
+    /* ─ KPI 3 Cards ─ */
+    .kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:16px}
+    .kpi-top{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:18px 20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .kpi-top.blue{border-top:3px solid #3b82f6}
+    .kpi-top.purple{border-top:3px solid #8b5cf6}
+    .kpi-top.green{border-top:3px solid #10b981}
+    .kpi-top .kt-label{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:6px}
+    .kpi-top .kt-value{font-size:22px;font-weight:800;color:var(--text)}
+    .kpi-top .kt-sub{font-size:11px;color:var(--muted);margin-top:4px}
+    .kpi-top .kt-sub .up{color:var(--accent);font-weight:700}
+    .kpi-top .kt-sub .down{color:var(--warn);font-weight:700}
+
+    /* ─ 오늘 현황 Card ─ */
+    .status-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .status-card.warn-top{border-top:3px solid var(--warn)}
+    .status-header{display:flex;align-items:center;gap:8px;margin-bottom:16px}
+    .status-header h2{font-size:14px;font-weight:700;color:var(--text)}
+    .status-header .s-date{font-size:11px;color:var(--muted)}
+    .status-header .s-badge{margin-left:auto;font-size:10px;font-weight:700;color:var(--warn);background:#fee2e2;padding:3px 10px;border-radius:6px}
+    .status-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .status-box{text-align:center;padding:14px 8px;border-radius:10px;border:1px solid var(--border);background:var(--chip)}
+    .status-box .sb-num{font-size:24px;font-weight:800;color:var(--primary)}
+    .status-box .sb-num.warn{color:var(--warn)}
+    .status-box .sb-num.accent{color:var(--accent)}
+    .status-box .sb-label{font-size:10px;color:var(--muted);font-weight:600;margin-top:4px}
+
+    /* ─ 할 일 Card ─ */
+    .todo-add{display:flex;gap:8px;margin-bottom:14px}
+    .todo-add input{flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;outline:none;background:var(--chip);color:var(--text);font-family:inherit}
+    .todo-add input:focus{border-color:var(--primary)}
+    .todo-add button{background:var(--primary);border:none;color:#fff;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap}
+    .todo-add button:hover{background:#1d4ed8}
+    .todo-empty{text-align:center;padding:20px;color:var(--muted);font-size:12px}
+
+    /* ─ 거래 진행 현황 Card ─ */
+    .deal-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:12px}
+    .deal-box{text-align:center;padding:16px 8px;border-radius:10px;border:1px solid var(--border);background:var(--chip);cursor:pointer;transition:all .15s}
+    .deal-box:hover{border-color:var(--primary);background:rgba(37,99,235,.04)}
+    .deal-box .db-num{font-size:24px;font-weight:800;color:var(--primary)}
+    .deal-box .db-label{font-size:10px;color:var(--muted);font-weight:600;margin-top:4px}
+
+    /* ─ 최근 활동 Card ─ */
+    .recent-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);cursor:pointer;transition:background .1s}
+    .recent-item:last-child{border-bottom:none}
+    .recent-item:hover{background:rgba(37,99,235,.02);border-radius:6px;margin:0 -6px;padding:10px 6px}
+    .recent-dot{width:7px;height:7px;border-radius:50%;margin-top:5px;flex-shrink:0}
+    .recent-dot.purchase{background:var(--primary)}
+    .recent-dot.sale{background:var(--orange)}
+    .recent-dot.work{background:var(--purple)}
+    .recent-body{flex:1;min-width:0}
+    .recent-text{font-size:12px;color:var(--text)}
+    .recent-text .vendor-link{color:var(--primary);cursor:pointer;font-weight:600}
+    .recent-text .vendor-link:hover{text-decoration:underline}
+    .recent-time{font-size:10px;color:var(--muted);margin-top:1px;text-align:right;flex-shrink:0}
 
     .all-clear{text-align:center;padding:30px 20px;color:var(--accent)}
     .all-clear .icon{font-size:32px;margin-bottom:8px}
@@ -58,9 +98,9 @@
 
     /* ─ Action Items ─ */
     .action-list{list-style:none}
-    .action-item{display:flex;align-items:flex-start;gap:10px;padding:12px 0;border-bottom:1px solid var(--border);transition:background .1s}
+    .action-item{display:flex;align-items:flex-start;gap:10px;padding:10px 0;border-bottom:1px solid var(--border);transition:background .1s}
     .action-item:last-child{border-bottom:none}
-    .action-item .chk{width:20px;height:20px;border-radius:5px;border:2px solid var(--border);cursor:pointer;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:11px;background:var(--card)}
+    .action-item .chk{width:18px;height:18px;border-radius:4px;border:2px solid var(--border);cursor:pointer;flex-shrink:0;margin-top:1px;display:flex;align-items:center;justify-content:center;transition:all .15s;font-size:10px;background:var(--card)}
     .action-item .chk:hover{border-color:var(--accent);background:rgba(22,163,74,.08)}
     .action-item .chk.done{border-color:var(--accent);background:var(--accent);color:#fff;font-weight:900}
     .action-item.completed{opacity:.35}
@@ -77,23 +117,10 @@
     .pri-badge.LOW{background:#f1f5f9;color:var(--muted)}
     .action-item .act-del{background:none;border:none;color:var(--muted);cursor:pointer;font-size:12px;padding:4px;opacity:.2;margin-top:2px}
     .action-item .act-del:hover{opacity:1;color:var(--warn)}
-
     .more-btn{display:flex;align-items:center;justify-content:center;padding:10px;cursor:pointer;color:var(--primary);font-size:12px;font-weight:600;border-top:1px solid var(--border);margin-top:4px}
     .more-btn:hover{background:rgba(37,99,235,.04);border-radius:0 0 8px 8px}
 
-    /* ─ Week/Overdue Sections ─ */
-    .section-summary{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;cursor:pointer;transition:all .12s;margin-bottom:4px}
-    .section-summary:hover{background:rgba(37,99,235,.04)}
-    .section-summary .s-icon{font-size:14px}
-    .section-summary .s-label{font-size:12px;font-weight:700;color:var(--text)}
-    .section-summary .s-count{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;margin-left:auto}
-    .section-summary .s-count.red{background:#fee2e2;color:var(--warn)}
-    .section-summary .s-count.blue{background:#dbeafe;color:var(--primary)}
-    .section-summary .s-count.muted{background:#f1f5f9;color:var(--muted)}
-    .section-expand{display:none;padding:0 4px 12px}
-    .section-expand.open{display:block}
-
-    /* ─ Timeline ─ */
+    /* ─ Timeline (전체보기 모드용) ─ */
     .tl-filters{display:flex;gap:6px;margin-bottom:10px}
     button.filter-btn{font-size:11px;padding:5px 10px;color:var(--muted);border:1px solid var(--border);background:var(--card);border-radius:8px;cursor:pointer;font-weight:600}
     button.filter-btn.active{color:var(--primary);background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3)}
@@ -112,29 +139,52 @@
 
     /* ─ Right Sidebar ─ */
     .right{display:flex;flex-direction:column;gap:16px}
-    .cal-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .cal-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
     .cal-header span,.cal-header a{font-size:12px;font-weight:700;color:var(--text);text-decoration:none}
-    .cal-header a:hover{color:var(--primary);text-decoration:underline}
     .cal-nav{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px}
     .cal-nav:hover{color:var(--text)}
     .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
-    .cal-dow{font-size:9px;color:var(--muted);font-weight:700;padding:4px 0}
+    .cal-dow{font-size:9px;font-weight:700;padding:6px 0;border-radius:4px}
+    .cal-dow.sun{color:var(--warn)}
+    .cal-dow.sat{color:var(--primary)}
+    .cal-dow-header{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center;background:#1e293b;border-radius:6px;margin-bottom:4px}
+    .cal-dow-header .cal-dow{color:#fff;font-size:9px;font-weight:700;padding:6px 0}
+    .cal-dow-header .cal-dow.sun{color:#fca5a5}
+    .cal-dow-header .cal-dow.sat{color:#93c5fd}
     .cal-day{font-size:11px;padding:5px 0;border-radius:6px;cursor:pointer;color:#94a3b8;position:relative}
     .cal-day.current-month{color:var(--text)}
     .cal-day:hover{background:#f1f5f9}
-    .cal-day.today{background:transparent;color:var(--primary);font-weight:700;border:2px solid var(--primary);border-radius:6px}
-    .cal-day.has-action{font-weight:700}
-    .cal-day.has-action::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--primary)}
-    .cal-day.has-overdue::after{background:var(--warn)}
-    .cal-day.today.has-action::after{background:var(--primary)}
+    .cal-day.today{background:var(--primary);color:#fff;font-weight:700;border-radius:50%;width:28px;height:28px;display:flex;align-items:center;justify-content:center;margin:0 auto}
+    /* 캘린더 점: 할 일 기준 — 🟠오늘/🟢이번주/🔵이번달 */
+    .cal-day.dot-today::after{content:'';position:absolute;bottom:1px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--orange)}
+    .cal-day.dot-week::after{content:'';position:absolute;bottom:1px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--accent)}
+    .cal-day.dot-month::after{content:'';position:absolute;bottom:1px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--primary)}
+    .cal-day.dot-overdue::after{content:'';position:absolute;bottom:1px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--warn)}
+    /* 범례 */
+    .cal-legend{display:flex;gap:12px;margin-top:10px;justify-content:center;flex-wrap:wrap}
+    .cal-legend .cl-item{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--muted)}
+    .cal-legend .cl-dot{width:6px;height:6px;border-radius:50%}
 
-    /* ─ Deal 도트 (금색) — Action만/Deal만일 때 중앙, 둘 다일 때 좌우 분리 ─ */
-    .cal-day.has-deal{font-weight:700}
-    .cal-day.has-deal::before{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--orange)}
-    /* 둘 다 있을 때: Action=::after(좌), Deal=::before(우) */
-    .cal-day.has-action.has-deal::after{left:50%;transform:translateX(-4px)}
-    .cal-day.has-action.has-deal::before{left:50%;transform:translateX(1px)}
+    /* ─ 입금·마감 임박 패널 ─ */
+    .payment-card{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .payment-card h3{font-size:13px;font-weight:700;color:var(--text);margin-bottom:12px}
+    .pay-row{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border)}
+    .pay-row:last-child{border-bottom:none}
+    .pay-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .pay-dot.red{background:var(--warn)}
+    .pay-dot.orange{background:var(--orange)}
+    .pay-dot.blue{background:var(--primary)}
+    .pay-dot.purple{background:var(--purple)}
+    .pay-label{flex:1;font-size:12px;color:var(--text)}
+    .pay-amount{font-size:13px;font-weight:700;color:var(--text)}
+    .pay-section-title{font-size:11px;font-weight:700;color:var(--muted);margin-top:16px;margin-bottom:8px;padding-top:12px;border-top:1px solid var(--border)}
+    /* S 지급 목록 */
+    .s-item{display:flex;align-items:center;gap:8px;padding:6px 0;border-bottom:1px solid var(--border)}
+    .s-item:last-child{border-bottom:none}
+    .s-item input[type=checkbox]{width:14px;height:14px;accent-color:var(--primary);cursor:pointer;flex-shrink:0}
+    .s-item .s-name{flex:1;font-size:12px;color:var(--text)}
+    .s-item .s-amt{font-size:12px;font-weight:700;color:var(--text)}
 
     /* ─ Calendar Slide Panel ─ */
     .cal-panel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:90}
@@ -167,10 +217,7 @@
     .cp-event .cp-badge.overdue-badge{background:#fee2e2;color:#991b1b}
     .cp-divider{height:1px;background:var(--border);margin:16px 0}
 
-    .kpi-stack{display:flex;flex-direction:column;gap:8px}
-    .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-    .kpi-card .t{font-size:10px;color:var(--muted);font-weight:600}
-    .kpi-card .v{font-size:24px;font-weight:600;color:var(--text-kpi);margin-top:4px}
+    /* kpi-stack 제거 — 입금·마감 패널로 교체 */
 
     /* ─ Vendor Drawer ─ */
     .drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:90}
@@ -309,15 +356,19 @@
     .unreg-panel-footer .uf-all:disabled{background:#94a3b8;cursor:not-allowed}
 
     /* ─ Responsive ─ */
-    @media(max-width:1280px){
-      .bento{grid-template-columns:1fr 280px}
-      .sidebar{display:none}
-    }
-    @media(max-width:900px){
+    @media(max-width:1024px){
       .bento{grid-template-columns:1fr;padding:12px}
       .right{display:none}
+      .kpi-row{grid-template-columns:1fr}
+      .status-grid{grid-template-columns:repeat(4,1fr)}
+      .deal-grid{grid-template-columns:repeat(4,1fr)}
       .drawer{width:100%;right:-102%}
       .cal-panel{width:100%;right:-102%}
+    }
+    @media(max-width:600px){
+      .kpi-row{grid-template-columns:1fr}
+      .status-grid{grid-template-columns:repeat(2,1fr)}
+      .deal-grid{grid-template-columns:repeat(2,1fr)}
     }
   </style>
 </head>
@@ -328,13 +379,93 @@
 <script src="./js/navbar.js"></script>
 
 <div class="bento">
-  <!-- LEFT: Quick Menu -->
-  <aside class="sidebar">
-    <a class="quick-btn" href="./deals.html"><span class="icon">💰</span>매출 등록</a>
-    <a class="quick-btn" href="./profit.html"><span class="icon">📈</span>수익 분석</a>
-    <a class="quick-btn" href="./trade.html"><span class="icon">📊</span>구매 이력</a>
-    <button class="quick-btn" id="btnQuickTask"><span class="icon">✏️</span>Action 추가</button>
-    <button class="quick-btn" id="btnQuickSearch"><span class="icon">🔍</span>거래처 검색</button>
+  <!-- ═══ CENTER: Main Content ═══ -->
+  <main class="center">
+
+    <!-- ═══ KPI 3 Cards ═══ -->
+    <div class="kpi-row">
+      <div class="kpi-top blue">
+        <div class="kt-label">연간 매출 현황</div>
+        <div class="kt-value" id="kYearSales">₩0</div>
+      </div>
+      <div class="kpi-top purple">
+        <div class="kt-label">이번 달 매출</div>
+        <div class="kt-value" id="kMonthSales">₩0</div>
+      </div>
+      <div class="kpi-top green">
+        <div class="kt-label">이번 달 이익</div>
+        <div class="kt-value" id="kMonthProfit">₩0</div>
+        <div class="kt-sub" id="kMarginSub"></div>
+      </div>
+    </div>
+
+    <!-- ═══ 오늘 현황 ═══ -->
+    <div class="status-card" id="statusCard">
+      <div class="status-header">
+        <h2>오늘 현황</h2>
+        <span class="s-date" id="todayDate"></span>
+        <span class="s-badge" id="overdueCount" style="display:none">기간 지남 0건</span>
+      </div>
+      <div class="status-grid">
+        <div class="status-box"><div class="sb-num" id="scToday">0</div><div class="sb-label">오늘 할일</div></div>
+        <div class="status-box"><div class="sb-num" id="scWeek">0</div><div class="sb-label">이번주 할일</div></div>
+        <div class="status-box"><div class="sb-num" id="scMonth">0</div><div class="sb-label">이번달 할일</div></div>
+        <div class="status-box"><div class="sb-num accent" id="scDone">0</div><div class="sb-label">완료</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ 할 일 ═══ -->
+    <div class="card">
+      <div class="card-header">
+        <h2>할 일</h2>
+      </div>
+      <div class="todo-add">
+        <input id="quickInput" placeholder="새 할 일 추가..." />
+        <button id="quickAddBtn">+ 추가</button>
+      </div>
+      <ul class="action-list" id="todoList"></ul>
+      <div class="todo-empty" id="todoEmpty" style="display:none">할 일이 없습니다</div>
+      <div class="more-btn" id="todayMore" style="display:none"></div>
+    </div>
+
+    <!-- ═══ 미등록 거래처 카드 ═══ -->
+    <div class="unreg-card" id="unregCard" style="display:none" onclick="openUnregPanel()">
+      <span class="uc-icon">⚠️</span>
+      <span class="uc-label">미등록 거래처</span>
+      <span class="uc-count" id="unregCount">0</span>
+    </div>
+
+    <!-- ═══ 거래 진행 현황 ═══ -->
+    <div class="card">
+      <div class="card-header">
+        <h2>거래 진행 현황 (이번달)</h2>
+      </div>
+      <div class="deal-grid">
+        <div class="deal-box" onclick="location.href='deals.html?filter=in_progress'"><div class="db-num" id="dpInProgress">0</div><div class="db-label">거래중</div></div>
+        <div class="deal-box" onclick="location.href='deals.html?filter=invoice'"><div class="db-num" id="dpInvoice">0</div><div class="db-label">계산서</div></div>
+        <div class="deal-box" onclick="location.href='deals.html?filter=payment_pending'"><div class="db-num" id="dpPayment">0</div><div class="db-label">입금확인</div></div>
+        <div class="deal-box" onclick="location.href='deals.html?filter=completed'"><div class="db-num" id="dpCompleted">0</div><div class="db-label">거래완료</div></div>
+      </div>
+    </div>
+
+    <!-- ═══ 최근 활동 ═══ -->
+    <div class="card">
+      <div class="card-header">
+        <h2>최근 활동</h2>
+        <a class="link" id="recentToggle">전체 보기 →</a>
+      </div>
+      <div id="recentList"></div>
+      <!-- 전체보기 확장 영역 (숨김) -->
+      <div id="fullTimeline" style="display:none">
+        <div class="tl-filters" style="margin-top:12px">
+          <button id="btnTlAll" class="filter-btn active">전체</button>
+          <button id="btnTlPurchase" class="filter-btn">구매</button>
+          <button id="btnTlSale" class="filter-btn">매출</button>
+          <button id="btnTlWork" class="filter-btn">업무</button>
+        </div>
+        <ul id="timeline" class="timeline"></ul>
+      </div>
+    </div>
 
     <!-- ═══ 데이터 관리 (접이식) ═══ -->
     <div class="data-mgmt">
@@ -358,122 +489,38 @@
     </div>
   </aside>
 
-  <!-- CENTER: Today Zone + Week + Timeline -->
-  <main class="center">
-
-    <!-- ═══ TODAY ZONE (상단 40%) ═══ -->
-    <div class="today-zone">
-      <div class="zone-header">
-        <span class="zone-title">🎯 오늘 실행</span>
-        <span class="zone-count" id="todayCount">0건</span>
-        <span class="zone-overdue" id="overdueCount" style="display:none">지연 0</span>
-        <span style="flex:1"></span>
-        <span style="font-size:11px;color:var(--muted)" id="todayDate"></span>
-      </div>
-
-      <!-- Quick Add -->
-      <div class="add-row">
-        <input id="quickInput" placeholder="오늘 할 일 추가..." />
-        <button id="quickAddBtn">추가</button>
-      </div>
-
-      <!-- Today Actions List -->
-      <ul class="action-list" id="todayList"></ul>
-      <div class="all-clear" id="todayClear" style="display:none">
-        <div class="icon">🟢</div>
-        <div class="msg">오늘 할 일 없음</div>
-        <div class="sub">새 Action을 추가하거나 Initiative에서 전환하세요</div>
-      </div>
-      <div class="more-btn" id="todayMore" style="display:none"></div>
-    </div>
-
-    <!-- ═══ 미등록 거래처 카드 ═══ -->
-    <div class="unreg-card" id="unregCard" style="display:none" onclick="openUnregPanel()">
-      <span class="uc-icon">⚠️</span>
-      <span class="uc-label">미등록 거래처</span>
-      <span class="uc-count" id="unregCount">0</span>
-    </div>
-
-    <!-- ═══ THIS WEEK / OVERDUE ═══ -->
-    <div class="card" id="weekCard">
-      <!-- Overdue Section -->
-      <div class="section-summary" id="overdueToggle" style="display:none">
-        <span class="s-icon">🔴</span>
-        <span class="s-label">Overdue</span>
-        <span class="s-count red" id="overdueNum">0</span>
-      </div>
-      <div class="section-expand" id="overdueExpand">
-        <ul class="action-list" id="overdueList"></ul>
-      </div>
-
-      <!-- This Week Section -->
-      <div class="section-summary" id="weekToggle">
-        <span class="s-icon">📅</span>
-        <span class="s-label">This Week</span>
-        <span class="s-count blue" id="weekNum">0</span>
-      </div>
-      <div class="section-expand" id="weekExpand">
-        <ul class="action-list" id="weekList"></ul>
-      </div>
-
-      <!-- This Month Section -->
-      <div class="section-summary" id="monthToggle">
-        <span class="s-icon">📆</span>
-        <span class="s-label">This Month</span>
-        <span class="s-count muted" id="monthNum">0</span>
-      </div>
-      <div class="section-expand" id="monthExpand">
-        <ul class="action-list" id="monthList"></ul>
-      </div>
-    </div>
-
-    <!-- ═══ TIMELINE ═══ -->
-    <div class="card">
-      <div class="card-header">
-        <h2>최근 활동</h2>
-        <span id="tlCount" class="count"></span>
-      </div>
-      <div class="tl-filters">
-        <button id="btnTlAll" class="filter-btn active">전체</button>
-        <button id="btnTlPurchase" class="filter-btn">구매</button>
-        <button id="btnTlSale" class="filter-btn">매출</button>
-        <button id="btnTlWork" class="filter-btn">업무</button>
-      </div>
-      <ul id="timeline" class="timeline"></ul>
-    </div>
-
-    <!-- ═══ Deal Tracker KPI ═══ -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
-      <div class="kpi-card"><div class="t">계산서 미발행</div><div class="v" id="kDealNoInvoice" style="color:#0891b2">0건</div><div class="t" id="kDealNoInvoiceAmt" style="font-size:11px">₩0</div></div>
-      <div class="kpi-card"><div class="t">공급가 확인 대기</div><div class="v" id="kDealSupplyDue" style="color:var(--muted)">0건</div><div class="t" id="kDealSupplyDueAmt" style="font-size:11px">₩0</div></div>
-      <div class="kpi-card"><div class="t">VAT 확인 대기</div><div class="v" id="kDealVatDue" style="color:var(--muted)">0건</div><div class="t" id="kDealVatDueAmt" style="font-size:11px">₩0</div></div>
-      <div class="kpi-card"><div class="t">30일+ 확인 필요</div><div class="v" id="kDealOverdue" style="color:var(--orange)">0건</div><div class="t" id="kDealOverdueAmt" style="font-size:11px;color:var(--orange)">₩0</div></div>
-    </div>
-
-    <!-- ═══ KPI (최하단) ═══ -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
-      <div class="kpi-card"><div class="t">이번 달 매출</div><div class="v" id="kSales" style="color:var(--orange)">₩0</div></div>
-      <div class="kpi-card"><div class="t">이번 달 매입</div><div class="v" id="kPurchase" style="color:var(--primary)">₩0</div></div>
-      <div class="kpi-card"><div class="t">마진</div><div class="v" id="kMargin" style="color:var(--accent)">₩0</div></div>
-      <div class="kpi-card"><div class="t">활성 거래처</div><div class="v" id="kVendors">0</div></div>
-    </div>
   </main>
 
-  <!-- RIGHT: Calendar + Quick KPI -->
+  <!-- ═══ RIGHT: Calendar + 입금·마감 ═══ -->
   <aside class="right">
     <div class="cal-card">
       <div class="cal-header">
         <button class="cal-nav" id="calPrev">◀</button>
-        <span id="calTitle" style="cursor:pointer">2026년 2월</span>
+        <span id="calTitle" style="cursor:pointer">2026년 3월</span>
         <button class="cal-nav" id="calNext">▶</button>
       </div>
+      <div class="cal-dow-header">
+        <div class="cal-dow sun">일</div><div class="cal-dow">월</div><div class="cal-dow">화</div><div class="cal-dow">수</div><div class="cal-dow">목</div><div class="cal-dow">금</div><div class="cal-dow sat">토</div>
+      </div>
       <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend">
+        <span class="cl-item"><span class="cl-dot" style="background:var(--orange)"></span>오늘 마감</span>
+        <span class="cl-item"><span class="cl-dot" style="background:var(--accent)"></span>이번주 마감</span>
+        <span class="cl-item"><span class="cl-dot" style="background:var(--primary)"></span>이번달 마감</span>
+      </div>
     </div>
 
-    <div class="kpi-stack">
-      <div class="kpi-card"><div class="t">Overdue</div><div class="v" id="rOverdue" style="color:var(--warn)">0</div></div>
-      <div class="kpi-card"><div class="t">This Week</div><div class="v" id="rWeek" style="color:var(--primary)">0</div></div>
-      <div class="kpi-card"><div class="t">Completed (이번 달)</div><div class="v" id="rCompleted" style="color:var(--accent)">0</div></div>
+    <!-- ═══ 입금·마감 임박 ═══ -->
+    <div class="payment-card">
+      <h3>입금 · 마감 임박</h3>
+      <div id="paymentSummary">
+        <div class="pay-row"><div class="pay-dot orange"></div><span class="pay-label">거래명세서</span><span class="pay-amount" id="payDN">₩0</span></div>
+        <div class="pay-row"><div class="pay-dot red"></div><span class="pay-label">계산서</span><span class="pay-amount" id="payInvoice">₩0</span></div>
+        <div class="pay-row"><div class="pay-dot blue"></div><span class="pay-label">미입금</span><span class="pay-amount" id="payUnpaid">₩0</span></div>
+        <div class="pay-row"><div class="pay-dot purple"></div><span class="pay-label">VAT 미입금</span><span class="pay-amount" id="payVat">₩0</span></div>
+      </div>
+      <div class="pay-section-title">S 지급 목록</div>
+      <div id="sPaymentList"></div>
     </div>
   </aside>
 </div>
@@ -752,111 +799,68 @@ function classifyActions(){
 }
 
 /* ══════════════════════════════════════════
-   TODAY ZONE RENDER
+   오늘 현황 카드 + 할 일 카드 렌더
    ══════════════════════════════════════════ */
-const TODAY_MAX = 3;
-let showAllToday = false;
+const TODO_MAX = 10;
+let showAllTodo = false;
 
-function renderTodayZone(){
+/* 오늘 현황 카드 — 4칸 집계 + 기간지남 배지 */
+function renderStatusCard(){
   const b = classifyActions();
-  const todayItems = [...b.overdue, ...b.today]; // Overdue + Today merged for display
   const today = todayStr();
-
-  // Header badges
   $("todayDate").textContent = today;
-  const activeCount = b.overdue.length + b.today.length;
-  $("todayCount").textContent = activeCount + "건";
 
+  $("scToday").textContent = b.today.length;
+  $("scWeek").textContent = b.week.length;
+  $("scMonth").textContent = b.month.length;
+  $("scDone").textContent = b.completed.length;
+
+  /* 기간 지남 배지 + 카드 상단 라인 */
   if(b.overdue.length > 0){
     $("overdueCount").style.display = "inline";
-    $("overdueCount").textContent = "지연 " + b.overdue.length;
+    $("overdueCount").textContent = "기간 지남 " + b.overdue.length + "건";
+    $("statusCard").classList.add("warn-top");
   } else {
     $("overdueCount").style.display = "none";
+    $("statusCard").classList.remove("warn-top");
   }
+}
 
-  // List
-  const ul = $("todayList");
-  const clear = $("todayClear");
+/* 할 일 카드 — 통합 리스트 (지연→오늘→이번주→나머지) */
+function renderTodoCard(){
+  const b = classifyActions();
+  const today = todayStr();
+  /* 정렬: 지연 → 오늘 → 이번주 → 이번달 → 미래 (완료 제외) */
+  const allItems = [...b.overdue, ...b.today, ...b.week, ...b.month, ...b.future];
+  const ul = $("todoList");
+  const emptyEl = $("todoEmpty");
   const moreBtn = $("todayMore");
 
-  if(!todayItems.length){
+  if(!allItems.length){
     ul.innerHTML = "";
-    clear.style.display = "block";
+    emptyEl.style.display = "block";
     moreBtn.style.display = "none";
     return;
   }
+  emptyEl.style.display = "none";
 
-  clear.style.display = "none";
-  const visible = showAllToday ? todayItems : todayItems.slice(0, TODAY_MAX);
-  const remaining = todayItems.length - TODAY_MAX;
-
+  const visible = showAllTodo ? allItems : allItems.slice(0, TODO_MAX);
+  const remaining = allItems.length - TODO_MAX;
   ul.innerHTML = visible.map(a => renderActionItem(a, today)).join("");
   bindActionItems(ul);
 
-  if(remaining > 0 && !showAllToday){
+  if(remaining > 0 && !showAllTodo){
     moreBtn.style.display = "flex";
     moreBtn.textContent = "+ " + remaining + "건 더보기";
-    moreBtn.onclick = () => { showAllToday = true; renderTodayZone(); };
+    moreBtn.onclick = () => { showAllTodo = true; renderTodoCard(); };
+  } else if(showAllTodo && allItems.length > TODO_MAX){
+    moreBtn.style.display = "flex";
+    moreBtn.textContent = "접기";
+    moreBtn.onclick = () => { showAllTodo = false; renderTodoCard(); };
   } else {
-    if(showAllToday && todayItems.length > TODAY_MAX){
-      moreBtn.style.display = "flex";
-      moreBtn.textContent = "접기";
-      moreBtn.onclick = () => { showAllToday = false; renderTodayZone(); };
-    } else {
-      moreBtn.style.display = "none";
-    }
+    moreBtn.style.display = "none";
   }
 }
-
-/* ══════════════════════════════════════════
-   WEEK / OVERDUE / MONTH SECTIONS
-   ══════════════════════════════════════════ */
-function renderSections(){
-  const b = classifyActions();
-  const today = todayStr();
-
-  // Overdue (separate section below Today Zone)
-  if(b.overdue.length > 0){
-    $("overdueToggle").style.display = "flex";
-    $("overdueNum").textContent = b.overdue.length;
-    $("overdueList").innerHTML = b.overdue.map(a => renderActionItem(a, today)).join("");
-    bindActionItems($("overdueList"));
-  } else {
-    $("overdueToggle").style.display = "none";
-    $("overdueExpand").classList.remove("open");
-  }
-
-  // This Week
-  $("weekNum").textContent = b.week.length;
-  if(b.week.length){
-    $("weekList").innerHTML = b.week.map(a => renderActionItem(a, today)).join("");
-    bindActionItems($("weekList"));
-  } else {
-    $("weekList").innerHTML = '<div style="padding:8px 0;color:var(--muted);font-size:12px">이번 주 추가 Action 없음</div>';
-  }
-
-  // This Month
-  $("monthNum").textContent = b.month.length;
-  if(b.month.length){
-    $("monthList").innerHTML = b.month.map(a => renderActionItem(a, today)).join("");
-    bindActionItems($("monthList"));
-  } else {
-    $("monthList").innerHTML = '<div style="padding:8px 0;color:var(--muted);font-size:12px">이번 달 추가 Action 없음</div>';
-  }
-
-  // Right sidebar KPI
-  $("rOverdue").textContent = b.overdue.length;
-  $("rWeek").textContent = b.week.length;
-  $("rCompleted").textContent = b.completed.length;
-}
-
-/* ── Section Toggle ── */
-["overdue","week","month"].forEach(key => {
-  $(key+"Toggle").onclick = () => {
-    const expand = $(key+"Expand");
-    expand.classList.toggle("open");
-  };
-});
 
 /* ══════════════════════════════════════════
    ACTION ITEM RENDERER (Shared)
@@ -1099,11 +1103,42 @@ function fmtWork(ev,d){
   return`Action ${ev}`;
 }
 
+/* 최근 활동 3건 렌더 + deep link */
+function renderRecentActivity(){
+  var items = buildTimeline();
+  var shown = items.slice(0,3);
+  var el = $("recentList");
+  if(!shown.length){
+    el.innerHTML = '<div style="padding:16px 0;text-align:center;color:var(--muted);font-size:12px">활동 기록이 없습니다.</div>';
+    return;
+  }
+  el.innerHTML = "";
+  shown.forEach(function(it){
+    var div = document.createElement("div");
+    div.className = "recent-item";
+    var dealId = it.detail && it.detail.id;
+    var hasDeal = dealId && it.type !== "work";
+    if(hasDeal) div.style.cursor = "pointer";
+
+    var vl = it.vendor ? '<span class="vendor-link" data-vendor="'+esc(it.vendor)+'">['+esc(it.vendor)+']</span> ' : "";
+    div.innerHTML = '<div class="recent-dot '+it.type+'"></div><div class="recent-body"><div class="recent-text">'+vl+it.text+'</div></div><div class="recent-time">'+relTime(it.ts)+'</div>';
+
+    if(hasDeal){
+      div.onclick = function(e){
+        if(e.target.classList.contains("vendor-link")) return;
+        window.location.href = "deals.html?deal_id=" + encodeURIComponent(dealId);
+      };
+    }
+    el.appendChild(div);
+  });
+  el.querySelectorAll("[data-vendor]").forEach(function(v){ v.onclick = function(e){ e.stopPropagation(); openDrawer(v.dataset.vendor); }; });
+}
+
+/* 전체 타임라인 (전체보기 확장) */
 function renderTimeline(){
   let items = buildTimeline();
   if(tlFilter!=="all") items = items.filter(x=>x.type===tlFilter);
   const shown = items.slice(0,TL_LIMIT);
-  $("tlCount").textContent = items.length+"건";
   const ul = $("timeline"); ul.innerHTML = "";
   if(!shown.length){ ul.innerHTML='<li class="tl-item"><div class="tl-body"><div class="tl-text" style="color:var(--muted);padding:16px 0">활동 기록이 없습니다.</div></div></li>'; return; }
   shown.forEach(it=>{
@@ -1113,7 +1148,7 @@ function renderTimeline(){
     ul.appendChild(li);
   });
   ul.querySelectorAll("[data-vendor]").forEach(el=>{el.onclick=()=>openDrawer(el.dataset.vendor);});
-  document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));
+  document.querySelectorAll("#fullTimeline .filter-btn").forEach(b=>b.classList.remove("active"));
   const map={all:"btnTlAll",purchase:"btnTlPurchase",sale:"btnTlSale",work:"btnTlWork"};
   if(map[tlFilter]) $(map[tlFilter]).classList.add("active");
 }
@@ -1121,43 +1156,153 @@ function renderTimeline(){
 /* ══════════════════════════════════════════
    MONTHLY KPI (₩ 통일)
    ══════════════════════════════════════════ */
+/* ── 전월 prefix 계산 ── */
+function lastMonthPrefix(){
+  var d = new Date();
+  d.setMonth(d.getMonth() - 1);
+  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+}
+
 function computeKPI(){
-  /* v5.4: golab_trade_v2 단일 SSoT 기준 — 레거시 폴백 제거 */
+  /* v6: 연간/월간/이익/마진율/전월비 */
   const TE = GoLabTradeEngine;
   const mp = monthPrefix();
-  let sT=0, pT=0; const allV=new Set();
+  const lmp = lastMonthPrefix();
+  const thisYear = new Date().getFullYear().toString();
+  let yearSales=0, monthSales=0, monthCost=0, lastSales=0, lastCost=0;
 
-  /* trade_v2 기반 월간 매출/원가/거래처 집계 */
   try{
     var allTrades = TE.loadAll();
     allTrades.forEach(function(t){
       if(t.deal_status === "cancelled") return;
       var dt = t.deal_date || (t.quote_at || t.created_at || "").substring(0, 10);
-      if((dt||"").substring(0,7) !== mp) return;
+      var ym = (dt||"").substring(0,7);
+      var y = (dt||"").substring(0,4);
       var calc = TE.calcTrade(t);
-      sT += calc.total_supply;
-      pT += calc.total_cost;
-      if(t.partner_id) allV.add(t.partner_id);
+      if(y === thisYear) yearSales += calc.total_supply;
+      if(ym === mp){ monthSales += calc.total_supply; monthCost += calc.total_cost; }
+      if(ym === lmp){ lastSales += calc.total_supply; lastCost += calc.total_cost; }
     });
   }catch(e){}
 
-  const margin = sT - pT;
-  $("kSales").textContent = fmt(sT);
-  $("kPurchase").textContent = fmt(pT);
-  $("kMargin").textContent = fmt(margin);
-  $("kMargin").style.color = margin >= 0 ? "var(--accent)" : "var(--warn)";
-  $("kVendors").textContent = allV.size;
+  var monthProfit = monthSales - monthCost;
+  var marginRate = monthSales > 0 ? (monthProfit / monthSales * 100) : 0;
+  var lastMarginRate = lastSales > 0 ? ((lastSales - lastCost) / lastSales * 100) : 0;
+  var marginDelta = marginRate - lastMarginRate;
 
-  /* ── Trade Engine KPI (거래 흐름 추적) ── */
+  $("kYearSales").textContent = fmt(yearSales);
+  $("kMonthSales").textContent = fmt(monthSales);
+  $("kMonthProfit").textContent = fmt(monthProfit);
+
+  /* 마진율 + 전월 대비 변동 */
+  var subHtml = "마진율 " + marginRate.toFixed(1) + "%";
+  if(marginDelta > 0) subHtml += ' <span class="up">▲' + Math.abs(marginDelta).toFixed(1) + '%</span>';
+  else if(marginDelta < 0) subHtml += ' <span class="down">▼' + Math.abs(marginDelta).toFixed(1) + '%</span>';
+  $("kMarginSub").innerHTML = subHtml;
+}
+
+/* ══════════════════════════════════════════
+   거래 진행 현황 (이번달) + 입금·마감 + S지급
+   ══════════════════════════════════════════ */
+const S_HIDDEN_KEY = "golab_console_s_hidden";
+
+function renderDealProgress(){
+  const TE = GoLabTradeEngine;
+  const mp = monthPrefix();
+  var allTrades = TE.loadAll();
+  var inP=0, inv=0, pay=0, comp=0;
+  allTrades.forEach(function(t){
+    if(t.deal_status === "cancelled") return;
+    var dt = t.deal_date || (t.quote_at || t.created_at || "").substring(0,10);
+    if((dt||"").substring(0,7) !== mp) return;
+    if(t.deal_status === "completed"){ comp++; return; }
+    if(t.invoice_at && !t.payment_at){ pay++; return; }
+    if(t.invoice_at){ inv++; return; }
+    inP++;
+  });
+  $("dpInProgress").textContent = inP;
+  $("dpInvoice").textContent = inv;
+  $("dpPayment").textContent = pay;
+  $("dpCompleted").textContent = comp;
+}
+
+function renderPaymentPanel(){
+  const TE = GoLabTradeEngine;
   var ds = TE.getKPISummary();
-  $("kDealNoInvoice").textContent = ds.noInvoice.count + "건";
-  $("kDealNoInvoiceAmt").textContent = TE.fmt(ds.noInvoice.amount);
-  $("kDealSupplyDue").textContent = ds.supplyDue.count + "건";
-  $("kDealSupplyDueAmt").textContent = TE.fmt(ds.supplyDue.amount);
-  $("kDealVatDue").textContent = ds.vatDue.count + "건";
-  $("kDealVatDueAmt").textContent = TE.fmt(ds.vatDue.amount);
-  $("kDealOverdue").textContent = ds.overdue30.count + "건";
-  $("kDealOverdueAmt").textContent = TE.fmt(ds.overdue30.amount);
+  /* 미수금 현황 4항목 */
+  $("payDN").textContent = fmt(ds.supplyDue.amount);
+  $("payInvoice").textContent = fmt(ds.noInvoice.amount);
+  $("payUnpaid").textContent = fmt(ds.paymentDueAmt);
+  $("payVat").textContent = fmt(ds.vatDue.amount);
+
+  /* S 지급 목록 */
+  renderSPaymentList();
+}
+
+function renderSPaymentList(){
+  const TE = GoLabTradeEngine;
+  var allTrades = TE.loadAll();
+  var hiddenArr = [];
+  try{ hiddenArr = JSON.parse(localStorage.getItem(S_HIDDEN_KEY)||"[]"); }catch{}
+  var hiddenSet = new Set(hiddenArr);
+
+  /* S지급 대상 수집 */
+  var sList = [];
+  allTrades.forEach(function(t){
+    if(t.deal_status === "cancelled") return;
+    var rates = t.rates || {};
+    if(n(rates.S_rate) <= 0) return;
+    var calc = TE.calcTrade(t);
+    var sAmt = n((t.settlement||{}).actual_S_amount) || n(calc.expected_S_amount);
+    if(sAmt <= 0) return;
+    sList.push({
+      trade_id: t.id,
+      partner_name: t.partner_name_snapshot,
+      partner_id: t.partner_id,
+      s_amount: sAmt,
+      deal_date: t.deal_date || ""
+    });
+  });
+
+  /* 파트너별 그룹핑 */
+  var grouped = {};
+  sList.forEach(function(item){
+    var key = item.partner_id || item.partner_name;
+    if(!grouped[key]) grouped[key] = { name:item.partner_name, amount:0, earliest_date:"9999", key:key };
+    grouped[key].amount += item.s_amount;
+    if(item.deal_date && item.deal_date < grouped[key].earliest_date) grouped[key].earliest_date = item.deal_date;
+  });
+
+  /* 정렬: 1차 금액 내림차순, 2차 deal_date 오래된 순 */
+  var sorted = Object.values(grouped).sort(function(a,b){
+    if(b.amount !== a.amount) return b.amount - a.amount;
+    return a.earliest_date.localeCompare(b.earliest_date);
+  });
+
+  /* 숨김 필터 */
+  var visible = sorted.filter(function(g){ return !hiddenSet.has(g.key); });
+
+  var el = $("sPaymentList");
+  if(!visible.length){
+    el.innerHTML = '<div style="font-size:11px;color:var(--muted);padding:8px 0;text-align:center">S 지급 대상 없음</div>';
+    return;
+  }
+  el.innerHTML = visible.map(function(g){
+    return '<div class="s-item"><input type="checkbox" data-skey="'+esc(g.key)+'"><span class="s-name">'+esc(g.name)+'</span><span class="s-amt">'+fmt(g.amount)+'</span></div>';
+  }).join("");
+
+  /* 체크 시 숨김 처리 */
+  el.querySelectorAll("input[type=checkbox]").forEach(function(cb){
+    cb.onchange = function(){
+      var key = cb.dataset.skey;
+      var arr = [];
+      try{ arr = JSON.parse(localStorage.getItem(S_HIDDEN_KEY)||"[]"); }catch{}
+      if(cb.checked){ arr.push(key); }
+      else { arr = arr.filter(function(k){ return k !== key; }); }
+      localStorage.setItem(S_HIDDEN_KEY, JSON.stringify(arr));
+      renderSPaymentList();
+    };
+  });
 }
 
 /* ══════════════════════════════════════════
@@ -1298,10 +1443,12 @@ function renderMiniCal(){
   const actionDates = evData.actionDates;
   const dealDates = evData.dealDates;
 
+  /* 할 일 기준 점 분류를 위한 날짜 범위 */
+  const eow = getEndOfWorkWeek(today);
+  const eom = getEndOfMonth(today);
+
   const grid=$("calGrid"); grid.innerHTML="";
-  ["일","월","화","수","목","금","토"].forEach(d=>{
-    const s=document.createElement("div"); s.className="cal-dow"; s.textContent=d; grid.appendChild(s);
-  });
+  /* 요일 헤더는 HTML에 별도 생성 (.cal-dow-header) — 그리드에서 제거 */
   const prevLast=new Date(calYear,calMonth,0).getDate();
   for(let i=startDow-1;i>=0;i--){
     const d=document.createElement("div"); d.className="cal-day"; d.textContent=prevLast-i; grid.appendChild(d);
@@ -1312,14 +1459,16 @@ function renderMiniCal(){
     d.className="cal-day current-month";
     if(ds===today) d.classList.add("today");
 
-    // Action 도트 (파랑/빨강)
+    /* 할 일 기준 점 표시: 🟠오늘 / 🟢이번주 / 🔵이번달 / 🔴지연 */
     const aInfo = actionDates.get(ds);
-    if(aInfo && aInfo.open){ d.classList.add("has-action"); if(aInfo.overdue) d.classList.add("has-overdue"); }
-    // Deal 도트 (금색)
-    if(dealDates.has(ds)) d.classList.add("has-deal");
+    if(aInfo && aInfo.open){
+      if(aInfo.overdue) d.classList.add("dot-overdue");
+      else if(ds === today) d.classList.add("dot-today");
+      else if(ds <= eow) d.classList.add("dot-week");
+      else d.classList.add("dot-month");
+    }
 
     d.textContent=day;
-    // 클릭 → Slide Panel 열기 (페이지 이동 제거)
     d.onclick=()=>{ openCalPanel(ds); };
     grid.appendChild(d);
   }
@@ -1772,19 +1921,35 @@ $("unregOverlay").onclick = e=>{ if(e.target===$("unregOverlay")) closeUnregPane
    RENDER ALL
    ══════════════════════════════════════════ */
 function renderAll(){
-  renderTodayZone();
-  renderSections();
-  renderTimeline();
+  renderStatusCard();
+  renderTodoCard();
+  renderRecentActivity();
   computeKPI();
+  renderDealProgress();
+  renderPaymentPanel();
   renderMiniCal();
   renderUnregCard();
 }
 
 /* ── Event Bindings ── */
-$("btnQuickTask").onclick = () => openActionModal(null);
-$("btnQuickSearch").onclick = openSearch;
+/* btnQuickTask/btnQuickSearch 제거 — null 가드 */
+if($("btnQuickTask")) $("btnQuickTask").onclick = () => openActionModal(null);
+if($("btnQuickSearch")) $("btnQuickSearch").onclick = openSearch;
 $("searchOverlay").onclick = e => { if(e.target===$("searchOverlay")) closeSearch(); };
 $("searchInput").addEventListener("input", e => renderSearchResults(e.target.value));
+
+/* 최근 활동 전체보기 토글 */
+$("recentToggle").onclick = function(){
+  var ft = $("fullTimeline");
+  if(ft.style.display === "none"){
+    ft.style.display = "block";
+    renderTimeline();
+    this.textContent = "접기";
+  } else {
+    ft.style.display = "none";
+    this.textContent = "전체 보기 →";
+  }
+};
 
 $("btnTlAll").onclick=()=>{tlFilter="all";renderTimeline();};
 $("btnTlPurchase").onclick=()=>{tlFilter="purchase";renderTimeline();};

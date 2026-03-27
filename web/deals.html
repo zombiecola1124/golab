@@ -3355,6 +3355,61 @@ render();
   /* 딜레이 후 패널 오픈 (렌더 완료 보장) */
   setTimeout(function(){ openPanel(dealId); }, 200);
 })();
+
+/* ══════════════════════════════════════════
+   v6: 콘솔 → 거래현황 필터 수신 — ?filter=in_progress|invoice|payment_pending|completed
+   ══════════════════════════════════════════ */
+(function(){
+  var params = new URLSearchParams(window.location.search);
+  var filterParam = params.get("filter");
+  if(!filterParam) return;
+
+  /* URL 파라미터 제거 */
+  if(window.history && window.history.replaceState){
+    window.history.replaceState({}, document.title, window.location.pathname);
+  }
+
+  /* 기간 프리셋 → "이번 달" 활성화 */
+  var now = new Date();
+  var thisMonth = now.getFullYear() + "-" + String(now.getMonth()+1).padStart(2,"0");
+  $("fMonth").value = thisMonth;
+  $("fMonth").style.display = "inline-block";
+  $("periodBar").querySelectorAll(".period-btn").forEach(function(b){
+    b.classList.toggle("active", b.dataset.period === "this");
+  });
+
+  /* 필터 초기화 */
+  $("fSearch").value = "";
+  $("fStatus").value = "";
+  $("fTradeClass").value = "";
+  $("fDealStatus").value = "";
+  $("fChannel").value = "";
+  $("fPayment").value = "";
+  chipFilter = "";
+
+  switch(filterParam){
+    case "in_progress":
+      /* 거래중: active + 계산서 미발행 */
+      $("fDealStatus").value = "active";
+      break;
+    case "invoice":
+      /* 계산서: 계산서 발행됨 */
+      $("fStatus").value = "계산서";
+      break;
+    case "payment_pending":
+      /* 입금확인: unsettled 칩필터 (unpaid + vat_pending) */
+      chipFilter = "unsettled";
+      $("chipFilterBar").querySelectorAll(".chip-filter").forEach(function(b){
+        b.classList.toggle("active", b.dataset.chipFilter === "unsettled");
+      });
+      break;
+    case "completed":
+      /* 거래완료 */
+      $("fDealStatus").value = "completed";
+      break;
+  }
+  render();
+})();
 </script>
 </body>
 </html>
