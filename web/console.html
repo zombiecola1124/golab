@@ -1158,9 +1158,11 @@ function renderTimeline(){
    ══════════════════════════════════════════ */
 /* ── 전월 prefix 계산 ── */
 function lastMonthPrefix(){
+  /* 월말 오버플로우 방지: 1일 기준으로 계산 */
   var d = new Date();
-  d.setMonth(d.getMonth() - 1);
-  return d.getFullYear() + "-" + String(d.getMonth()+1).padStart(2,"0");
+  var y = d.getFullYear(), m = d.getMonth(); // 0-based
+  if(m === 0){ y--; m = 11; } else { m--; }
+  return y + "-" + String(m+1).padStart(2,"0");
 }
 
 function computeKPI(){
