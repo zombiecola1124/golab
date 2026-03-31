@@ -7,7 +7,7 @@
   <link rel="stylesheet" href="./css/ui.css">
   <style>
     :root{
-      --bg:#f5f7fa;--card:#ffffff;--border:#e5e7eb;
+      --bg:#ffffff;--card:#ffffff;--border:#e5e7eb;
       --text:#0f172a;--text-kpi:#0f172a;--muted:#64748b;
       --primary:#2563eb;--warn:#dc2626;--accent:#16a34a;--orange:#d97706;
       --purple:#7c3aed;--chip:#f8fafc;
@@ -23,6 +23,7 @@
     .hdr-badge.red{background:#fee2e2;color:#991b1b}
     .hdr-badge.orange{background:#fff7ed;color:#9a3412}
     .hdr-badge.blue{background:#dbeafe;color:#1e40af}
+    .hdr-badge.dim{background:#f1f5f9;color:#94a3b8}
 
     /* ─ Layout: 2 Column (60/40) ─ */
     .bento{display:grid;grid-template-columns:3fr 2fr;gap:20px;max-width:1440px;margin:0 auto;padding:20px 20px 40px;min-height:calc(100vh - 50px)}
@@ -44,7 +45,10 @@
 
     /* ─ KPI Row (3카드) ─ */
     .kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
-    .kpi-v2{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .kpi-v2{background:var(--card);border:1px solid var(--border);border-radius:12px;padding:20px 22px;box-shadow:0 1px 3px rgba(0,0,0,.04);border-top:3px solid var(--border);overflow:hidden}
+    .kpi-v2.kpi-annual{border-top-color:var(--primary)}
+    .kpi-v2.kpi-monthly{border-top-color:var(--purple)}
+    .kpi-v2.kpi-profit{border-top-color:var(--accent)}
     .kpi-v2 .kv-label{font-size:11px;color:var(--muted);font-weight:600;margin-bottom:2px}
     .kpi-v2 .kv-value{font-size:26px;font-weight:900;color:var(--text);margin-top:6px;letter-spacing:-.5px}
     .kpi-v2 .kv-sub{font-size:11px;color:var(--muted);margin-top:4px;display:flex;align-items:center;gap:4px}
@@ -123,10 +127,10 @@
     .cal-nav{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px}
     .cal-nav:hover{color:var(--text);background:#f1f5f9}
     .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
-    .cal-dow{font-size:10px;font-weight:700;padding:6px 0;border-radius:4px}
-    .cal-dow.sun{color:var(--warn);background:rgba(220,38,38,.06)}
-    .cal-dow.sat{color:var(--primary);background:rgba(37,99,235,.06)}
-    .cal-dow.weekday{color:var(--muted);background:rgba(37,99,235,.04)}
+    .cal-dow{font-size:10px;font-weight:700;padding:6px 0;border-radius:4px;background:#1e293b;color:#fff}
+    .cal-dow.sun{background:#1e293b;color:#fca5a5}
+    .cal-dow.sat{background:#1e293b;color:#93c5fd}
+    .cal-dow.weekday{background:#1e293b;color:#fff}
     .cal-day{font-size:12px;padding:7px 0;border-radius:8px;cursor:pointer;color:#94a3b8;position:relative}
     .cal-day.current-month{color:var(--text)}
     .cal-day.current-month.sun{color:var(--warn)}
@@ -728,11 +732,14 @@ function renderHeaderBadges(){
     const hdr = document.querySelector("header");
     if(hdr) hdr.appendChild(container);
   }
-  const badges = [];
-  if(ds.supplyDue.count) badges.push(`<span class="hdr-badge red">미입금 ${ds.supplyDue.count}건</span>`);
-  if(ds.vatDue.count) badges.push(`<span class="hdr-badge orange">VAT ${ds.vatDue.count}건</span>`);
-  if(b.overdue.length) badges.push(`<span class="hdr-badge blue">지연 ${b.overdue.length}건</span>`);
-  container.innerHTML = badges.join("");
+  /* 항상 3개 배지 표시 — 0건이면 dim 스타일 */
+  const unpaid = ds.supplyDue.count;
+  const vat = ds.vatDue.count;
+  const overdue = b.overdue.length;
+  container.innerHTML = `
+    <span class="hdr-badge ${unpaid?'red':'dim'}">미입금 ${unpaid}건</span>
+    <span class="hdr-badge ${vat?'orange':'dim'}">VAT ${vat}건</span>
+    <span class="hdr-badge ${overdue?'blue':'dim'}">지연 ${overdue}건</span>`;
 }
 
 /* ══════════════════════════════════════════
@@ -763,16 +770,16 @@ function renderKPIRow(){
   const profitChg = prevProfit ? ((curProfit - prevProfit) / prevProfit * 100) : 0;
 
   $("kpiRow").innerHTML = `
-    <div class="kpi-v2">
+    <div class="kpi-v2 kpi-annual">
       <div class="kv-label">연간 매출 현황</div>
       <div class="kv-value">${fmt(annual)}</div>
     </div>
-    <div class="kpi-v2">
+    <div class="kpi-v2 kpi-monthly">
       <div class="kv-label">이번 달 매출</div>
       <div class="kv-value">${fmt(curSales)}</div>
       <div class="kv-sub">대전월 ${Math.abs(salesChg).toFixed(1)}%</div>
     </div>
-    <div class="kpi-v2">
+    <div class="kpi-v2 kpi-profit">
       <div class="kv-label">이번 달 이익</div>
       <div class="kv-value">${fmt(curProfit)}</div>
       <div class="kv-sub"><span class="${profitChg>=0?'up':'down'}">${profitChg>=0?'▲':'▼'}${Math.abs(profitChg).toFixed(1)}%</span></div>
@@ -856,12 +863,13 @@ function renderActionItem(a, today){
   const isOverdue = !isDone && a.dueDate < today;
   const isToday = !isDone && a.dueDate === today;
 
-  let tags = "";
-  /* 상태 칩: [지연] / [오늘] */
-  if(isOverdue) tags += '<span class="status-chip overdue">지연</span>';
-  else if(isToday) tags += '<span class="status-chip today">오늘</span>';
-  else if(a.dueDate && !isDone) tags += '<span>' + a.dueDate + '</span>';
+  /* 상태 칩: 타이틀 우측에 배치 */
+  let statusChip = "";
+  if(isOverdue) statusChip = '<span class="status-chip overdue">지연</span>';
+  else if(isToday) statusChip = '<span class="status-chip today">오늘</span>';
 
+  let tags = "";
+  if(!isOverdue && !isToday && a.dueDate && !isDone) tags += '<span>' + a.dueDate + '</span>';
   if(a.vendorId) tags += '<span class="vendor-tag" data-vendor="'+esc(a.vendorId)+'">'+esc(resolvePartnerName(a.vendorId)||a.vendorId)+'</span>';
   if(a.priority && a.priority !== "NORMAL") tags += '<span class="pri-badge '+a.priority+'">'+a.priority+'</span>';
 
@@ -882,7 +890,7 @@ function renderActionItem(a, today){
   return `<li class="action-item${isDone?' completed':''}">
     <div class="chk${isDone?' done':''}" data-toggle="${a.id}">${isDone?'✓':''}</div>
     <div class="act-body" data-edit="${a.id}">
-      <div class="act-title">${esc(a.title)}</div>
+      <div class="act-title">${esc(a.title)}${statusChip}</div>
       <div class="act-meta">${tags}</div>
     </div>
     <button class="act-del" data-del="${a.id}">✕</button>
