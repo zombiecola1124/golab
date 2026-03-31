@@ -1193,14 +1193,6 @@ function renderPaymentDue(){
     <div class="ps-row"><span class="ps-dot gray"></span>VAT 미입금<span class="ps-amt">${fmt(vatUnpaidAmt)}</span></div>
   </div>`;
 
-  if(channels.length){
-    html += '<div class="partner-due-list">';
-    channels.slice(0,8).forEach(p => {
-      html += `<div class="pd-item"><span class="pd-name">${esc(p.name)}</span><span class="pd-amt">${fmt(p.amount)}</span></div>`;
-    });
-    html += '</div>';
-  }
-
   $("paymentDueCard").innerHTML = html;
 }
 
