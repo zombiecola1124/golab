@@ -206,9 +206,10 @@
     .sc-check{width:16px;height:16px;border-radius:4px;border:2px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;background:var(--card);transition:all .15s}
     .sc-check:hover{border-color:var(--accent)}
     .sc-check.done{border-color:var(--accent);background:var(--accent);color:#fff}
-    .sc-partner{flex:1;font-weight:600;color:var(--text)}
-    .sc-amt{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
-    .sc-item.checked .sc-partner,.sc-item.checked .sc-amt{opacity:.4;text-decoration:line-through}
+    .sc-info{flex:1;min-width:0;display:flex;flex-direction:column;gap:1px}
+    .sc-partner{font-weight:600;color:var(--text);font-size:12px}
+    .sc-item-name{font-size:10px;color:var(--muted);white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
+    .sc-amt{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums;flex-shrink:0}
 
     /* ─ Vendor Drawer ─ */
     .drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:90}
@@ -439,8 +440,8 @@
     <!-- 입금·마감 임박 -->
     <div class="card" id="paymentDueCard"></div>
 
-    <!-- S 지급 체크리스트 (숨김) -->
-    <div class="card" id="sPaymentCard" style="display:none"></div>
+    <!-- S 지급 체크리스트 -->
+    <div class="card" id="sPaymentCard"></div>
   </aside>
 </div>
 
@@ -1219,12 +1220,35 @@ function renderSPaymentChecklist(){
 
   TE.loadAll().forEach(t => {
     if(t.deal_status === "cancelled") return;
+    if(status[t.id]) return; /* 이미 체크(지급완료)된 건 제외 */
     const calc = TE.calcTrade(t);
     const expectedS = n(calc.expected_S_amount);
     if(expectedS <= 0) return;
-    const name = resolvePartnerName(t.partner_id) || t.partner_name_snapshot || "—";
-    items.push({ id:t.id, name, amount:expectedS, checked:!!status[t.id] });
+
+    /* 진행업체 추출: memo "진행:XXX" → 거래처명 → fallback */
+    const memo = t.memo || "";
+    const chMatch = memo.match(/진행[:\s]*([^\s/]+)/);
+    let channelName = chMatch ? chMatch[1] : "";
+    if(!channelName) channelName = resolvePartnerName(t.partner_id) || t.partner_name_snapshot || "";
+    if(!channelName) channelName = "진행업체 미지정";
+
+    /* 품목명 추출 */
+    const itemArr = t.items || [];
+    const itemName = itemArr.length === 0 ? "—"
+      : itemArr.length === 1 ? (itemArr[0].name || "—")
+      : (itemArr[0].name || "—") + " 외 " + (itemArr.length - 1) + "건";
+
+    items.push({
+      id: t.id,
+      channel: channelName,
+      item: itemName,
+      amount: expectedS,
+      date: t.deal_date || ""
+    });
   });
+
+  /* 오래된 거래일 순 정렬 */
+  items.sort((a,b) => (a.date||"").localeCompare(b.date||""));
 
   if(!items.length){
     $("sPaymentCard").innerHTML = `<div class="card-header"><h2>S 지급 체크리스트</h2></div>
@@ -1232,26 +1256,24 @@ function renderSPaymentChecklist(){
     return;
   }
 
-  let html = `<div class="card-header"><h2>S 지급 체크리스트</h2><span class="count">${items.filter(x=>!x.checked).length}건 미지급</span></div>`;
+  let html = `<div class="card-header"><h2>S 지급 체크리스트</h2><span class="count">${items.length}건 미지급</span></div>`;
   html += '<div class="s-checklist">';
   items.forEach(item => {
-    const cls = item.checked ? 'sc-item checked' : 'sc-item';
-    const chkCls = item.checked ? 'sc-check done' : 'sc-check';
-    html += `<div class="${cls}">
-      <div class="${chkCls}" data-s-toggle="${item.id}">${item.checked?'✓':''}</div>
-      <span class="sc-partner">${esc(item.name)}</span>
+    html += `<div class="sc-item">
+      <div class="sc-check" data-s-toggle="${item.id}"></div>
+      <div class="sc-info"><span class="sc-partner">${esc(item.channel)}</span><span class="sc-item-name">${esc(item.item)}</span></div>
       <span class="sc-amt">${fmt(item.amount)}</span>
     </div>`;
   });
   html += '</div>';
   $("sPaymentCard").innerHTML = html;
 
-  /* 체크 이벤트 바인딩 */
+  /* 체크 이벤트 — 클릭 시 지급완료 처리 후 숨김 */
   $("sPaymentCard").querySelectorAll("[data-s-toggle]").forEach(el => {
     el.onclick = () => {
       const tid = el.dataset.sToggle;
       const st = loadSPaymentStatus();
-      st[tid] = !st[tid];
+      st[tid] = true;
       saveSPaymentStatus(st);
       renderSPaymentChecklist();
     };
