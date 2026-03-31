@@ -118,16 +118,21 @@
     /* ─ Calendar ─ */
     .cal-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
-    .cal-header span,.cal-header a{font-size:12px;font-weight:700;color:var(--text);text-decoration:none}
+    .cal-header span,.cal-header a{font-size:14px;font-weight:800;color:var(--text);text-decoration:none}
     .cal-header a:hover{color:var(--primary);text-decoration:underline}
-    .cal-nav{background:none;border:none;color:var(--muted);cursor:pointer;font-size:14px;padding:2px 6px}
-    .cal-nav:hover{color:var(--text)}
+    .cal-nav{background:none;border:none;color:var(--muted);cursor:pointer;font-size:16px;padding:4px 8px;border-radius:6px}
+    .cal-nav:hover{color:var(--text);background:#f1f5f9}
     .cal-grid{display:grid;grid-template-columns:repeat(7,1fr);gap:2px;text-align:center}
-    .cal-dow{font-size:9px;color:var(--muted);font-weight:700;padding:4px 0}
-    .cal-day{font-size:11px;padding:5px 0;border-radius:6px;cursor:pointer;color:#94a3b8;position:relative}
+    .cal-dow{font-size:10px;font-weight:700;padding:6px 0;border-radius:4px}
+    .cal-dow.sun{color:var(--warn);background:rgba(220,38,38,.06)}
+    .cal-dow.sat{color:var(--primary);background:rgba(37,99,235,.06)}
+    .cal-dow.weekday{color:var(--muted);background:rgba(37,99,235,.04)}
+    .cal-day{font-size:12px;padding:7px 0;border-radius:8px;cursor:pointer;color:#94a3b8;position:relative}
     .cal-day.current-month{color:var(--text)}
+    .cal-day.current-month.sun{color:var(--warn)}
+    .cal-day.current-month.sat{color:var(--primary)}
     .cal-day:hover{background:#f1f5f9}
-    .cal-day.today{background:transparent;color:var(--primary);font-weight:700;border:2px solid var(--primary);border-radius:6px}
+    .cal-day.today{background:var(--primary);color:#fff;font-weight:800;border-radius:8px}
     .cal-day.has-action{font-weight:700}
     .cal-day.has-action::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--primary)}
     .cal-day.has-overdue::after{background:var(--warn)}
@@ -1315,8 +1320,8 @@ function renderMiniCal(){
   const actionDates = evData.actionDates;
   const dealDates = evData.dealDates;
   const grid=$("calGrid"); grid.innerHTML="";
-  ["일","월","화","수","목","금","토"].forEach(d=>{
-    const s=document.createElement("div"); s.className="cal-dow"; s.textContent=d; grid.appendChild(s);
+  ["일","월","화","수","목","금","토"].forEach((d,i)=>{
+    const s=document.createElement("div"); s.className="cal-dow "+(i===0?"sun":i===6?"sat":"weekday"); s.textContent=d; grid.appendChild(s);
   });
   const prevLast=new Date(calYear,calMonth,0).getDate();
   for(let i=startDow-1;i>=0;i--){
@@ -1325,7 +1330,8 @@ function renderMiniCal(){
   for(let day=1;day<=lastDay;day++){
     const d=document.createElement("div");
     const ds=`${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
-    d.className="cal-day current-month";
+    const dayDow = new Date(calYear,calMonth,day).getDay();
+    d.className="cal-day current-month"+(dayDow===0?" sun":"")+(dayDow===6?" sat":"");
     if(ds===today) d.classList.add("today");
     const aInfo = actionDates.get(ds);
     if(aInfo && aInfo.open){ d.classList.add("has-action"); if(aInfo.overdue) d.classList.add("has-overdue"); }
