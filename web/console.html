@@ -1149,30 +1149,37 @@ function renderTimeline(){
 function renderPaymentDue(){
   const TE = GoLabTradeEngine;
   let deliveryNoteAmt=0, invoiceAmt=0, unpaidAmt=0, vatUnpaidAmt=0;
-  const partnerDue = new Map();
+  /* 진행업체별 미수금 (대성금속 거래의 memo에서 "진행:XXX" 추출) */
+  const channelDue = new Map();
+
+  /* 대성금속 partner_id 찾기 */
+  const dsPartner = GoLabPartnerMaster.findByName("대성금속");
+  const dsId = dsPartner ? dsPartner.partner_id : null;
 
   TE.loadAll().forEach(t => {
     if(t.deal_status === "cancelled") return;
+    /* 대성금속 거래만 필터 */
+    if(t.partner_id !== dsId && t.partner_name_snapshot !== "대성금속") return;
+
     const calc = TE.calcTrade(t);
     const ps = TE.calcPaymentStatus(t);
     if(ps.code === "paid") return;
 
     /* 카테고리별 집계 */
     if(t.delivery_note_at && !t.invoice_at) deliveryNoteAmt += calc.total_supply;
-    if(t.invoice_at && !t.payment_at){
-      invoiceAmt += calc.total_supply;
-    }
+    if(t.invoice_at && !t.payment_at) invoiceAmt += calc.total_supply;
     if(ps.code === "vat_pending") vatUnpaidAmt += calc.vat_amount - n(t.paid_vat);
     if(ps.code === "unpaid") unpaidAmt += calc.total_supply - n(t.paid_supply);
 
-    /* 거래처별 미수금 */
-    const pid = t.partner_id || t.partner_name_snapshot || "기타";
-    const name = resolvePartnerName(pid) || t.partner_name_snapshot || pid;
-    if(!partnerDue.has(pid)) partnerDue.set(pid, {name, amount:0});
-    partnerDue.get(pid).amount += calc.total_amount - n(t.paid_supply) - n(t.paid_vat);
+    /* 진행업체별 미수금 — memo에서 "진행:XXX" 추출 */
+    const memo = t.memo || "";
+    const chMatch = memo.match(/진행[:\s]*([^\s/]+)/);
+    const chName = chMatch ? chMatch[1] : "기타";
+    if(!channelDue.has(chName)) channelDue.set(chName, {name:chName, amount:0});
+    channelDue.get(chName).amount += calc.total_amount - n(t.paid_supply) - n(t.paid_vat);
   });
 
-  const partners = [...partnerDue.values()].filter(p=>p.amount>0).sort((a,b)=>b.amount-a.amount);
+  const channels = [...channelDue.values()].filter(p=>p.amount>0).sort((a,b)=>b.amount-a.amount);
 
   let html = `<div class="card-header"><h2>입금 · 마감 임박</h2><span class="count">미수금 현황</span></div>`;
   html += `<div class="payment-summary">
@@ -1182,9 +1189,9 @@ function renderPaymentDue(){
     <div class="ps-row"><span class="ps-dot gray"></span>VAT 미입금<span class="ps-amt">${fmt(vatUnpaidAmt)}</span></div>
   </div>`;
 
-  if(partners.length){
+  if(channels.length){
     html += '<div class="partner-due-list">';
-    partners.slice(0,8).forEach(p => {
+    channels.slice(0,8).forEach(p => {
       html += `<div class="pd-item"><span class="pd-name">${esc(p.name)}</span><span class="pd-amt">${fmt(p.amount)}</span></div>`;
     });
     html += '</div>';
