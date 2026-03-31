@@ -17,19 +17,20 @@
       font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
       font-size:13px;line-height:1.5}
 
-    /* [GoLab v4.1] header/tabs → ui.css로 이동 */
+    /* ─ 헤더 배지 (상단 우측) ─ */
+    .header-badges{display:flex;gap:6px;align-items:center;margin-left:auto;padding-right:4px}
+    .hdr-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;white-space:nowrap;cursor:default}
+    .hdr-badge.red{background:#fee2e2;color:#991b1b}
+    .hdr-badge.orange{background:#fff7ed;color:#9a3412}
+    .hdr-badge.blue{background:#dbeafe;color:#1e40af}
 
-    /* ─ Layout: 3 Column ─ */
-    .bento{display:grid;grid-template-columns:1fr 280px;gap:20px;max-width:1440px;margin:0 auto;padding:20px 20px 40px;min-height:calc(100vh - 50px)}
+    /* ─ Layout: 2 Column (60/40) ─ */
+    .bento{display:grid;grid-template-columns:3fr 2fr;gap:20px;max-width:1440px;margin:0 auto;padding:20px 20px 40px;min-height:calc(100vh - 50px)}
 
-    /* ─ Left Sidebar ─ */
-    .sidebar{display:none;flex-direction:column;gap:12px}
-    .quick-btn{display:flex;align-items:center;gap:10px;padding:12px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--text);font-size:12px;font-weight:600;cursor:pointer;transition:all .15s;text-decoration:none;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-    .quick-btn:hover{border-color:rgba(37,99,235,.3);background:rgba(37,99,235,.04)}
-    .quick-btn .icon{font-size:16px;width:24px;text-align:center;flex-shrink:0}
+    .col-left{display:flex;flex-direction:column;gap:16px;min-width:0}
+    .col-right{display:flex;flex-direction:column;gap:16px}
 
-    /* ─ Center ─ */
-    .center{display:flex;flex-direction:column;gap:20px;min-width:0}
+    /* ─ 공통 카드 ─ */
     .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .card-header{display:flex;align-items:center;gap:8px;margin-bottom:14px}
     .card-header h2{font-size:14px;font-weight:700;color:var(--text)}
@@ -38,18 +39,33 @@
     .card-header .badge.green{background:#dcfce7;color:var(--accent)}
     .card-header .badge.blue{background:#dbeafe;color:var(--primary)}
     .card-header .count{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400}
+    .card-header .link-btn{margin-left:auto;font-size:11px;color:var(--primary);font-weight:600;cursor:pointer;text-decoration:none}
+    .card-header .link-btn:hover{text-decoration:underline}
 
-    /* ─ TODAY ZONE ─ */
-    .today-zone{border:2px solid var(--primary);border-radius:12px;background:var(--card);padding:20px;box-shadow:0 2px 8px rgba(37,99,235,.06)}
-    .today-zone .zone-header{display:flex;align-items:center;gap:10px;margin-bottom:16px}
-    .today-zone .zone-title{font-size:16px;font-weight:800;color:var(--text)}
-    .today-zone .zone-count{font-size:12px;font-weight:700;color:var(--primary);background:rgba(37,99,235,.08);padding:3px 10px;border-radius:6px}
-    .today-zone .zone-overdue{font-size:11px;font-weight:700;color:var(--warn);background:#fee2e2;padding:3px 10px;border-radius:6px}
-    .today-zone .add-row{display:flex;gap:8px;margin-bottom:16px}
-    .today-zone .add-row input{flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;outline:none;background:var(--chip);color:var(--text);font-family:inherit}
-    .today-zone .add-row input:focus{border-color:var(--primary)}
-    .today-zone .add-row button{background:var(--primary);border:none;color:#fff;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap}
-    .today-zone .add-row button:hover{background:#1d4ed8}
+    /* ─ KPI Row (3카드) ─ */
+    .kpi-row{display:grid;grid-template-columns:repeat(3,1fr);gap:14px}
+    .kpi-v2{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:16px 18px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .kpi-v2 .kv-label{font-size:11px;color:var(--muted);font-weight:600}
+    .kpi-v2 .kv-value{font-size:22px;font-weight:800;color:var(--text);margin-top:4px;letter-spacing:-.5px}
+    .kpi-v2 .kv-sub{font-size:10px;color:var(--muted);margin-top:3px;display:flex;align-items:center;gap:4px}
+    .kpi-v2 .kv-sub .up{color:var(--accent);font-weight:700}
+    .kpi-v2 .kv-sub .down{color:var(--warn);font-weight:700}
+
+    /* ─ 오늘 현황 (Summary Bar) ─ */
+    .today-summary .ts-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
+    .today-summary .ts-header h2{font-size:14px;font-weight:800}
+    .today-summary .ts-date{font-size:11px;color:var(--muted)}
+    .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
+    .stat-box{text-align:center;padding:14px 8px;border:1px solid var(--border);border-radius:10px;background:var(--chip)}
+    .stat-box .sb-num{font-size:22px;font-weight:800;color:var(--text)}
+    .stat-box .sb-label{font-size:10px;color:var(--muted);font-weight:600;margin-top:2px}
+
+    /* ─ 할 일 카드 ─ */
+    .add-row{display:flex;gap:8px;margin-bottom:14px}
+    .add-row input{flex:1;border:1px solid var(--border);border-radius:8px;padding:8px 12px;font-size:12px;outline:none;background:var(--chip);color:var(--text);font-family:inherit}
+    .add-row input:focus{border-color:var(--primary)}
+    .add-row button{background:var(--primary);border:none;color:#fff;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap}
+    .add-row button:hover{background:#1d4ed8}
 
     .all-clear{text-align:center;padding:30px 20px;color:var(--accent)}
     .all-clear .icon{font-size:32px;margin-bottom:8px}
@@ -68,8 +84,9 @@
     .action-item .act-body{flex:1;min-width:0;cursor:pointer}
     .action-item .act-title{font-size:13px;font-weight:600;color:var(--text)}
     .action-item .act-meta{font-size:10px;color:var(--muted);margin-top:3px;display:flex;gap:8px;align-items:center;flex-wrap:wrap}
-    .act-meta .overdue-tag{color:var(--warn);font-weight:700}
-    .act-meta .today-tag{color:var(--primary);font-weight:600}
+    .act-meta .status-chip{font-size:9px;font-weight:700;padding:2px 8px;border-radius:4px}
+    .act-meta .status-chip.overdue{background:#fee2e2;color:#991b1b}
+    .act-meta .status-chip.today{background:#fff7ed;color:#9a3412}
     .act-meta .vendor-tag{color:var(--primary);cursor:pointer;font-weight:600}
     .act-meta .vendor-tag:hover{text-decoration:underline}
     .pri-badge{font-size:9px;font-weight:700;padding:1px 6px;border-radius:4px;text-transform:uppercase}
@@ -80,18 +97,6 @@
 
     .more-btn{display:flex;align-items:center;justify-content:center;padding:10px;cursor:pointer;color:var(--primary);font-size:12px;font-weight:600;border-top:1px solid var(--border);margin-top:4px}
     .more-btn:hover{background:rgba(37,99,235,.04);border-radius:0 0 8px 8px}
-
-    /* ─ Week/Overdue Sections ─ */
-    .section-summary{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:8px;cursor:pointer;transition:all .12s;margin-bottom:4px}
-    .section-summary:hover{background:rgba(37,99,235,.04)}
-    .section-summary .s-icon{font-size:14px}
-    .section-summary .s-label{font-size:12px;font-weight:700;color:var(--text)}
-    .section-summary .s-count{font-size:11px;font-weight:700;padding:2px 8px;border-radius:6px;margin-left:auto}
-    .section-summary .s-count.red{background:#fee2e2;color:var(--warn)}
-    .section-summary .s-count.blue{background:#dbeafe;color:var(--primary)}
-    .section-summary .s-count.muted{background:#f1f5f9;color:var(--muted)}
-    .section-expand{display:none;padding:0 4px 12px}
-    .section-expand.open{display:block}
 
     /* ─ Timeline ─ */
     .tl-filters{display:flex;gap:6px;margin-bottom:10px}
@@ -110,8 +115,7 @@
     .tl-text .vendor-link:hover{text-decoration:underline}
     .tl-time{font-size:10px;color:var(--muted);margin-top:1px}
 
-    /* ─ Right Sidebar ─ */
-    .right{display:flex;flex-direction:column;gap:16px}
+    /* ─ Calendar ─ */
     .cal-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .cal-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px}
     .cal-header span,.cal-header a{font-size:12px;font-weight:700;color:var(--text);text-decoration:none}
@@ -128,13 +132,14 @@
     .cal-day.has-action::after{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--primary)}
     .cal-day.has-overdue::after{background:var(--warn)}
     .cal-day.today.has-action::after{background:var(--primary)}
-
-    /* ─ Deal 도트 (금색) — Action만/Deal만일 때 중앙, 둘 다일 때 좌우 분리 ─ */
     .cal-day.has-deal{font-weight:700}
     .cal-day.has-deal::before{content:'';position:absolute;bottom:2px;left:50%;transform:translateX(-50%);width:4px;height:4px;border-radius:50%;background:var(--orange)}
-    /* 둘 다 있을 때: Action=::after(좌), Deal=::before(우) */
     .cal-day.has-action.has-deal::after{left:50%;transform:translateX(-4px)}
     .cal-day.has-action.has-deal::before{left:50%;transform:translateX(1px)}
+
+    .cal-legend{display:flex;gap:12px;margin-top:10px;padding-top:8px;border-top:1px solid var(--border)}
+    .cal-legend-item{display:flex;align-items:center;gap:4px;font-size:9px;color:var(--muted)}
+    .cal-legend-dot{width:6px;height:6px;border-radius:50%;flex-shrink:0}
 
     /* ─ Calendar Slide Panel ─ */
     .cal-panel-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:90}
@@ -167,10 +172,32 @@
     .cp-event .cp-badge.overdue-badge{background:#fee2e2;color:#991b1b}
     .cp-divider{height:1px;background:var(--border);margin:16px 0}
 
-    .kpi-stack{display:flex;flex-direction:column;gap:8px}
-    .kpi-card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:12px 14px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-    .kpi-card .t{font-size:10px;color:var(--muted);font-weight:600}
-    .kpi-card .v{font-size:24px;font-weight:600;color:var(--text-kpi);margin-top:4px}
+    /* ─ 입금·마감 임박 ─ */
+    .payment-summary{display:flex;flex-direction:column;gap:6px;margin-bottom:14px}
+    .ps-row{display:flex;align-items:center;gap:8px;padding:6px 0;font-size:12px}
+    .ps-dot{width:8px;height:8px;border-radius:50%;flex-shrink:0}
+    .ps-dot.brown{background:#92400e}
+    .ps-dot.red{background:var(--warn)}
+    .ps-dot.gray{background:#94a3b8}
+    .ps-amt{margin-left:auto;font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+    .partner-due-list{border-top:1px solid var(--border);padding-top:10px}
+    .pd-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}
+    .pd-item:last-child{border-bottom:none}
+    .pd-check{width:16px;height:16px;border-radius:4px;border:2px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;background:var(--card);transition:all .15s}
+    .pd-check:hover{border-color:var(--accent)}
+    .pd-name{flex:1;font-weight:600;color:var(--text)}
+    .pd-amt{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+
+    /* ─ S 지급 체크리스트 ─ */
+    .s-checklist{margin-top:0}
+    .sc-item{display:flex;align-items:center;gap:8px;padding:8px 0;border-bottom:1px solid var(--border);font-size:12px}
+    .sc-item:last-child{border-bottom:none}
+    .sc-check{width:16px;height:16px;border-radius:4px;border:2px solid var(--border);cursor:pointer;flex-shrink:0;display:flex;align-items:center;justify-content:center;font-size:9px;background:var(--card);transition:all .15s}
+    .sc-check:hover{border-color:var(--accent)}
+    .sc-check.done{border-color:var(--accent);background:var(--accent);color:#fff}
+    .sc-partner{flex:1;font-weight:600;color:var(--text)}
+    .sc-amt{font-weight:700;color:var(--text);font-variant-numeric:tabular-nums}
+    .sc-item.checked .sc-partner,.sc-item.checked .sc-amt{opacity:.4;text-decoration:line-through}
 
     /* ─ Vendor Drawer ─ */
     .drawer-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.2);z-index:90}
@@ -212,7 +239,7 @@
     .modal-btns .btn-danger{color:var(--warn);border-color:rgba(220,38,38,.3)}
     .modal-btns .btn-danger:hover{background:#fee2e2}
 
-    /* ─ Deal Link Tag (Action 리스트) ─ */
+    /* ─ Deal Link Tag ─ */
     .deal-link-tag{display:inline-flex;align-items:center;gap:3px;font-size:10px;color:var(--primary);background:rgba(37,99,235,.08);border-radius:4px;padding:1px 6px;cursor:pointer;text-decoration:none;font-weight:600;transition:background .15s}
     .deal-link-tag:hover{background:rgba(37,99,235,.16)}
     .deal-link-tag.inactive{color:var(--muted);background:rgba(100,116,139,.08)}
@@ -228,15 +255,12 @@
     .search-results li{padding:8px 10px;cursor:pointer;border-radius:6px;font-size:12px;color:var(--text);transition:background .1s}
     .search-results li:hover{background:rgba(37,99,235,.08)}
 
-    /* ─ Data Management Section ─ */
-    .data-mgmt{margin-top:auto;border-top:1px solid var(--border);padding-top:12px}
-    .data-mgmt-toggle{display:flex;align-items:center;gap:8px;padding:10px 14px;border-radius:10px;border:1px solid var(--border);background:var(--card);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;width:100%;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-    .data-mgmt-toggle:hover{color:var(--text);border-color:#cbd5e1}
-    .data-mgmt-toggle .dm-icon{font-size:14px}
-    .data-mgmt-toggle .dm-arrow{margin-left:auto;font-size:10px;transition:transform .2s}
-    .data-mgmt-toggle.open .dm-arrow{transform:rotate(180deg)}
-    .data-mgmt-body{display:none;margin-top:8px;padding:12px;background:var(--card);border:1px solid var(--border);border-radius:10px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-    .data-mgmt-body.open{display:block}
+    /* ─ Data Management ─ */
+    .dm-floating{position:fixed;bottom:20px;right:20px;z-index:50}
+    .dm-fab{width:44px;height:44px;border-radius:50%;background:var(--card);border:1px solid var(--border);box-shadow:0 2px 8px rgba(0,0,0,.12);cursor:pointer;display:flex;align-items:center;justify-content:center;font-size:18px;transition:all .15s}
+    .dm-fab:hover{box-shadow:0 4px 16px rgba(0,0,0,.18);border-color:#cbd5e1}
+    .dm-popup{display:none;position:absolute;bottom:52px;right:0;width:280px;background:var(--card);border:1px solid var(--border);border-radius:10px;padding:14px;box-shadow:0 4px 16px rgba(0,0,0,.12)}
+    .dm-popup.open{display:block}
     .dm-info{font-size:10px;color:var(--muted);margin-bottom:10px;line-height:1.6}
     .dm-info .dm-val{font-weight:700;color:var(--text)}
     .dm-btn{display:flex;align-items:center;gap:8px;width:100%;padding:10px 12px;border-radius:8px;border:1px solid var(--border);background:var(--chip);color:var(--text);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;margin-bottom:6px}
@@ -244,7 +268,7 @@
     .dm-btn:hover{border-color:rgba(37,99,235,.3);background:rgba(37,99,235,.04)}
     .dm-btn .dm-bi{font-size:14px;width:20px;text-align:center}
 
-    /* ─ Restore Panel (overlay in center) ─ */
+    /* ─ Restore Panel ─ */
     .restore-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:120;align-items:flex-start;justify-content:center;padding-top:60px}
     .restore-overlay.open{display:flex}
     .restore-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;width:560px;max-width:92vw;max-height:80vh;overflow-y:auto;padding:24px;box-shadow:0 12px 40px rgba(0,0,0,.15)}
@@ -280,7 +304,7 @@
     .rp-btns .btn-commit:hover{background:#b91c1c}
     .rp-btns .btn-commit:disabled{background:#94a3b8;cursor:not-allowed}
 
-    /* ─ Unregistered Vendor Card & Panel ─ */
+    /* ─ 미등록 거래처 ─ */
     .unreg-card{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:10px;border:1px solid var(--orange);background:rgba(217,119,6,.06);cursor:pointer;transition:all .15s;margin-bottom:0}
     .unreg-card:hover{background:rgba(217,119,6,.12);border-color:var(--orange)}
     .unreg-card .uc-icon{font-size:18px}
@@ -309,15 +333,15 @@
     .unreg-panel-footer .uf-all:disabled{background:#94a3b8;cursor:not-allowed}
 
     /* ─ Responsive ─ */
-    @media(max-width:1280px){
-      .bento{grid-template-columns:1fr 280px}
-      .sidebar{display:none}
+    @media(max-width:1023px){
+      .bento{grid-template-columns:1fr;padding:14px}
     }
-    @media(max-width:900px){
-      .bento{grid-template-columns:1fr;padding:12px}
-      .right{display:none}
+    @media(max-width:640px){
+      .kpi-row{grid-template-columns:1fr}
+      .stat-grid{grid-template-columns:repeat(2,1fr)}
       .drawer{width:100%;right:-102%}
       .cal-panel{width:100%;right:-102%}
+      .header-badges{display:none}
     }
   </style>
 </head>
@@ -328,56 +352,25 @@
 <script src="./js/navbar.js"></script>
 
 <div class="bento">
-  <!-- LEFT: Quick Menu -->
-  <aside class="sidebar">
-    <a class="quick-btn" href="./deals.html"><span class="icon">💰</span>매출 등록</a>
-    <a class="quick-btn" href="./profit.html"><span class="icon">📈</span>수익 분석</a>
-    <a class="quick-btn" href="./trade.html"><span class="icon">📊</span>구매 이력</a>
-    <button class="quick-btn" id="btnQuickTask"><span class="icon">✏️</span>Action 추가</button>
-    <button class="quick-btn" id="btnQuickSearch"><span class="icon">🔍</span>거래처 검색</button>
+  <!-- ═══ LEFT COLUMN (60%) ═══ -->
+  <main class="col-left">
 
-    <!-- ═══ 데이터 관리 (접이식) ═══ -->
-    <div class="data-mgmt">
-      <button class="data-mgmt-toggle" id="dmToggle">
-        <span class="dm-icon">⚙️</span>데이터 관리
-        <span class="dm-arrow">▼</span>
-      </button>
-      <div class="data-mgmt-body" id="dmBody">
-        <div class="dm-info">
-          현재 용량: <span class="dm-val" id="dmSize">-</span> / 5MB<br>
-          golab_ 키: <span class="dm-val" id="dmKeyCount">-</span>개
-        </div>
-        <button class="dm-btn" id="btnFullBackup">
-          <span class="dm-bi">📦</span>전체 백업
-        </button>
-        <button class="dm-btn" id="btnFullRestore">
-          <span class="dm-bi">📥</span>백업에서 복원
-        </button>
-        <input type="file" id="restoreFileIn" accept="application/json" style="display:none" />
+    <!-- KPI 3카드 -->
+    <div class="kpi-row" id="kpiRow"></div>
+
+    <!-- 오늘 현황 -->
+    <div class="card today-summary" id="todaySummary"></div>
+
+    <!-- 할 일 -->
+    <div class="card" id="todoCard">
+      <div class="card-header">
+        <h2>할 일</h2>
+        <span class="count" id="todoCount"></span>
       </div>
-    </div>
-  </aside>
-
-  <!-- CENTER: Today Zone + Week + Timeline -->
-  <main class="center">
-
-    <!-- ═══ TODAY ZONE (상단 40%) ═══ -->
-    <div class="today-zone">
-      <div class="zone-header">
-        <span class="zone-title">🎯 오늘 실행</span>
-        <span class="zone-count" id="todayCount">0건</span>
-        <span class="zone-overdue" id="overdueCount" style="display:none">지연 0</span>
-        <span style="flex:1"></span>
-        <span style="font-size:11px;color:var(--muted)" id="todayDate"></span>
-      </div>
-
-      <!-- Quick Add -->
       <div class="add-row">
-        <input id="quickInput" placeholder="오늘 할 일 추가..." />
-        <button id="quickAddBtn">추가</button>
+        <input id="quickInput" placeholder="새 할 일 추가..." />
+        <button id="quickAddBtn">+ 추가</button>
       </div>
-
-      <!-- Today Actions List -->
       <ul class="action-list" id="todayList"></ul>
       <div class="all-clear" id="todayClear" style="display:none">
         <div class="icon">🟢</div>
@@ -387,51 +380,22 @@
       <div class="more-btn" id="todayMore" style="display:none"></div>
     </div>
 
-    <!-- ═══ 미등록 거래처 카드 ═══ -->
+    <!-- 미등록 거래처 카드 -->
     <div class="unreg-card" id="unregCard" style="display:none" onclick="openUnregPanel()">
       <span class="uc-icon">⚠️</span>
       <span class="uc-label">미등록 거래처</span>
       <span class="uc-count" id="unregCount">0</span>
     </div>
 
-    <!-- ═══ THIS WEEK / OVERDUE ═══ -->
-    <div class="card" id="weekCard">
-      <!-- Overdue Section -->
-      <div class="section-summary" id="overdueToggle" style="display:none">
-        <span class="s-icon">🔴</span>
-        <span class="s-label">Overdue</span>
-        <span class="s-count red" id="overdueNum">0</span>
-      </div>
-      <div class="section-expand" id="overdueExpand">
-        <ul class="action-list" id="overdueList"></ul>
-      </div>
+    <!-- 거래 진행 현황 -->
+    <div class="card" id="dealProgressCard"></div>
 
-      <!-- This Week Section -->
-      <div class="section-summary" id="weekToggle">
-        <span class="s-icon">📅</span>
-        <span class="s-label">This Week</span>
-        <span class="s-count blue" id="weekNum">0</span>
-      </div>
-      <div class="section-expand" id="weekExpand">
-        <ul class="action-list" id="weekList"></ul>
-      </div>
-
-      <!-- This Month Section -->
-      <div class="section-summary" id="monthToggle">
-        <span class="s-icon">📆</span>
-        <span class="s-label">This Month</span>
-        <span class="s-count muted" id="monthNum">0</span>
-      </div>
-      <div class="section-expand" id="monthExpand">
-        <ul class="action-list" id="monthList"></ul>
-      </div>
-    </div>
-
-    <!-- ═══ TIMELINE ═══ -->
-    <div class="card">
+    <!-- 최근 활동 -->
+    <div class="card" id="timelineCard">
       <div class="card-header">
         <h2>최근 활동</h2>
         <span id="tlCount" class="count"></span>
+        <a class="link-btn" href="./deals.html">전체 보기 →</a>
       </div>
       <div class="tl-filters">
         <button id="btnTlAll" class="filter-btn active">전체</button>
@@ -441,41 +405,46 @@
       </div>
       <ul id="timeline" class="timeline"></ul>
     </div>
-
-    <!-- ═══ Deal Tracker KPI ═══ -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px;margin-bottom:12px">
-      <div class="kpi-card"><div class="t">계산서 미발행</div><div class="v" id="kDealNoInvoice" style="color:#0891b2">0건</div><div class="t" id="kDealNoInvoiceAmt" style="font-size:11px">₩0</div></div>
-      <div class="kpi-card"><div class="t">공급가 확인 대기</div><div class="v" id="kDealSupplyDue" style="color:var(--muted)">0건</div><div class="t" id="kDealSupplyDueAmt" style="font-size:11px">₩0</div></div>
-      <div class="kpi-card"><div class="t">VAT 확인 대기</div><div class="v" id="kDealVatDue" style="color:var(--muted)">0건</div><div class="t" id="kDealVatDueAmt" style="font-size:11px">₩0</div></div>
-      <div class="kpi-card"><div class="t">30일+ 확인 필요</div><div class="v" id="kDealOverdue" style="color:var(--orange)">0건</div><div class="t" id="kDealOverdueAmt" style="font-size:11px;color:var(--orange)">₩0</div></div>
-    </div>
-
-    <!-- ═══ KPI (최하단) ═══ -->
-    <div style="display:grid;grid-template-columns:repeat(4,1fr);gap:12px">
-      <div class="kpi-card"><div class="t">이번 달 매출</div><div class="v" id="kSales" style="color:var(--orange)">₩0</div></div>
-      <div class="kpi-card"><div class="t">이번 달 매입</div><div class="v" id="kPurchase" style="color:var(--primary)">₩0</div></div>
-      <div class="kpi-card"><div class="t">마진</div><div class="v" id="kMargin" style="color:var(--accent)">₩0</div></div>
-      <div class="kpi-card"><div class="t">활성 거래처</div><div class="v" id="kVendors">0</div></div>
-    </div>
   </main>
 
-  <!-- RIGHT: Calendar + Quick KPI -->
-  <aside class="right">
+  <!-- ═══ RIGHT COLUMN (40%) ═══ -->
+  <aside class="col-right">
+
+    <!-- 캘린더 -->
     <div class="cal-card">
       <div class="cal-header">
         <button class="cal-nav" id="calPrev">◀</button>
-        <span id="calTitle" style="cursor:pointer">2026년 2월</span>
+        <span id="calTitle" style="cursor:pointer">2026년 3월</span>
         <button class="cal-nav" id="calNext">▶</button>
       </div>
       <div class="cal-grid" id="calGrid"></div>
+      <div class="cal-legend">
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--warn)"></div>오늘 마감</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--orange)"></div>이번주 마감</div>
+        <div class="cal-legend-item"><div class="cal-legend-dot" style="background:var(--primary)"></div>이번달 마감</div>
+      </div>
     </div>
 
-    <div class="kpi-stack">
-      <div class="kpi-card"><div class="t">Overdue</div><div class="v" id="rOverdue" style="color:var(--warn)">0</div></div>
-      <div class="kpi-card"><div class="t">This Week</div><div class="v" id="rWeek" style="color:var(--primary)">0</div></div>
-      <div class="kpi-card"><div class="t">Completed (이번 달)</div><div class="v" id="rCompleted" style="color:var(--accent)">0</div></div>
-    </div>
+    <!-- 입금·마감 임박 -->
+    <div class="card" id="paymentDueCard"></div>
+
+    <!-- S 지급 체크리스트 -->
+    <div class="card" id="sPaymentCard"></div>
   </aside>
+</div>
+
+<!-- ═══ 데이터 관리 (플로팅) ═══ -->
+<div class="dm-floating">
+  <button class="dm-fab" id="dmFab">⚙️</button>
+  <div class="dm-popup" id="dmPopup">
+    <div class="dm-info">
+      현재 용량: <span class="dm-val" id="dmSize">-</span> / 5MB<br>
+      golab_ 키: <span class="dm-val" id="dmKeyCount">-</span>개
+    </div>
+    <button class="dm-btn" id="btnFullBackup"><span class="dm-bi">📦</span>전체 백업</button>
+    <button class="dm-btn" id="btnFullRestore"><span class="dm-bi">📥</span>백업에서 복원</button>
+    <input type="file" id="restoreFileIn" accept="application/json" style="display:none" />
+  </div>
 </div>
 
 <!-- ═══ ACTION MODAL ═══ -->
@@ -518,9 +487,7 @@
       <button class="cp-close" id="cpClose">✕</button>
     </div>
   </div>
-  <div class="cp-body" id="cpBody">
-    <!-- JS로 동적 렌더링 -->
-  </div>
+  <div class="cp-body" id="cpBody"></div>
 </div>
 
 <!-- ═══ VENDOR DRAWER ═══ -->
@@ -554,22 +521,16 @@
   <div class="restore-panel">
     <h3>📥 백업에서 복원</h3>
     <div class="rp-sub">DRY_RUN 결과를 확인한 뒤 COMMIT을 실행하세요</div>
-
-    <!-- 모드 선택 -->
     <div class="rp-mode" id="rpMode">
       <label class="active"><input type="radio" name="restoreMode" value="replace" checked /> Replace (초기화 후 교체)</label>
       <label><input type="radio" name="restoreMode" value="merge" /> Merge (기존 유지 + 덮어쓰기)</label>
     </div>
-
-    <!-- DRY_RUN 리포트 -->
     <div class="rp-report" id="rpReport">
       <h4>DRY_RUN 리포트</h4>
       <div id="rpSummary"></div>
       <div class="rp-capacity" id="rpCapacity"></div>
       <div class="rp-keys" id="rpKeys"></div>
     </div>
-
-    <!-- 버튼 -->
     <div class="rp-btns">
       <button id="rpCancel">취소</button>
       <button class="btn-commit" id="rpCommit">COMMIT 실행</button>
@@ -613,20 +574,20 @@
 <script src="js/partner-master.js"></script>
 <script>
 /* ══════════════════════════════════════════
-   GoLab Console v1.6 — Today Execution Center
+   GoLab Console v8.0 — 사업 운영 대시보드
    Single Source of Truth: golab_actions_v15
+   거래 데이터: GoLabTradeEngine API 전용 소비
    ══════════════════════════════════════════ */
 
 const $ = id => document.getElementById(id);
 
 /* ── Data Keys ── */
-const ACTION_KEY = "golab_actions_v15";   // ★ Single Source of Truth (shared with Calendar)
-/* v5.4: SSoT 확정 — golab_trade_v2 단일 기준, 레거시 키 제거 */
+const ACTION_KEY = "golab_actions_v15";
 const TRADE_AUDIT = "golab_trade_audit";
 const SALES_AUDIT = "golab_sales_audit";
 const WORK_AUDIT = "golab_work_audit";
-// Legacy (read-only migration)
 const LEGACY_TASK_KEY = "golab_worklog_v1";
+const S_PAYMENT_KEY = "golab_s_payment_status"; /* S 지급 체크 상태 (UI only) */
 
 const TL_LIMIT = 20;
 
@@ -641,9 +602,16 @@ function monthPrefix(){ return todayStr().substring(0,7); }
 function relTime(iso){
   if(!iso) return "";
   const d=iso.substring(0,10), t=todayStr();
-  if(d===t) return "오늘 "+iso.substring(11,16);
+  if(d===t){
+    const diff=Math.floor((Date.now()-new Date(iso).getTime())/60000);
+    if(diff<1) return "방금 전";
+    if(diff<60) return diff+"분 전";
+    return Math.floor(diff/60)+"시간 전";
+  }
   const yd=new Date(new Date(t).getTime()-864e5).toISOString().substring(0,10);
-  if(d===yd) return "어제 "+iso.substring(11,16);
+  if(d===yd) return "어제";
+  const diffD=Math.floor((new Date(t)-new Date(d))/864e5);
+  if(diffD<=7) return diffD+"일 전";
   return d;
 }
 function extractHashtags(text){
@@ -652,7 +620,7 @@ function extractHashtags(text){
   return m?[...new Set(m)]:[];
 }
 
-/* ── Partner 해석 헬퍼 (partner_id ↔ 이름 양방향) ── */
+/* ── Partner 해석 헬퍼 ── */
 function resolvePartnerId(nameOrId){
   if(!nameOrId) return null;
   const byId = GoLabPartnerMaster.getById(nameOrId);
@@ -687,11 +655,10 @@ function getEndOfMonth(today){
 /* ══════════════════════════════════════════
    SINGLE SOURCE: Actions CRUD
    ══════════════════════════════════════════ */
-/* v2.5: deal_id 없는 레거시 Action에 null 기본값 런타임 보강 */
 function loadActions(){ try{return JSON.parse(GoLabStorage.getItem(ACTION_KEY)||"[]").map(a=>({deal_id:null,...a}))}catch{return[]} }
 function saveActions(arr){ GoLabStorage.setItem(ACTION_KEY, JSON.stringify(arr)); }
 
-/* ── Legacy Migration (one-time, non-destructive) ── */
+/* ── Legacy Migration ── */
 function migrateLegacyTasks(){
   const legacy = JSON.parse(localStorage.getItem(LEGACY_TASK_KEY)||"[]");
   if(!legacy.length) return;
@@ -699,20 +666,14 @@ function migrateLegacyTasks(){
   const existingTitles = new Set(actions.map(a=>a.title));
   let migrated = 0;
   legacy.forEach(t => {
-    if(existingTitles.has(t.text)) return; // skip duplicates
+    if(existingTitles.has(t.text)) return;
     actions.push({
-      id: t.id || uid(),
-      title: t.text || "",
-      dueDate: t.due || todayStr(),
-      type: "ACTION",
-      status: t.done ? "DONE" : "OPEN",
-      priority: "NORMAL",
-      vendorId: t.vendor || "",
-      deal_id: null, /* v4: Deal 연결 준비 */
+      id: t.id || uid(), title: t.text || "", dueDate: t.due || todayStr(),
+      type: "ACTION", status: t.done ? "DONE" : "OPEN", priority: "NORMAL",
+      vendorId: t.vendor || "", deal_id: null,
       createdAt: t.createdAt || new Date().toISOString(),
       updatedAt: t.createdAt || new Date().toISOString(),
-      doneAt: t.completedAt || null,
-      _migratedFrom: "worklog"
+      doneAt: t.completedAt || null, _migratedFrom: "worklog"
     });
     migrated++;
   });
@@ -720,7 +681,7 @@ function migrateLegacyTasks(){
 }
 migrateLegacyTasks();
 
-/* ── Dynamic Escalation (same logic as Calendar) ── */
+/* ── Dynamic Escalation ── */
 function classifyActions(){
   const today = todayStr();
   const eow = getEndOfWorkWeek(today);
@@ -729,7 +690,6 @@ function classifyActions(){
   const buckets = { overdue:[], today:[], week:[], month:[], completed:[], future:[] };
   const d = new Date();
   const mp = d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0");
-
   actions.forEach(a => {
     if(a.status === "DONE"){
       const doneAt = a.doneAt || a.updatedAt || "";
@@ -742,39 +702,114 @@ function classifyActions(){
     else if(a.dueDate <= eom) buckets.month.push(a);
     else buckets.future.push(a);
   });
-
-  // Sort each bucket: HIGH first, then dueDate asc, then createdAt desc
   const priOrder = {HIGH:0, NORMAL:1, LOW:2};
   const sortFn = (a,b) => (priOrder[a.priority]||1)-(priOrder[b.priority]||1) || (a.dueDate||"").localeCompare(b.dueDate||"") || (b.createdAt||"").localeCompare(a.createdAt||"");
   Object.values(buckets).forEach(arr => arr.sort(sortFn));
-
   return buckets;
 }
 
 /* ══════════════════════════════════════════
-   TODAY ZONE RENDER
+   헤더 배지 (미입금 / VAT / 지연)
    ══════════════════════════════════════════ */
-const TODAY_MAX = 3;
+function renderHeaderBadges(){
+  const TE = GoLabTradeEngine;
+  const ds = TE.getKPISummary();
+  const b = classifyActions();
+  let container = $("headerBadges");
+  if(!container){
+    container = document.createElement("div");
+    container.id = "headerBadges";
+    container.className = "header-badges";
+    const hdr = document.querySelector("header");
+    if(hdr) hdr.appendChild(container);
+  }
+  const badges = [];
+  if(ds.supplyDue.count) badges.push(`<span class="hdr-badge red">미입금 ${ds.supplyDue.count}건</span>`);
+  if(ds.vatDue.count) badges.push(`<span class="hdr-badge orange">VAT ${ds.vatDue.count}건</span>`);
+  if(b.overdue.length) badges.push(`<span class="hdr-badge blue">지연 ${b.overdue.length}건</span>`);
+  container.innerHTML = badges.join("");
+}
+
+/* ══════════════════════════════════════════
+   KPI 3카드 (연간매출 / 이번달매출 / 이번달이익)
+   ══════════════════════════════════════════ */
+function renderKPIRow(){
+  const TE = GoLabTradeEngine;
+  const now = new Date();
+  const yearPrefix = now.getFullYear() + "-";
+  const curMP = monthPrefix();
+  const prev = new Date(now.getFullYear(), now.getMonth() - 1, 1);
+  const prevMP = prev.getFullYear() + "-" + String(prev.getMonth()+1).padStart(2,"0");
+
+  let annual=0, curSales=0, prevSales=0, curProfit=0, prevProfit=0;
+
+  TE.loadAll().forEach(t => {
+    if(t.deal_status === "cancelled") return;
+    const dt = t.deal_date || (t.quote_at || t.created_at || "").substring(0,10);
+    if(!dt) return;
+    const calc = TE.calcTrade(t);
+    const mp = dt.substring(0,7);
+    if(dt.startsWith(yearPrefix)) annual += calc.total_supply;
+    if(mp === curMP){ curSales += calc.total_supply; curProfit += calc.gross_profit || 0; }
+    if(mp === prevMP){ prevSales += calc.total_supply; prevProfit += calc.gross_profit || 0; }
+  });
+
+  const salesChg = prevSales ? ((curSales - prevSales) / prevSales * 100) : 0;
+  const profitChg = prevProfit ? ((curProfit - prevProfit) / prevProfit * 100) : 0;
+
+  $("kpiRow").innerHTML = `
+    <div class="kpi-v2">
+      <div class="kv-label">연간 매출 현황</div>
+      <div class="kv-value">${fmt(annual)}</div>
+    </div>
+    <div class="kpi-v2">
+      <div class="kv-label">이번 달 매출</div>
+      <div class="kv-value">${fmt(curSales)}</div>
+      <div class="kv-sub">대전월 ${Math.abs(salesChg).toFixed(1)}%</div>
+    </div>
+    <div class="kpi-v2">
+      <div class="kv-label">이번 달 이익</div>
+      <div class="kv-value">${fmt(curProfit)}</div>
+      <div class="kv-sub"><span class="${profitChg>=0?'up':'down'}">${profitChg>=0?'▲':'▼'}${Math.abs(profitChg).toFixed(1)}%</span></div>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════
+   오늘 현황 (날짜 + 4박스)
+   ══════════════════════════════════════════ */
+function renderTodaySummary(){
+  const b = classifyActions();
+  const today = new Date();
+  const dayNames = ["일","월","화","수","목","금","토"];
+  const dateLabel = `${today.getMonth()+1}월 ${today.getDate()}일 ${dayNames[today.getDay()]}요일`;
+
+  $("todaySummary").innerHTML = `
+    <div class="ts-header">
+      <h2>오늘 현황</h2>
+      <span class="ts-date">${dateLabel}</span>
+      ${b.overdue.length ? `<span class="badge red">기간 지난 ${b.overdue.length}건</span>` : ""}
+    </div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="sb-num">${b.overdue.length + b.today.length}</div><div class="sb-label">오늘 할일</div></div>
+      <div class="stat-box"><div class="sb-num">${b.week.length}</div><div class="sb-label">이번주 할일</div></div>
+      <div class="stat-box"><div class="sb-num">${b.month.length}</div><div class="sb-label">이번달 할일</div></div>
+      <div class="stat-box"><div class="sb-num">${b.completed.length}</div><div class="sb-label">완료</div></div>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════
+   할 일 카드 (Today Zone 간소화)
+   ══════════════════════════════════════════ */
+const TODAY_MAX = 5;
 let showAllToday = false;
 
 function renderTodayZone(){
   const b = classifyActions();
-  const todayItems = [...b.overdue, ...b.today]; // Overdue + Today merged for display
+  const todayItems = [...b.overdue, ...b.today];
   const today = todayStr();
 
-  // Header badges
-  $("todayDate").textContent = today;
-  const activeCount = b.overdue.length + b.today.length;
-  $("todayCount").textContent = activeCount + "건";
+  $("todoCount").textContent = todayItems.length + "건";
 
-  if(b.overdue.length > 0){
-    $("overdueCount").style.display = "inline";
-    $("overdueCount").textContent = "지연 " + b.overdue.length;
-  } else {
-    $("overdueCount").style.display = "none";
-  }
-
-  // List
   const ul = $("todayList");
   const clear = $("todayClear");
   const moreBtn = $("todayMore");
@@ -809,57 +844,7 @@ function renderTodayZone(){
 }
 
 /* ══════════════════════════════════════════
-   WEEK / OVERDUE / MONTH SECTIONS
-   ══════════════════════════════════════════ */
-function renderSections(){
-  const b = classifyActions();
-  const today = todayStr();
-
-  // Overdue (separate section below Today Zone)
-  if(b.overdue.length > 0){
-    $("overdueToggle").style.display = "flex";
-    $("overdueNum").textContent = b.overdue.length;
-    $("overdueList").innerHTML = b.overdue.map(a => renderActionItem(a, today)).join("");
-    bindActionItems($("overdueList"));
-  } else {
-    $("overdueToggle").style.display = "none";
-    $("overdueExpand").classList.remove("open");
-  }
-
-  // This Week
-  $("weekNum").textContent = b.week.length;
-  if(b.week.length){
-    $("weekList").innerHTML = b.week.map(a => renderActionItem(a, today)).join("");
-    bindActionItems($("weekList"));
-  } else {
-    $("weekList").innerHTML = '<div style="padding:8px 0;color:var(--muted);font-size:12px">이번 주 추가 Action 없음</div>';
-  }
-
-  // This Month
-  $("monthNum").textContent = b.month.length;
-  if(b.month.length){
-    $("monthList").innerHTML = b.month.map(a => renderActionItem(a, today)).join("");
-    bindActionItems($("monthList"));
-  } else {
-    $("monthList").innerHTML = '<div style="padding:8px 0;color:var(--muted);font-size:12px">이번 달 추가 Action 없음</div>';
-  }
-
-  // Right sidebar KPI
-  $("rOverdue").textContent = b.overdue.length;
-  $("rWeek").textContent = b.week.length;
-  $("rCompleted").textContent = b.completed.length;
-}
-
-/* ── Section Toggle ── */
-["overdue","week","month"].forEach(key => {
-  $(key+"Toggle").onclick = () => {
-    const expand = $(key+"Expand");
-    expand.classList.toggle("open");
-  };
-});
-
-/* ══════════════════════════════════════════
-   ACTION ITEM RENDERER (Shared)
+   ACTION ITEM RENDERER
    ══════════════════════════════════════════ */
 function renderActionItem(a, today){
   const isDone = a.status === "DONE";
@@ -867,14 +852,15 @@ function renderActionItem(a, today){
   const isToday = !isDone && a.dueDate === today;
 
   let tags = "";
-  if(isOverdue) tags += '<span class="overdue-tag">' + a.dueDate + ' 지연</span>';
-  else if(isToday) tags += '<span class="today-tag">오늘 마감</span>';
-  else if(a.dueDate) tags += '<span>' + a.dueDate + '</span>';
+  /* 상태 칩: [지연] / [오늘] */
+  if(isOverdue) tags += '<span class="status-chip overdue">지연</span>';
+  else if(isToday) tags += '<span class="status-chip today">오늘</span>';
+  else if(a.dueDate && !isDone) tags += '<span>' + a.dueDate + '</span>';
 
-  if(a.vendorId) tags += '<span class="vendor-tag" data-vendor="'+esc(a.vendorId)+'">'+esc(a.vendorId)+'</span>';
+  if(a.vendorId) tags += '<span class="vendor-tag" data-vendor="'+esc(a.vendorId)+'">'+esc(resolvePartnerName(a.vendorId)||a.vendorId)+'</span>';
   if(a.priority && a.priority !== "NORMAL") tags += '<span class="pri-badge '+a.priority+'">'+a.priority+'</span>';
 
-  /* v5.4: 연결 거래 태그 + Deep Link */
+  /* v5.4: 연결 거래 태그 */
   if(a.deal_id){
     var TE = window.GoLabTradeEngine;
     var linkedTrade = TE ? TE.getById(a.deal_id) : null;
@@ -911,7 +897,6 @@ function bindActionItems(container){
   container.querySelectorAll("[data-vendor]").forEach(el => {
     el.onclick = e => { e.stopPropagation(); openDrawer(el.dataset.vendor); };
   });
-  /* v5.4: 거래 Deep Link 클릭 처리 */
   container.querySelectorAll("[data-deallink]").forEach(el => {
     el.onclick = e => { e.stopPropagation(); e.preventDefault(); window.location.href = "deals.html?deal_id=" + encodeURIComponent(el.dataset.deallink); };
   });
@@ -949,7 +934,7 @@ function quickAdd(){
   const a = {
     id: uid(), title, dueDate: todayStr(),
     type: "ACTION", status: "OPEN", priority: "NORMAL",
-    vendorId: "", deal_id: null, /* v4: Deal 연결 준비 (UI 미구현) */
+    vendorId: "", deal_id: null,
     createdAt: new Date().toISOString(),
     updatedAt: new Date().toISOString()
   };
@@ -974,10 +959,8 @@ function openActionModal(id){
     $("actTitle").value = a.title;
     $("actDate").value = a.dueDate;
     $("actPriority").value = a.priority || "NORMAL";
-    // partner_id 또는 레거시 텍스트 → autocomplete 세팅
     if(a.vendorId) acActVendor.setValue(a.vendorId);
     else acActVendor.clear();
-    /* v5.4: 거래 드롭다운 세팅 */
     populateDealSelect(a.vendorId || null, id);
     if(a.deal_id) $("actDealSelect").value = a.deal_id;
     else $("actDealSelect").value = "";
@@ -989,7 +972,6 @@ function openActionModal(id){
     $("actDate").value = todayStr();
     $("actPriority").value = "NORMAL";
     acActVendor.clear();
-    /* v5.4: 거래 드롭다운 초기화 */
     populateDealSelect(null, null);
     $("actDealSelect").value = "";
     $("actDelete").style.display = "none";
@@ -1001,9 +983,9 @@ function openActionModal(id){
 function saveActionModal(){
   const title = $("actTitle").value.trim();
   if(!title){ $("actTitle").focus(); return; }
-  const vendorPid = acActVendor.getValue(); // partner_id 또는 null
-  const vendorDisplay = resolvePartnerName(vendorPid); // audit용 표시 이름
-  const selectedDealId = $("actDealSelect").value || null; /* v5.4: 연결 거래 */
+  const vendorPid = acActVendor.getValue();
+  const vendorDisplay = resolvePartnerName(vendorPid);
+  const selectedDealId = $("actDealSelect").value || null;
   const actions = loadActions();
   if(editingActionId){
     const a = actions.find(x => x.id === editingActionId);
@@ -1011,14 +993,14 @@ function saveActionModal(){
       a.title = title; a.dueDate = $("actDate").value;
       a.priority = $("actPriority").value;
       a.vendorId = vendorPid || "";
-      a.deal_id = selectedDealId; /* v5.4: 거래 연결 저장 */
+      a.deal_id = selectedDealId;
       a.updatedAt = new Date().toISOString();
     }
   } else {
     const a = {
       id: uid(), title, dueDate: $("actDate").value || todayStr(),
       type: "ACTION", status: "OPEN", priority: $("actPriority").value || "NORMAL",
-      vendorId: vendorPid || "", deal_id: selectedDealId, /* v5.4: 거래 연결 */
+      vendorId: vendorPid || "", deal_id: selectedDealId,
       createdAt: new Date().toISOString(),
       updatedAt: new Date().toISOString()
     };
@@ -1053,7 +1035,35 @@ $("actionModal").onclick = e => { if(e.target===$("actionModal")) closeActionMod
 $("actTitle").addEventListener("keydown", e => { if(e.key==="Enter") saveActionModal(); });
 
 /* ══════════════════════════════════════════
-   TIMELINE (Legacy audit-based)
+   거래 진행 현황 (이번달)
+   ══════════════════════════════════════════ */
+function renderDealProgress(){
+  const TE = GoLabTradeEngine;
+  const mp = monthPrefix();
+  let trading=0, invoiced=0, paymentPending=0, completed=0;
+
+  TE.loadAll().forEach(t => {
+    if(t.deal_status === "cancelled") return;
+    const dt = t.deal_date || (t.quote_at || t.created_at || "").substring(0,10);
+    if((dt||"").substring(0,7) !== mp) return;
+    if(t.payment_at) completed++;
+    else if(t.invoice_at) paymentPending++;
+    else if(t.delivery_note_at || t.order_at) invoiced++;
+    else trading++;
+  });
+
+  $("dealProgressCard").innerHTML = `
+    <div class="card-header"><h2>거래 진행 현황 (이번달)</h2></div>
+    <div class="stat-grid">
+      <div class="stat-box"><div class="sb-num">${trading}</div><div class="sb-label">거래중</div></div>
+      <div class="stat-box"><div class="sb-num">${invoiced}</div><div class="sb-label">계산서</div></div>
+      <div class="stat-box"><div class="sb-num">${paymentPending}</div><div class="sb-label">입금확인</div></div>
+      <div class="stat-box"><div class="sb-num">${completed}</div><div class="sb-label">거래완료</div></div>
+    </div>`;
+}
+
+/* ══════════════════════════════════════════
+   TIMELINE
    ══════════════════════════════════════════ */
 let tlFilter = "all";
 
@@ -1119,63 +1129,122 @@ function renderTimeline(){
 }
 
 /* ══════════════════════════════════════════
-   MONTHLY KPI (₩ 통일)
+   입금·마감 임박
    ══════════════════════════════════════════ */
-function computeKPI(){
-  /* v5.4: golab_trade_v2 단일 SSoT 기준 — 레거시 폴백 제거 */
+function renderPaymentDue(){
   const TE = GoLabTradeEngine;
-  const mp = monthPrefix();
-  let sT=0, pT=0; const allV=new Set();
+  let deliveryNoteAmt=0, invoiceAmt=0, unpaidAmt=0, vatUnpaidAmt=0;
+  const partnerDue = new Map();
 
-  /* trade_v2 기반 월간 매출/원가/거래처 집계 */
-  try{
-    var allTrades = TE.loadAll();
-    allTrades.forEach(function(t){
-      if(t.deal_status === "cancelled") return;
-      var dt = t.deal_date || (t.quote_at || t.created_at || "").substring(0, 10);
-      if((dt||"").substring(0,7) !== mp) return;
-      var calc = TE.calcTrade(t);
-      sT += calc.total_supply;
-      pT += calc.total_cost;
-      if(t.partner_id) allV.add(t.partner_id);
+  TE.loadAll().forEach(t => {
+    if(t.deal_status === "cancelled") return;
+    const calc = TE.calcTrade(t);
+    const ps = TE.calcPaymentStatus(t);
+    if(ps.code === "paid") return;
+
+    /* 카테고리별 집계 */
+    if(t.delivery_note_at && !t.invoice_at) deliveryNoteAmt += calc.total_supply;
+    if(t.invoice_at && !t.payment_at){
+      invoiceAmt += calc.total_supply;
+    }
+    if(ps.code === "vat_pending") vatUnpaidAmt += calc.vat_amount - n(t.paid_vat);
+    if(ps.code === "unpaid") unpaidAmt += calc.total_supply - n(t.paid_supply);
+
+    /* 거래처별 미수금 */
+    const pid = t.partner_id || t.partner_name_snapshot || "기타";
+    const name = resolvePartnerName(pid) || t.partner_name_snapshot || pid;
+    if(!partnerDue.has(pid)) partnerDue.set(pid, {name, amount:0});
+    partnerDue.get(pid).amount += calc.total_amount - n(t.paid_supply) - n(t.paid_vat);
+  });
+
+  const partners = [...partnerDue.values()].filter(p=>p.amount>0).sort((a,b)=>b.amount-a.amount);
+
+  let html = `<div class="card-header"><h2>입금 · 마감 임박</h2><span class="count">미수금 현황</span></div>`;
+  html += `<div class="payment-summary">
+    <div class="ps-row"><span class="ps-dot brown"></span>거래명세서<span class="ps-amt">${fmt(deliveryNoteAmt)}</span></div>
+    <div class="ps-row"><span class="ps-dot red"></span>계산서<span class="ps-amt">${fmt(invoiceAmt)}</span></div>
+    <div class="ps-row"><span class="ps-dot gray"></span>미입금<span class="ps-amt">${fmt(unpaidAmt)}</span></div>
+    <div class="ps-row"><span class="ps-dot gray"></span>VAT 미입금<span class="ps-amt">${fmt(vatUnpaidAmt)}</span></div>
+  </div>`;
+
+  if(partners.length){
+    html += '<div class="partner-due-list">';
+    partners.slice(0,8).forEach(p => {
+      html += `<div class="pd-item"><span class="pd-name">${esc(p.name)}</span><span class="pd-amt">${fmt(p.amount)}</span></div>`;
     });
-  }catch(e){}
+    html += '</div>';
+  }
 
-  const margin = sT - pT;
-  $("kSales").textContent = fmt(sT);
-  $("kPurchase").textContent = fmt(pT);
-  $("kMargin").textContent = fmt(margin);
-  $("kMargin").style.color = margin >= 0 ? "var(--accent)" : "var(--warn)";
-  $("kVendors").textContent = allV.size;
-
-  /* ── Trade Engine KPI (거래 흐름 추적) ── */
-  var ds = TE.getKPISummary();
-  $("kDealNoInvoice").textContent = ds.noInvoice.count + "건";
-  $("kDealNoInvoiceAmt").textContent = TE.fmt(ds.noInvoice.amount);
-  $("kDealSupplyDue").textContent = ds.supplyDue.count + "건";
-  $("kDealSupplyDueAmt").textContent = TE.fmt(ds.supplyDue.amount);
-  $("kDealVatDue").textContent = ds.vatDue.count + "건";
-  $("kDealVatDueAmt").textContent = TE.fmt(ds.vatDue.amount);
-  $("kDealOverdue").textContent = ds.overdue30.count + "건";
-  $("kDealOverdueAmt").textContent = TE.fmt(ds.overdue30.amount);
+  $("paymentDueCard").innerHTML = html;
 }
 
 /* ══════════════════════════════════════════
-   CALENDAR: 단일 소스 함수 + Mini Calendar + Slide Panel (v2.4)
+   S 지급 체크리스트
+   golab_s_payment_status 로 체크 상태만 저장
+   golab_trade_v2 원본 절대 수정 금지
+   ══════════════════════════════════════════ */
+function loadSPaymentStatus(){
+  try{ return JSON.parse(localStorage.getItem(S_PAYMENT_KEY)||"{}"); }catch{ return {}; }
+}
+function saveSPaymentStatus(obj){
+  localStorage.setItem(S_PAYMENT_KEY, JSON.stringify(obj));
+}
+
+function renderSPaymentChecklist(){
+  const TE = GoLabTradeEngine;
+  const status = loadSPaymentStatus();
+  const items = [];
+
+  TE.loadAll().forEach(t => {
+    if(t.deal_status === "cancelled") return;
+    const calc = TE.calcTrade(t);
+    const expectedS = n(calc.expected_S_amount);
+    if(expectedS <= 0) return;
+    const name = resolvePartnerName(t.partner_id) || t.partner_name_snapshot || "—";
+    items.push({ id:t.id, name, amount:expectedS, checked:!!status[t.id] });
+  });
+
+  if(!items.length){
+    $("sPaymentCard").innerHTML = `<div class="card-header"><h2>S 지급 체크리스트</h2></div>
+      <div style="color:var(--muted);font-size:12px;padding:8px 0;text-align:center">S 지급 대상 없음</div>`;
+    return;
+  }
+
+  let html = `<div class="card-header"><h2>S 지급 체크리스트</h2><span class="count">${items.filter(x=>!x.checked).length}건 미지급</span></div>`;
+  html += '<div class="s-checklist">';
+  items.forEach(item => {
+    const cls = item.checked ? 'sc-item checked' : 'sc-item';
+    const chkCls = item.checked ? 'sc-check done' : 'sc-check';
+    html += `<div class="${cls}">
+      <div class="${chkCls}" data-s-toggle="${item.id}">${item.checked?'✓':''}</div>
+      <span class="sc-partner">${esc(item.name)}</span>
+      <span class="sc-amt">${fmt(item.amount)}</span>
+    </div>`;
+  });
+  html += '</div>';
+  $("sPaymentCard").innerHTML = html;
+
+  /* 체크 이벤트 바인딩 */
+  $("sPaymentCard").querySelectorAll("[data-s-toggle]").forEach(el => {
+    el.onclick = () => {
+      const tid = el.dataset.sToggle;
+      const st = loadSPaymentStatus();
+      st[tid] = !st[tid];
+      saveSPaymentStatus(st);
+      renderSPaymentChecklist();
+    };
+  });
+}
+
+/* ══════════════════════════════════════════
+   CALENDAR: 단일 소스 + Mini Cal + Slide Panel
    ══════════════════════════════════════════ */
 let calYear, calMonth;
 (function(){ const d=new Date(); calYear=d.getFullYear(); calMonth=d.getMonth(); })();
 
-/* ── 라벨 순서 상수 (dedupe 정렬용) ── */
 const DEAL_LABEL_ORDER = ["견적", "거래", "계산서", "입금"];
-const DEAL_FIELD_MAP = {
-  quote_at:   "견적",
-  deal_date:  "거래",
-  invoice_at: "계산서",
-  payment_at: "입금"
-};
+const DEAL_FIELD_MAP = { quote_at:"견적", deal_date:"거래", invoice_at:"계산서", payment_at:"입금" };
 
-/* ── 날짜 유효성 검사 ── */
 function isValidDateStr(s){
   if(!s || typeof s !== "string" || s.length < 10) return false;
   const d = s.substring(0,10);
@@ -1183,77 +1252,41 @@ function isValidDateStr(s){
   return !isNaN(Date.parse(d));
 }
 
-/* ══════════════════════════════════════════
-   buildCalendarEvents() — 도트 + 리스트 단일 소스
-   Mini Calendar 도트 계산과 Slide Panel 이벤트 리스트를
-   동일 함수에서 생성하여 불일치를 원천 차단한다.
-   ══════════════════════════════════════════ */
 function buildCalendarEvents(){
   const today = todayStr();
-
-  /* ── 1. Action 수집 ── */
-  const actionDates = new Map(); // date → {open, overdue}
-  const actionsByDate = {};      // date → [{id, title, priority, overdue, status}]
+  const actionDates = new Map();
+  const actionsByDate = {};
   loadActions().forEach(a => {
     if(!isValidDateStr(a.dueDate)) return;
     const d = a.dueDate.substring(0,10);
-    // 도트용 (DONE 제외)
     if(!actionDates.has(d)) actionDates.set(d, {open:false, overdue:false});
     const info = actionDates.get(d);
     if(a.status !== "DONE"){ info.open = true; if(d < today) info.overdue = true; }
-    // 리스트용 (모든 상태)
     if(!actionsByDate[d]) actionsByDate[d] = [];
-    actionsByDate[d].push({
-      id: a.id,
-      title: a.title || "(제목 없음)",
-      priority: a.priority || "NORMAL",
-      overdue: a.status !== "DONE" && d < today,
-      done: a.status === "DONE",
-      deal_id: a.deal_id || null
-    });
+    actionsByDate[d].push({ id:a.id, title:a.title||"(제목 없음)", priority:a.priority||"NORMAL", overdue:a.status!=="DONE"&&d<today, done:a.status==="DONE", deal_id:a.deal_id||null });
   });
 
-  /* ── 2. Deal 수집 + dedupe ── */
-  const dealDates = new Set();        // date Set (도트용)
-  const dealGroupsByDate = {};        // date → [{deal_id, labels, partner, amount}]
-  // 중간 맵: `${deal_id}_${date}` → {deal_id, labelsSet, partner, amount}
+  const dealDates = new Set();
+  const dealGroupsByDate = {};
   const dealDedupeMap = new Map();
-
-  /* v2.4.1: 거래 SSoT를 golab_trade_v2로 교체 */
   try{
     const trades = JSON.parse(GoLabStorage.getItem("golab_trade_v2") || "[]");
     trades.forEach(trade => {
       if(trade.deal_status === "cancelled") return;
-      const did = trade.id;   /* v2: id (v1은 deal_id) */
+      const did = trade.id;
       if(!did) return;
-
-      /* 얇은 매핑: supply_amount (items 배열 합산) */
       const totalSupply = (trade.items || []).reduce((s, i) => s + (Number(i.supply_amount) || 0), 0);
-      /* 얇은 매핑: item_name (1건이면 품목명, 2건+ 이면 "첫품목 외 N건") */
       const itemArr = trade.items || [];
-      const itemLabel = itemArr.length === 0 ? ""
-        : itemArr.length === 1 ? (itemArr[0].name || "")
-        : (itemArr[0].name || "") + " 외 " + (itemArr.length - 1) + "건";
-
-      // 4개 필드 스캔
+      const itemLabel = itemArr.length === 0 ? "" : itemArr.length === 1 ? (itemArr[0].name || "") : (itemArr[0].name || "") + " 외 " + (itemArr.length - 1) + "건";
       Object.keys(DEAL_FIELD_MAP).forEach(field => {
         const raw = trade[field];
         if(!isValidDateStr(raw)) return;
         const d = raw.substring(0,10);
         const label = DEAL_FIELD_MAP[field];
         const key = did + "_" + d;
-
         dealDates.add(d);
-
         if(!dealDedupeMap.has(key)){
-          dealDedupeMap.set(key, {
-            deal_id: did,
-            date: d,
-            labelsSet: new Set([label]),
-            partner: trade.partner_name_snapshot || "",
-            amount: totalSupply,
-            item: itemLabel
-          });
+          dealDedupeMap.set(key, { deal_id:did, date:d, labelsSet:new Set([label]), partner:trade.partner_name_snapshot||"", amount:totalSupply, item:itemLabel });
         } else {
           dealDedupeMap.get(key).labelsSet.add(label);
         }
@@ -1261,43 +1294,26 @@ function buildCalendarEvents(){
     });
   }catch(e){}
 
-  // dedupe 맵 → 날짜별 그룹 배열로 변환
   dealDedupeMap.forEach(entry => {
     const d = entry.date;
     if(!dealGroupsByDate[d]) dealGroupsByDate[d] = [];
-    // 라벨 순서 고정: 견적 → 거래 → 계산서 → 입금
     const sortedLabels = DEAL_LABEL_ORDER.filter(l => entry.labelsSet.has(l));
-    dealGroupsByDate[d].push({
-      deal_id: entry.deal_id,
-      labels: sortedLabels,
-      labelText: sortedLabels.join(" / "),
-      partner: entry.partner,
-      amount: entry.amount,
-      item: entry.item
-    });
+    dealGroupsByDate[d].push({ deal_id:entry.deal_id, labels:sortedLabels, labelText:sortedLabels.join(" / "), partner:entry.partner, amount:entry.amount, item:entry.item });
   });
 
   return { actionDates, dealDates, actionsByDate, dealGroupsByDate };
 }
 
-/* ══════════════════════════════════════════
-   MINI CALENDAR (Right sidebar)
-   ══════════════════════════════════════════ */
 function renderMiniCal(){
   const mNames=["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
-  const calTitle=$("calTitle");
-  calTitle.textContent=calYear+"년 "+mNames[calMonth];
-
+  $("calTitle").textContent=calYear+"년 "+mNames[calMonth];
   const first=new Date(calYear,calMonth,1);
   const lastDay=new Date(calYear,calMonth+1,0).getDate();
   const startDow=first.getDay();
   const today=todayStr();
-
-  // 단일 소스에서 도트 데이터 가져오기
   const evData = buildCalendarEvents();
   const actionDates = evData.actionDates;
   const dealDates = evData.dealDates;
-
   const grid=$("calGrid"); grid.innerHTML="";
   ["일","월","화","수","목","금","토"].forEach(d=>{
     const s=document.createElement("div"); s.className="cal-dow"; s.textContent=d; grid.appendChild(s);
@@ -1311,15 +1327,10 @@ function renderMiniCal(){
     const ds=`${calYear}-${String(calMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`;
     d.className="cal-day current-month";
     if(ds===today) d.classList.add("today");
-
-    // Action 도트 (파랑/빨강)
     const aInfo = actionDates.get(ds);
     if(aInfo && aInfo.open){ d.classList.add("has-action"); if(aInfo.overdue) d.classList.add("has-overdue"); }
-    // Deal 도트 (금색)
     if(dealDates.has(ds)) d.classList.add("has-deal");
-
     d.textContent=day;
-    // 클릭 → Slide Panel 열기 (페이지 이동 제거)
     d.onclick=()=>{ openCalPanel(ds); };
     grid.appendChild(d);
   }
@@ -1330,17 +1341,14 @@ function renderMiniCal(){
 }
 
 /* ══════════════════════════════════════════
-   CALENDAR SLIDE PANEL (v2.4)
-   Console 내부 우측 슬라이드 패널
+   CALENDAR SLIDE PANEL
    ══════════════════════════════════════════ */
 let cpYear, cpMonth, selectedCalDate;
 (function(){ const d=new Date(); cpYear=d.getFullYear(); cpMonth=d.getMonth(); selectedCalDate=todayStr(); })();
 
-/* ── 패널 열기 ── */
 function openCalPanel(dateStr){
   if(!dateStr) dateStr = todayStr();
   selectedCalDate = dateStr;
-  // 패널 월을 선택 날짜 기준으로 맞춤
   const parts = dateStr.split("-");
   cpYear = parseInt(parts[0]);
   cpMonth = parseInt(parts[1]) - 1;
@@ -1349,128 +1357,90 @@ function openCalPanel(dateStr){
   $("calPanelOverlay").classList.add("open");
 }
 
-/* ── 패널 닫기 ── */
 function closeCalPanel(){
   $("calPanel").classList.remove("open");
   $("calPanelOverlay").classList.remove("open");
 }
 
-/* ── 패널 렌더링 ── */
 function renderCalPanel(){
   const mNames=["1월","2월","3월","4월","5월","6월","7월","8월","9월","10월","11월","12월"];
   $("cpMonthTitle").textContent = cpYear+"년 "+mNames[cpMonth];
-
   const evData = buildCalendarEvents();
   const today = todayStr();
   const body = $("cpBody");
-
-  // 현재 월의 시작~끝 날짜
   const monthStart = `${cpYear}-${String(cpMonth+1).padStart(2,"0")}-01`;
   const lastDay = new Date(cpYear, cpMonth+1, 0).getDate();
   const monthEnd = `${cpYear}-${String(cpMonth+1).padStart(2,"0")}-${String(lastDay).padStart(2,"0")}`;
-
-  // 이번 주 범위 (일~토)
   const todayDate = new Date();
   const dow = todayDate.getDay();
   const weekStart = new Date(todayDate); weekStart.setDate(weekStart.getDate() - dow);
   const weekEnd = new Date(weekStart); weekEnd.setDate(weekEnd.getDate() + 6);
   const wsStr = dateStr(weekStart);
   const weStr = dateStr(weekEnd);
-
-  // 전체 날짜 수집 (이번 달 범위)
   const allDatesInMonth = [];
   for(let day=1; day<=lastDay; day++){
     allDatesInMonth.push(`${cpYear}-${String(cpMonth+1).padStart(2,"0")}-${String(day).padStart(2,"0")}`);
   }
 
+  const dayNames = ["일","월","화","수","목","금","토"];
   let html = "";
 
-  /* ── (A) 선택된 날짜 이벤트 (강조 섹션) ── */
+  /* (A) 선택된 날짜 이벤트 */
   const selActions = evData.actionsByDate[selectedCalDate] || [];
   const selDeals = evData.dealGroupsByDate[selectedCalDate] || [];
   const selTotal = selActions.length + selDeals.length;
-
-  // 날짜 포맷
   const selParts = selectedCalDate.split("-");
   const selDateObj = new Date(+selParts[0], +selParts[1]-1, +selParts[2]);
-  const dayNames = ["일","월","화","수","목","금","토"];
   const selLabel = `${+selParts[1]}월 ${+selParts[2]}일 (${dayNames[selDateObj.getDay()]})`;
   const isToday = selectedCalDate === today;
-
   html += `<div class="cp-date-header">${isToday?"📌 오늘 — ":"📅 "}${selLabel}</div>`;
-
   if(selTotal === 0){
     html += `<div class="cp-empty">이 날짜에 일정이 없습니다</div>`;
   } else {
-    // Action 이벤트
     selActions.forEach(a => {
       const dotCls = a.done ? "action" : (a.overdue ? "overdue" : "action");
       const badgeCls = a.done ? "action-badge" : (a.overdue ? "overdue-badge" : "action-badge");
       const badgeText = a.done ? "완료" : (a.overdue ? "지연" : (a.priority === "HIGH" ? "높음" : "Action"));
       const titleStyle = a.done ? "text-decoration:line-through;color:var(--muted)" : "";
       const dealHint = a.deal_id ? ` <span style="font-size:9px;color:var(--muted)">🔗 Deal</span>` : "";
-      html += `<div class="cp-event">
-        <div class="cp-dot ${dotCls}"></div>
-        <div class="cp-info">
-          <div class="cp-label" style="${titleStyle}">${esc(a.title)}${dealHint}</div>
-        </div>
-        <span class="cp-badge ${badgeCls}">${badgeText}</span>
-      </div>`;
+      html += `<div class="cp-event"><div class="cp-dot ${dotCls}"></div><div class="cp-info"><div class="cp-label" style="${titleStyle}">${esc(a.title)}${dealHint}</div></div><span class="cp-badge ${badgeCls}">${badgeText}</span></div>`;
     });
-    // Deal 이벤트
     selDeals.forEach(dg => {
       const amtText = dg.amount ? fmt(dg.amount) : "";
       const partnerText = dg.partner ? esc(dg.partner) : "";
       const sub = [partnerText, dg.item ? esc(dg.item) : "", amtText].filter(Boolean).join(" · ");
-      html += `<div class="cp-event">
-        <div class="cp-dot deal"></div>
-        <div class="cp-info">
-          <div class="cp-label">💰 ${esc(dg.labelText)}</div>
-          ${sub ? `<div class="cp-sub">${sub}</div>` : ""}
-        </div>
-        <span class="cp-badge deal-badge">Deal</span>
-      </div>`;
+      html += `<div class="cp-event"><div class="cp-dot deal"></div><div class="cp-info"><div class="cp-label">💰 ${esc(dg.labelText)}</div>${sub?`<div class="cp-sub">${sub}</div>`:""}</div><span class="cp-badge deal-badge">Deal</span></div>`;
     });
   }
 
   html += `<div class="cp-divider"></div>`;
 
-  /* ── (B) 이번 주 예정 ── */
-  html += `<div class="cp-section">`;
-  html += `<div class="cp-section-title">📋 이번 주 예정</div>`;
+  /* (B) 이번 주 예정 */
+  html += `<div class="cp-section"><div class="cp-section-title">📋 이번 주 예정</div>`;
   let weekCount = 0;
   allDatesInMonth.forEach(d => {
     if(d < wsStr || d > weStr || d === selectedCalDate) return;
     const acts = evData.actionsByDate[d] || [];
     const dls = evData.dealGroupsByDate[d] || [];
     if(acts.length === 0 && dls.length === 0) return;
-
     const dp = d.split("-");
     const dObj = new Date(+dp[0], +dp[1]-1, +dp[2]);
     const dLabel = `${+dp[1]}/${+dp[2]}(${dayNames[dObj.getDay()]})`;
-
     acts.filter(a => !a.done).forEach(a => {
       weekCount++;
       const dotCls = a.overdue ? "overdue" : "action";
-      html += `<div class="cp-event" onclick="openCalPanel('${d}')">
-        <div class="cp-dot ${dotCls}"></div>
-        <div class="cp-info"><div class="cp-label">${esc(a.title)}</div><div class="cp-sub">${dLabel}</div></div>
-      </div>`;
+      html += `<div class="cp-event" onclick="openCalPanel('${d}')"><div class="cp-dot ${dotCls}"></div><div class="cp-info"><div class="cp-label">${esc(a.title)}</div><div class="cp-sub">${dLabel}</div></div></div>`;
     });
     dls.forEach(dg => {
       weekCount++;
-      html += `<div class="cp-event" onclick="openCalPanel('${d}')">
-        <div class="cp-dot deal"></div>
-        <div class="cp-info"><div class="cp-label">💰 ${esc(dg.labelText)}</div><div class="cp-sub">${dLabel} · ${esc(dg.partner||dg.item||"")}</div></div>
-      </div>`;
+      html += `<div class="cp-event" onclick="openCalPanel('${d}')"><div class="cp-dot deal"></div><div class="cp-info"><div class="cp-label">💰 ${esc(dg.labelText)}</div><div class="cp-sub">${dLabel} · ${esc(dg.partner||dg.item||"")}</div></div></div>`;
     });
   });
   if(weekCount === 0) html += `<div class="cp-empty">이번 주 추가 예정 없음</div>`;
   html += `</div>`;
 
-  /* ── (C) 이번 달 전체 ── */
-  html += `<div class="cp-section">`;
-  html += `<div class="cp-section-title">📆 ${mNames[cpMonth]} 전체</div>`;
+  /* (C) 이번 달 전체 */
+  html += `<div class="cp-section"><div class="cp-section-title">📆 ${mNames[cpMonth]} 전체</div>`;
   let monthEvents = [];
   allDatesInMonth.forEach(d => {
     if(d === selectedCalDate) return;
@@ -1480,59 +1450,38 @@ function renderCalPanel(){
     const dp = d.split("-");
     const dObj = new Date(+dp[0], +dp[1]-1, +dp[2]);
     const dLabel = `${+dp[1]}/${+dp[2]}(${dayNames[dObj.getDay()]})`;
-    acts.forEach(a => {
-      monthEvents.push({d, dLabel, type:"action", title:esc(a.title), overdue:a.overdue});
-    });
-    dls.forEach(dg => {
-      monthEvents.push({d, dLabel, type:"deal", title:"💰 "+esc(dg.labelText), sub:esc(dg.partner||dg.item||"")});
-    });
+    acts.forEach(a => { monthEvents.push({d, dLabel, type:"action", title:esc(a.title), overdue:a.overdue}); });
+    dls.forEach(dg => { monthEvents.push({d, dLabel, type:"deal", title:"💰 "+esc(dg.labelText), sub:esc(dg.partner||dg.item||"")}); });
   });
   if(monthEvents.length === 0){
     html += `<div class="cp-empty">추가 이벤트 없음</div>`;
   } else {
-    // 최대 20건 표시
     monthEvents.slice(0,20).forEach(ev => {
       const dotCls = ev.type === "deal" ? "deal" : (ev.overdue ? "overdue" : "action");
-      html += `<div class="cp-event" onclick="openCalPanel('${ev.d}')" style="cursor:pointer">
-        <div class="cp-dot ${dotCls}"></div>
-        <div class="cp-info"><div class="cp-label">${ev.title}</div><div class="cp-sub">${ev.dLabel}${ev.sub?" · "+ev.sub:""}</div></div>
-      </div>`;
+      html += `<div class="cp-event" onclick="openCalPanel('${ev.d}')" style="cursor:pointer"><div class="cp-dot ${dotCls}"></div><div class="cp-info"><div class="cp-label">${ev.title}</div><div class="cp-sub">${ev.dLabel}${ev.sub?" · "+ev.sub:""}</div></div></div>`;
     });
-    if(monthEvents.length > 20){
-      html += `<div class="cp-empty">외 ${monthEvents.length - 20}건 더 있음</div>`;
-    }
+    if(monthEvents.length > 20) html += `<div class="cp-empty">외 ${monthEvents.length - 20}건 더 있음</div>`;
   }
   html += `</div>`;
-
   body.innerHTML = html;
 }
 
 /* ══════════════════════════════════════════
-   VENDOR DRAWER (uses Action data)
+   VENDOR DRAWER
    ══════════════════════════════════════════ */
-/* partner_id / 텍스트 이름 양쪽 지원 — 정규화 매칭으로 표기 차이 통합 */
 function openDrawer(nameOrId){
   if(!nameOrId) return;
   $("drawer").classList.add("open"); $("drawerOverlay").classList.add("open");
-
-  // partner 해석
   const partnerId = resolvePartnerId(nameOrId);
   const partner = partnerId ? GoLabPartnerMaster.getById(partnerId) : null;
   const displayName = partner ? (partner.display_name || partner.name) : nameOrId;
   $("vpName").textContent = displayName;
-
-  // 매칭 헬퍼 — partner_id/이름/정규화 3단 비교
   function matchVendor(text){
     if(!text) return false;
     if(text === displayName) return true;
-    if(partner){
-      const f = GoLabPartnerMaster.findByName(text);
-      return f && f.partner_id === partnerId;
-    }
+    if(partner){ const f = GoLabPartnerMaster.findByName(text); return f && f.partner_id === partnerId; }
     return false;
   }
-
-  /* v5.4: golab_trade_v2 단일 SSoT — 레거시 폴백 제거 */
   let deals=[];
   const TE = GoLabTradeEngine;
   try{
@@ -1542,15 +1491,11 @@ function openDrawer(nameOrId){
       return matchVendor(t.partner_name_snapshot);
     });
   }catch(e){}
-
-  // Actions (vendorId = partner_id 또는 레거시 텍스트)
   const vendorActions = loadActions().filter(a=>{
     if(!a.vendorId) return false;
     if(partnerId && a.vendorId === partnerId) return true;
     return matchVendor(a.vendorId);
   }).filter(a=>a.status!=="DONE");
-
-  /* 거래 통계 — trade_v2 calcTrade 기반 */
   let totalAmt = 0;
   deals.forEach(function(t){ totalAmt += TE.calcTrade(t).total_supply; });
   const allDates = deals.map(function(t){ return t.deal_date||t.quote_at||t.created_at||""; }).filter(Boolean).sort();
@@ -1558,14 +1503,10 @@ function openDrawer(nameOrId){
   $("vpLatest").textContent=allDates.length?allDates[allDates.length-1]:"-";
   $("vpCount").textContent = deals.length;
   $("vpTasks").textContent=vendorActions.length+"건";
-
-  // Hashtags
   const allMemos = [...deals.map(function(t){return t.memo||""}),...vendorActions.map(a=>a.title)];
   const tags=new Set();
   allMemos.forEach(m=>extractHashtags(m).forEach(h=>tags.add(h)));
   $("vpTags").innerHTML=[...tags].map(t=>`<span class="htag">${esc(t)}</span>`).join("");
-
-  // Timeline — 정규화 매칭으로 필터
   const items=buildTimeline().filter(x=>matchVendor(x.vendor)).slice(0,30);
   const ul=$("vpTimeline"); ul.innerHTML="";
   if(!items.length){
@@ -1577,8 +1518,6 @@ function openDrawer(nameOrId){
       ul.appendChild(li);
     });
   }
-
-  // Footer: pending actions
   const todoDiv=$("vpTodos"); todoDiv.innerHTML="";
   if(!vendorActions.length){
     todoDiv.innerHTML='<div style="color:var(--muted);font-size:12px;padding:4px 0">미완료 Action 없음</div>';
@@ -1596,21 +1535,17 @@ function closeDrawer(){ $("drawer").classList.remove("open"); $("drawerOverlay")
 /* ══════════════════════════════════════════
    VENDOR SEARCH
    ══════════════════════════════════════════ */
-/* partner_master 기반 거래처 목록 + 미등록 거래처 하위 호환 */
 function getAllVendors(){
   const partners = GoLabPartnerMaster.loadAll();
   const result = partners.map(p=>({partner_id:p.partner_id, name:p.name, type:p.type}));
   const knownIds = new Set(partners.map(p=>p.partner_id));
   const knownNames = new Set(partners.map(p=>p.name));
-  /* v5.4: golab_trade_v2 단일 SSoT 기반 미등록 수집 */
   const unregistered = new Set();
   try{GoLabTradeEngine.loadAll().forEach(function(t){
     if(t.deal_status === "cancelled") return;
     if(t.partner_id && knownIds.has(t.partner_id)) return;
     var nm = t.partner_name_snapshot;
-    if(nm && !knownNames.has(nm)){
-      const f=GoLabPartnerMaster.findByName(nm); if(!f) unregistered.add(nm);
-    }
+    if(nm && !knownNames.has(nm)){ const f=GoLabPartnerMaster.findByName(nm); if(!f) unregistered.add(nm); }
   });}catch{}
   loadActions().forEach(a=>{
     if(!a.vendorId) return;
@@ -1646,30 +1581,24 @@ function renderSearchResults(q){
 /* ══════════════════════════════════════════
    미등록 거래처 수집 + 일괄 등록
    ══════════════════════════════════════════ */
-/** 미등록 거래처 수집 — sales.client + trade.vendor 기반, _normalize dedupe */
 function collectUnregistered(){
   const partners = GoLabPartnerMaster.loadAll();
   const normSet = new Set(partners.map(p => GoLabPartnerMaster.normalize(p.name)));
   const nameIds = new Set(partners.map(p => p.partner_id));
-  // Map: normalizedName → {name, sources}
   const unregMap = new Map();
   function addName(rawName, source){
     if(!rawName) return;
     const norm = GoLabPartnerMaster.normalize(rawName);
     if(!norm) return;
-    if(normSet.has(norm)) return; // 이미 등록됨
-    if(!unregMap.has(norm)){
-      unregMap.set(norm, {name:rawName, sources:new Set()});
-    }
+    if(normSet.has(norm)) return;
+    if(!unregMap.has(norm)) unregMap.set(norm, {name:rawName, sources:new Set()});
     unregMap.get(norm).sources.add(source);
   }
-  /* v5.4: golab_trade_v2 단일 SSoT 기반 수집 */
   try{GoLabTradeEngine.loadAll().forEach(function(t){
     if(t.deal_status === "cancelled") return;
     if(t.partner_id && nameIds.has(t.partner_id)) return;
     addName(t.partner_name_snapshot, "거래");
   });}catch{}
-  // Action의 레거시 텍스트 vendorId
   loadActions().forEach(a=>{
     if(!a.vendorId) return;
     if(nameIds.has(a.vendorId)) return;
@@ -1678,7 +1607,6 @@ function collectUnregistered(){
   return [...unregMap.values()].sort((a,b)=>a.name.localeCompare(b.name));
 }
 
-/** 미등록 거래처 카드 렌더 */
 function renderUnregCard(){
   const unregs = collectUnregistered();
   const card = $("unregCard");
@@ -1687,7 +1615,6 @@ function renderUnregCard(){
   $("unregCount").textContent = unregs.length;
 }
 
-/** 미등록 거래처 패널 열기 */
 function openUnregPanel(){
   const unregs = collectUnregistered();
   if(!unregs.length){ alert("미등록 거래처가 없습니다."); return; }
@@ -1695,17 +1622,11 @@ function openUnregPanel(){
   list.innerHTML="";
   unregs.forEach((item,i)=>{
     const div = document.createElement("div");
-    div.className="unreg-item";
-    div.dataset.idx = i;
-    div.dataset.name = item.name;
+    div.className="unreg-item"; div.dataset.idx = i; div.dataset.name = item.name;
     const srcText = [...item.sources].join("/");
-    div.innerHTML=`
-      <span class="ui-name">${esc(item.name)}</span>
-      <span class="ui-src">${esc(srcText)}</span>
-      <button class="ui-btn" data-reg="${i}">등록</button>`;
+    div.innerHTML=`<span class="ui-name">${esc(item.name)}</span><span class="ui-src">${esc(srcText)}</span><button class="ui-btn" data-reg="${i}">등록</button>`;
     list.appendChild(div);
   });
-  // 개별 등록 버튼
   list.querySelectorAll("[data-reg]").forEach(btn=>{
     btn.onclick=(e)=>{
       e.stopPropagation();
@@ -1713,12 +1634,8 @@ function openUnregPanel(){
       const name = row.dataset.name;
       try{
         GoLabPartnerMaster.create({name, type:"미분류", note:"미등록→개별 등록"});
-        row.querySelector(".ui-btn").replaceWith(
-          Object.assign(document.createElement("span"),{className:"ui-done",textContent:"✓ 등록완료"})
-        );
-        _updateUnregInfo();
-        renderUnregCard();
-        renderAll();
+        row.querySelector(".ui-btn").replaceWith(Object.assign(document.createElement("span"),{className:"ui-done",textContent:"✓ 등록완료"}));
+        _updateUnregInfo(); renderUnregCard(); renderAll();
       }catch(err){ alert("등록 실패: "+err.message); }
     };
   });
@@ -1734,32 +1651,18 @@ function _updateUnregInfo(){
   $("unregAll").disabled = (remaining === 0);
 }
 
-/** 모두 등록 — pre-backup 후 일괄 생성 */
 function registerAllUnreg(){
   const remaining = $("unregList").querySelectorAll(".ui-btn");
   if(!remaining.length){ alert("등록할 거래처가 없습니다."); return; }
   if(!confirm(`미등록 거래처 ${remaining.length}개를 모두 등록합니다.\n(거래처 마스터 pre-backup 자동 수행)\n계속하시겠습니까?`)) return;
-  // pre-backup: 현재 partner_master 스냅샷 저장
   const currentMaster = localStorage.getItem(GoLabPartnerMaster.MASTER_KEY) || "[]";
   localStorage.setItem("golab_partner_master_pre_batch_backup", currentMaster);
   GoLabPartnerMaster.emitAudit("PRE_BATCH_BACKUP", {count: JSON.parse(currentMaster).length});
-  // 이름 수집
   const names = [];
-  remaining.forEach(btn=>{
-    const row = btn.closest(".unreg-item");
-    names.push(row.dataset.name);
-  });
-  // 일괄 등록
+  remaining.forEach(btn=>{ const row = btn.closest(".unreg-item"); names.push(row.dataset.name); });
   const result = GoLabPartnerMaster.batchCreate(names, "미분류");
-  // UI 갱신
-  remaining.forEach(btn=>{
-    btn.replaceWith(
-      Object.assign(document.createElement("span"),{className:"ui-done",textContent:"✓ 등록완료"})
-    );
-  });
-  _updateUnregInfo();
-  renderUnregCard();
-  renderAll();
+  remaining.forEach(btn=>{ btn.replaceWith(Object.assign(document.createElement("span"),{className:"ui-done",textContent:"✓ 등록완료"})); });
+  _updateUnregInfo(); renderUnregCard(); renderAll();
   alert(`일괄 등록 완료!\n등록: ${result.created}개, 중복 건너뜀: ${result.skipped}개`);
 }
 
@@ -1772,17 +1675,19 @@ $("unregOverlay").onclick = e=>{ if(e.target===$("unregOverlay")) closeUnregPane
    RENDER ALL
    ══════════════════════════════════════════ */
 function renderAll(){
+  renderHeaderBadges();
+  renderKPIRow();
+  renderTodaySummary();
   renderTodayZone();
-  renderSections();
+  renderDealProgress();
   renderTimeline();
-  computeKPI();
   renderMiniCal();
+  renderPaymentDue();
+  renderSPaymentChecklist();
   renderUnregCard();
 }
 
 /* ── Event Bindings ── */
-$("btnQuickTask").onclick = () => openActionModal(null);
-$("btnQuickSearch").onclick = openSearch;
 $("searchOverlay").onclick = e => { if(e.target===$("searchOverlay")) closeSearch(); };
 $("searchInput").addEventListener("input", e => renderSearchResults(e.target.value));
 
@@ -1797,7 +1702,6 @@ $("drawerOverlay").onclick = closeDrawer;
 $("calPrev").onclick=()=>{calMonth--;if(calMonth<0){calMonth=11;calYear--;}renderMiniCal();};
 $("calNext").onclick=()=>{calMonth++;if(calMonth>11){calMonth=0;calYear++;}renderMiniCal();};
 
-/* ── Calendar Panel 이벤트 바인딩 (v2.4) ── */
 $("calTitle").onclick=()=>{ openCalPanel(todayStr()); };
 $("cpClose").onclick = closeCalPanel;
 $("calPanelOverlay").onclick = closeCalPanel;
@@ -1808,16 +1712,23 @@ document.addEventListener("keydown",e=>{
   if(e.key==="Escape"){ closeCalPanel(); closeActionModal(); closeDrawer(); closeSearch(); closeRestorePanel(); closeUnregPanel(); }
 });
 
-/* ── 크로스탭 동기화: 다른 탭에서 ACTION/거래 변경 시 자동 반영 ── */
-/* v2.4.1: golab_deals_v1 → golab_trade_v2 (Calendar SSoT 교체) */
+/* 크로스탭 동기화 */
 window.addEventListener("storage", e => { if(e.key === ACTION_KEY || e.key === "golab_trade_v2") renderAll(); });
 
 /* ══════════════════════════════════════════
    DATA MANAGEMENT — 전체 백업/복원
-   (golab_ 접두사 키 전수 스캔)
    ══════════════════════════════════════════ */
 
-/* ── golab_ 키 전수 스캔 유틸 ── */
+/* 데이터 관리 플로팅 버튼 */
+$("dmFab").onclick = () => {
+  $("dmPopup").classList.toggle("open");
+  if($("dmPopup").classList.contains("open")) refreshDmInfo();
+};
+/* 팝업 외부 클릭 시 닫기 */
+document.addEventListener("click", e => {
+  if(!e.target.closest(".dm-floating")) $("dmPopup").classList.remove("open");
+});
+
 function scanGolabKeys(){
   const keys = [];
   for(let i=0; i<localStorage.length; i++){
@@ -1827,7 +1738,6 @@ function scanGolabKeys(){
   return keys.sort();
 }
 
-/* ── 용량 계산 (bytes) ── */
 function calcStorageBytes(keys){
   let total = 0;
   keys.forEach(k => {
@@ -1843,13 +1753,6 @@ function fmtBytes(b){
   return (b/1048576).toFixed(2) + " MB";
 }
 
-/* ── 데이터 관리 패널 토글 ── */
-$("dmToggle").onclick = () => {
-  $("dmToggle").classList.toggle("open");
-  $("dmBody").classList.toggle("open");
-  if($("dmBody").classList.contains("open")) refreshDmInfo();
-};
-
 function refreshDmInfo(){
   const keys = scanGolabKeys();
   const bytes = calcStorageBytes(keys);
@@ -1857,445 +1760,212 @@ function refreshDmInfo(){
   $("dmKeyCount").textContent = keys.length;
 }
 
-/* ── 전체 백업 (Full Backup) ── */
+/* ── 전체 백업 ── */
 $("btnFullBackup").onclick = function(){
   const keys = scanGolabKeys();
   if(!keys.length){ alert("백업할 golab_ 키가 없습니다."); return; }
-
-  // golab_ 키 전수 수집
   const data = {};
-  keys.forEach(k => {
-    try{ data[k] = JSON.parse(localStorage.getItem(k)); }
-    catch{ data[k] = localStorage.getItem(k); }
-  });
-
+  keys.forEach(k => { try{ data[k] = JSON.parse(localStorage.getItem(k)); }catch{ data[k] = localStorage.getItem(k); } });
   const totalBytes = calcStorageBytes(keys);
   const now = new Date();
   const ts = now.toISOString().replace(/[-:]/g,"").replace("T","_").substring(0,15);
   const filename = `GoLab_FullBackup_${ts}.json`;
-
-  // 메타 정보 포함
-  const payload = {
-    _meta: {
-      version: "1.6.1",
-      timestamp: now.toISOString(),
-      keyCount: keys.length,
-      totalBytes: totalBytes
-    },
-    keys: data
-  };
-
-  // Blob 다운로드
+  const payload = { _meta: { version: "8.0", timestamp: now.toISOString(), keyCount: keys.length, totalBytes }, keys: data };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
   const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
-
-  // audit 기록: FULL_BACKUP
+  a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
   emitWorkAudit("FULL_BACKUP", { keyCount: keys.length, totalBytes, filename });
-
   alert(`전체 백업 완료!\n\n키: ${keys.length}개\n용량: ${fmtBytes(totalBytes)}\n파일: ${filename}`);
   refreshDmInfo();
 };
 
 /* ── 복원: 파일 선택 → DRY_RUN ── */
-var restorePayload = null; // 파싱된 백업 데이터 보관 (var: 콘솔 테스트 접근 허용)
-
+var restorePayload = null;
 $("btnFullRestore").onclick = () => $("restoreFileIn").click();
 
 $("restoreFileIn").addEventListener("change", e => {
   const f = e.target.files?.[0];
-  if(!f) return;
-  e.target.value = "";
-
+  if(!f) return; e.target.value = "";
   const reader = new FileReader();
   reader.onload = ev => {
     try{
       const parsed = JSON.parse(ev.target.result);
-
-      // 검증: _meta + keys 구조
       if(!parsed._meta || !parsed.keys || typeof parsed.keys !== "object"){
-        alert("올바른 GoLab 전체 백업 파일이 아닙니다.\n(_meta + keys 구조 필요)");
-        return;
+        alert("올바른 GoLab 전체 백업 파일이 아닙니다.\n(_meta + keys 구조 필요)"); return;
       }
-
-      restorePayload = parsed;
-      runDryRun();
-    }catch(err){
-      alert("JSON 파싱 실패:\n" + err.message);
-    }
+      restorePayload = parsed; runDryRun();
+    }catch(err){ alert("JSON 파싱 실패:\n" + err.message); }
   };
   reader.readAsText(f);
 });
 
-/* ── DRY_RUN 리포트 생성 ── */
 function runDryRun(){
   if(!restorePayload) return;
-
   const backupKeys = Object.keys(restorePayload.keys).filter(k => k.startsWith("golab_")).sort();
   const currentKeys = scanGolabKeys();
   const mode = getRestoreMode();
-
   const backupSet = new Set(backupKeys);
   const currentSet = new Set(currentKeys);
-
-  // 키 분류
-  const overwrite = []; // 백업에도 있고 현재에도 있음
-  const add = [];       // 백업에 있고 현재에 없음
-  const extra = [];     // 현재에 있고 백업에 없음
-
-  backupKeys.forEach(k => {
-    if(currentSet.has(k)) overwrite.push(k);
-    else add.push(k);
-  });
-  currentKeys.forEach(k => {
-    if(!backupSet.has(k)) extra.push(k);
-  });
-
-  // 용량 계산
+  const overwrite = [], add = [], extra = [];
+  backupKeys.forEach(k => { if(currentSet.has(k)) overwrite.push(k); else add.push(k); });
+  currentKeys.forEach(k => { if(!backupSet.has(k)) extra.push(k); });
   let estimatedBytes = 0;
-  backupKeys.forEach(k => {
-    const v = JSON.stringify(restorePayload.keys[k]) || "";
-    estimatedBytes += new Blob([k]).size + new Blob([v]).size;
-  });
-  if(mode === "merge"){
-    extra.forEach(k => {
-      const v = localStorage.getItem(k) || "";
-      estimatedBytes += new Blob([k]).size + new Blob([v]).size;
-    });
-  }
-
-  // 리포트 렌더링
-  const extraLabel = mode === "replace"
-    ? `🔴 삭제됨: ${extra.length}개 키`
-    : `🟢 유지됨: ${extra.length}개 키`;
-
+  backupKeys.forEach(k => { const v = JSON.stringify(restorePayload.keys[k]) || ""; estimatedBytes += new Blob([k]).size + new Blob([v]).size; });
+  if(mode === "merge"){ extra.forEach(k => { const v = localStorage.getItem(k) || ""; estimatedBytes += new Blob([k]).size + new Blob([v]).size; }); }
   $("rpSummary").innerHTML = `
     <div class="rp-row"><span class="rp-icon">✅</span><span class="rp-label">덮어쓰기</span><span class="rp-count">${overwrite.length}개 키</span></div>
     <div class="rp-row"><span class="rp-icon">➕</span><span class="rp-label">새로 추가</span><span class="rp-count">${add.length}개 키</span></div>
-    <div class="rp-row"><span class="rp-icon">${mode==="replace"?"🔴":"🟢"}</span><span class="rp-label">${mode==="replace"?"삭제됨":"유지됨"}</span><span class="rp-count">${extra.length}개 키</span></div>
-  `;
-
-  // 용량 가드
-  const MB5 = 5 * 1024 * 1024;
-  const MB4_5 = 4.5 * 1024 * 1024;
+    <div class="rp-row"><span class="rp-icon">${mode==="replace"?"🔴":"🟢"}</span><span class="rp-label">${mode==="replace"?"삭제됨":"유지됨"}</span><span class="rp-count">${extra.length}개 키</span></div>`;
+  const MB5 = 5*1024*1024, MB4_5 = 4.5*1024*1024;
   const capClass = estimatedBytes > MB4_5 ? "rp-capacity warn" : "rp-capacity";
   let capMsg = `예상 용량: ${fmtBytes(estimatedBytes)} / 5MB`;
   if(estimatedBytes > MB5) capMsg += " ⛔ 용량 초과! 복원 불가";
   else if(estimatedBytes > MB4_5) capMsg += " ⚠️ 용량 경고";
   $("rpCapacity").className = capClass;
   $("rpCapacity").textContent = capMsg;
-
-  // COMMIT 버튼 활성/비활성
   $("rpCommit").disabled = (estimatedBytes > MB5);
-
-  // 키 상세 목록
   let keysHtml = "";
-  overwrite.forEach(k => {
-    keysHtml += `<div class="rp-key-item"><span class="kname">${k}</span><span class="kstatus overwrite">덮어쓰기</span></div>`;
-  });
-  add.forEach(k => {
-    keysHtml += `<div class="rp-key-item"><span class="kname">${k}</span><span class="kstatus add">추가</span></div>`;
-  });
+  overwrite.forEach(k => { keysHtml += `<div class="rp-key-item"><span class="kname">${k}</span><span class="kstatus overwrite">덮어쓰기</span></div>`; });
+  add.forEach(k => { keysHtml += `<div class="rp-key-item"><span class="kname">${k}</span><span class="kstatus add">추가</span></div>`; });
   extra.forEach(k => {
-    if(mode === "replace"){
-      keysHtml += `<div class="rp-key-item"><span class="kname">${k}</span><span class="kstatus delete">삭제됨</span></div>`;
-    } else {
-      keysHtml += `<div class="rp-key-item"><span class="kname">${k}</span><span class="kstatus keep">유지됨</span></div>`;
-    }
+    if(mode === "replace") keysHtml += `<div class="rp-key-item"><span class="kname">${k}</span><span class="kstatus delete">삭제됨</span></div>`;
+    else keysHtml += `<div class="rp-key-item"><span class="kname">${k}</span><span class="kstatus keep">유지됨</span></div>`;
   });
   $("rpKeys").innerHTML = keysHtml;
-
-  // 메타 정보
   const meta = restorePayload._meta;
   $("rpReport").querySelector("h4").innerHTML = `DRY_RUN 리포트 <span style="font-size:10px;color:var(--muted);font-weight:400">(백업: ${meta.timestamp?.substring(0,16)||"?"}, ${meta.keyCount||"?"}키, ${fmtBytes(meta.totalBytes||0)})</span>`;
-
-  // 패널 표시
   $("restoreOverlay").classList.add("open");
 }
 
-/* ── 모드 선택 헬퍼 ── */
 function getRestoreMode(){
   const radios = document.querySelectorAll('input[name="restoreMode"]');
   for(const r of radios) if(r.checked) return r.value;
   return "replace";
 }
 
-// 모드 전환 시 DRY_RUN 재실행
 $("rpMode").addEventListener("change", e => {
-  // active 클래스 토글
   $("rpMode").querySelectorAll("label").forEach(l => l.classList.remove("active"));
   e.target.closest("label").classList.add("active");
   if(restorePayload) runDryRun();
 });
 
-/* ── pre-restore 백업 (자동 다운로드) ── */
 function downloadPreRestoreBackup(){
   const keys = scanGolabKeys();
   const data = {};
-  keys.forEach(k => {
-    try{ data[k] = JSON.parse(localStorage.getItem(k)); }
-    catch{ data[k] = localStorage.getItem(k); }
-  });
-
+  keys.forEach(k => { try{ data[k] = JSON.parse(localStorage.getItem(k)); }catch{ data[k] = localStorage.getItem(k); } });
   const totalBytes = calcStorageBytes(keys);
   const now = new Date();
-  const ts = now.getFullYear()
-    + String(now.getMonth()+1).padStart(2,"0")
-    + String(now.getDate()).padStart(2,"0")
-    + "_" + String(now.getHours()).padStart(2,"0")
-    + String(now.getMinutes()).padStart(2,"0")
-    + String(now.getSeconds()).padStart(2,"0");
+  const ts = now.getFullYear()+String(now.getMonth()+1).padStart(2,"0")+String(now.getDate()).padStart(2,"0")+"_"+String(now.getHours()).padStart(2,"0")+String(now.getMinutes()).padStart(2,"0")+String(now.getSeconds()).padStart(2,"0");
   const filename = `pre_restore_${ts}.json`;
-
-  const payload = {
-    _meta: {
-      version: "1.6.1",
-      timestamp: now.toISOString(),
-      keyCount: keys.length,
-      totalBytes: totalBytes,
-      type: "PRE_RESTORE_BACKUP"
-    },
-    keys: data
-  };
-
+  const payload = { _meta: { version: "8.0", timestamp: now.toISOString(), keyCount: keys.length, totalBytes, type: "PRE_RESTORE_BACKUP" }, keys: data };
   const blob = new Blob([JSON.stringify(payload, null, 2)], {type:"application/json"});
-  const a = document.createElement("a");
-  a.href = URL.createObjectURL(blob);
-  a.download = filename;
-  a.click();
-  URL.revokeObjectURL(a.href);
-
-  // audit: BACKUP_PRE_RESTORE
+  const a = document.createElement("a"); a.href = URL.createObjectURL(blob); a.download = filename; a.click(); URL.revokeObjectURL(a.href);
   emitWorkAudit("BACKUP_PRE_RESTORE", { keyCount: keys.length, totalBytes, filename });
-
   return filename;
 }
 
-/* ── COMMIT 실행 (3중 안전장치) ── */
 $("rpCommit").onclick = function(){
   if(!restorePayload) return;
   const mode = getRestoreMode();
-
   if(mode === "replace"){
-    // ① confirm 1회
     if(!confirm("전체 데이터를 교체합니다. 계속하시겠습니까?")) return;
-    // ② confirm 2회
     if(!confirm("이 작업은 되돌릴 수 없습니다. 정말 실행하시겠습니까?")) return;
-    // ③ RESET 타이핑 확인
     const input = prompt("최종 확인: RESET을 입력하세요");
-    if(input !== "RESET"){
-      alert("RESET이 일치하지 않습니다. 복원이 취소되었습니다.");
-      return;
-    }
+    if(input !== "RESET"){ alert("RESET이 일치하지 않습니다. 복원이 취소되었습니다."); return; }
   } else {
-    // Merge: confirm 1회만
     if(!confirm(`Merge 모드로 복원합니다. ${Object.keys(restorePayload.keys).length}개 키를 덮어쓰기/추가합니다. 계속하시겠습니까?`)) return;
   }
-
-  // ④ pre-restore 자동 백업
   const preFile = downloadPreRestoreBackup();
-
-  // ⑤ 실행
   const backupKeys = Object.keys(restorePayload.keys).filter(k => k.startsWith("golab_"));
   const currentKeys = scanGolabKeys();
   const backupSet = new Set(backupKeys);
-
-  let deletedKeys = [];
-  let overwrittenKeys = [];
-  let addedKeys = [];
-
+  let deletedKeys=[], overwrittenKeys=[], addedKeys=[];
   try{
     if(mode === "replace"){
-      // Replace: 기존 golab_ 키 전체 삭제
-      currentKeys.forEach(k => {
-        if(!backupSet.has(k)) deletedKeys.push(k);
-        else overwrittenKeys.push(k);
-        localStorage.removeItem(k);
-      });
-
-      // 백업 키 전체 세팅
-      backupKeys.forEach(k => {
-        const val = restorePayload.keys[k];
-        localStorage.setItem(k, typeof val === "string" ? val : JSON.stringify(val));
-        if(!overwrittenKeys.includes(k)) addedKeys.push(k);
-      });
+      currentKeys.forEach(k => { if(!backupSet.has(k)) deletedKeys.push(k); else overwrittenKeys.push(k); localStorage.removeItem(k); });
+      backupKeys.forEach(k => { const val = restorePayload.keys[k]; localStorage.setItem(k, typeof val === "string" ? val : JSON.stringify(val)); if(!overwrittenKeys.includes(k)) addedKeys.push(k); });
     } else {
-      // Merge: 기존 키 유지, 백업 키로 덮어쓰기/추가
       const currentSet = new Set(currentKeys);
-      backupKeys.forEach(k => {
-        const val = restorePayload.keys[k];
-        if(currentSet.has(k)) overwrittenKeys.push(k);
-        else addedKeys.push(k);
-        localStorage.setItem(k, typeof val === "string" ? val : JSON.stringify(val));
-      });
+      backupKeys.forEach(k => { const val = restorePayload.keys[k]; if(currentSet.has(k)) overwrittenKeys.push(k); else addedKeys.push(k); localStorage.setItem(k, typeof val === "string" ? val : JSON.stringify(val)); });
     }
-
-    // ⑥ audit: FULL_RESTORE
     const totalBytes = calcStorageBytes(scanGolabKeys());
-    emitWorkAudit("FULL_RESTORE", {
-      mode: mode.toUpperCase(),
-      keyCount: backupKeys.length,
-      overwritten: overwrittenKeys.length,
-      added: addedKeys.length,
-      deleted: deletedKeys.length,
-      totalBytes,
-      preRestoreFile: preFile
-    });
-
-    // ⑦ 완료 리포트
+    emitWorkAudit("FULL_RESTORE", { mode: mode.toUpperCase(), keyCount: backupKeys.length, overwritten: overwrittenKeys.length, added: addedKeys.length, deleted: deletedKeys.length, totalBytes, preRestoreFile: preFile });
     closeRestorePanel();
-    alert(
-      `✅ 복원 완료! (${mode.toUpperCase()} 모드)\n\n`
-      + `덮어쓰기: ${overwrittenKeys.length}개\n`
-      + `추가: ${addedKeys.length}개\n`
-      + (mode==="replace" ? `삭제: ${deletedKeys.length}개\n` : "")
-      + `\npre-restore 백업: ${preFile}\n\n`
-      + `페이지를 새로고침합니다.`
-    );
+    alert(`✅ 복원 완료! (${mode.toUpperCase()} 모드)\n\n덮어쓰기: ${overwrittenKeys.length}개\n추가: ${addedKeys.length}개\n${mode==="replace"?`삭제: ${deletedKeys.length}개\n`:""}\npre-restore 백업: ${preFile}\n\n페이지를 새로고침합니다.`);
     location.reload();
-
   }catch(err){
     alert("복원 중 오류 발생:\n" + err.message + "\n\npre-restore 백업(" + preFile + ")으로 복구 가능합니다.");
   }
 };
 
-/* ── 복원 패널 닫기 ── */
-function closeRestorePanel(){
-  $("restoreOverlay").classList.remove("open");
-  restorePayload = null;
-}
+function closeRestorePanel(){ $("restoreOverlay").classList.remove("open"); restorePayload = null; }
 $("rpCancel").onclick = closeRestorePanel;
 $("restoreOverlay").onclick = e => { if(e.target===$("restoreOverlay")) closeRestorePanel(); };
 
 /* ── Action Modal 거래처 autocomplete 초기화 ── */
-const acActVendor = GoLabPartnerMaster.createAutocomplete($("acActVendorWrap"), {
-  placeholder: "거래처 검색..."
-});
+const acActVendor = GoLabPartnerMaster.createAutocomplete($("acActVendorWrap"), { placeholder: "거래처 검색..." });
 
 /* ══════════════════════════════════════════
    v5.4: Action ↔ Deal 연결 UI
    ══════════════════════════════════════════ */
-
-/**
- * 거래 드롭다운 옵션 로드
- * - 최근 3개월 거래 우선 + 미결제/부분결제 상단
- * - 이미 다른 Action에 연결된 거래는 회색 비활성
- * - filterPartnerId: 특정 거래처 거래만 필터 (null이면 전체)
- * - currentActionId: 현재 편집 중인 Action ID (자기 거래는 선택 가능)
- */
 function populateDealSelect(filterPartnerId, currentActionId){
   var sel = $("actDealSelect");
   sel.innerHTML = '<option value="">— 거래 없음 —</option>';
-
   var TE = window.GoLabTradeEngine;
   if(!TE) return;
-
   var allTrades = TE.loadAll();
   if(!allTrades.length) return;
-
-  /* 이미 다른 Action에 연결된 deal_id 셋 구축 */
   var usedDealIds = {};
-  loadActions().forEach(function(a){
-    if(a.deal_id && a.id !== currentActionId){
-      usedDealIds[a.deal_id] = true;
-    }
-  });
-
-  /* 거래처 필터 */
+  loadActions().forEach(function(a){ if(a.deal_id && a.id !== currentActionId) usedDealIds[a.deal_id] = true; });
   var trades = allTrades;
-  if(filterPartnerId){
-    trades = trades.filter(function(t){ return t.partner_id === filterPartnerId; });
-  }
-
-  /* 정렬 기준: ① 미결제/부분결제 ② 최근 3개월 ③ 나머지 날짜 역순 */
-  var now = new Date();
-  var threeMonthsAgo = new Date(now.getFullYear(), now.getMonth()-3, now.getDate());
-  var cutoff = threeMonthsAgo.toISOString().slice(0,10);
-
+  if(filterPartnerId) trades = trades.filter(function(t){ return t.partner_id === filterPartnerId; });
   trades.sort(function(a,b){
-    /* 정산 상태: 미완료 우선 */
     var aUnpaid = _isDealUnpaid(a) ? 0 : 1;
     var bUnpaid = _isDealUnpaid(b) ? 0 : 1;
     if(aUnpaid !== bUnpaid) return aUnpaid - bUnpaid;
-    /* 날짜 역순 */
     var ad = a.deal_date || a.created_at || "";
     var bd = b.deal_date || b.created_at || "";
     return bd.localeCompare(ad);
   });
-
-  /* 옵션 렌더링 */
   trades.forEach(function(t){
     var opt = document.createElement("option");
     opt.value = t.id;
-
-    /* 라벨: T20260320-001 | 품목명 | 120,000원 */
     var itemLabel = "—";
     if(t.items && t.items.length > 0){
-      itemLabel = t.items.length === 1
-        ? (t.items[0].name || "품목")
-        : (t.items[0].name || "품목") + " 외 " + (t.items.length-1) + "건";
+      itemLabel = t.items.length === 1 ? (t.items[0].name || "품목") : (t.items[0].name || "품목") + " 외 " + (t.items.length-1) + "건";
     }
     var calc = TE.calcTrade(t);
     var amtStr = _fmtAmt(calc.total_supply);
-    var dateStr = (t.deal_date || "").slice(5) || "—"; /* MM-DD */
+    var dStr = (t.deal_date || "").slice(5) || "—";
     var statusTag = "";
-
-    /* 취소/비활성 거래 표시 */
-    if(t.deal_status === "cancelled"){
-      statusTag = " (취소)";
-    }
-
-    /* 이미 연결된 거래 처리 */
+    if(t.deal_status === "cancelled") statusTag = " (취소)";
     var isUsed = usedDealIds[t.id];
     if(isUsed){
       opt.disabled = true;
       opt.textContent = t.id + " | " + itemLabel + " | " + amtStr + " · 이미 연결됨";
       opt.style.color = "#94a3b8";
     } else {
-      opt.textContent = t.id + " | " + dateStr + " | " + itemLabel + " | " + amtStr + statusTag;
+      opt.textContent = t.id + " | " + dStr + " | " + itemLabel + " | " + amtStr + statusTag;
     }
-
     sel.appendChild(opt);
   });
 }
+function _isDealUnpaid(t){ var TE = window.GoLabTradeEngine; if(!TE) return false; var ps = TE.calcPaymentStatus(t); return ps.code !== "paid"; }
+function _fmtAmt(n){ if(!n) return "0원"; return n.toLocaleString("ko-KR") + "원"; }
 
-/* 미결제 판정 헬퍼 */
-function _isDealUnpaid(t){
-  var TE = window.GoLabTradeEngine;
-  if(!TE) return false;
-  var ps = TE.calcPaymentStatus(t);
-  return ps.code !== "paid";
-}
-
-/* 금액 포맷 헬퍼 */
-function _fmtAmt(n){
-  if(!n) return "0원";
-  return n.toLocaleString("ko-KR") + "원";
-}
-
-/* ── 거래 ↔ 거래처 양방향 연동 ── */
-
-/* 역방향 연동 시 MutationObserver 재진입 방지 플래그 */
+/* 거래처 ↔ 거래 양방향 연동 */
 var _dealSelectingSuppressVendorSync = false;
-
-/* 거래처 변경 시 → 거래 드롭다운 필터 + 초기화 */
 (function(){
   var vendorWrap = $("acActVendorWrap");
   var obs = new MutationObserver(function(){
-    /* 거래→거래처 역방향 세팅 중이면 드롭다운 초기화 방지 */
     if(_dealSelectingSuppressVendorSync) return;
     var pid = acActVendor.getValue();
     populateDealSelect(pid || null, editingActionId);
-    /* 거래처 변경 시 거래 선택 초기화 */
     $("actDealSelect").value = "";
   });
   obs.observe(vendorWrap, { childList: true, subtree: true, attributes: true });
 })();
 
-/* 거래 선택 시 → 거래처 자동 세팅 (역방향) */
 $("actDealSelect").addEventListener("change", function(){
   var dealId = this.value;
   if(!dealId) return;
@@ -2303,18 +1973,12 @@ $("actDealSelect").addEventListener("change", function(){
   if(!TE) return;
   var trade = TE.getById(dealId);
   if(!trade) return;
-  /* 거래처가 비어있거나 다른 거래처면 자동 세팅 */
   var currentVendor = acActVendor.getValue();
   if(trade.partner_id && trade.partner_id !== currentVendor){
-    /* 플래그로 MutationObserver 재진입 방지 */
     _dealSelectingSuppressVendorSync = true;
     acActVendor.setValue(trade.partner_id);
-    /* 드롭다운 값 복원 (Observer가 초기화할 수 있으므로) */
     var self = this;
-    setTimeout(function(){
-      self.value = dealId;
-      _dealSelectingSuppressVendorSync = false;
-    }, 50);
+    setTimeout(function(){ self.value = dealId; _dealSelectingSuppressVendorSync = false; }, 50);
   }
 });
 
