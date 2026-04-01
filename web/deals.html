@@ -366,6 +366,26 @@
 
     /* [GoLab v4.1] pay-badge → ui.css로 이동 */
 
+    /* v6.0: 카테고리 섹션 헤더 (테이블 내부 <tr>) */
+    .cat-section-header td{
+      background:linear-gradient(135deg,#f0f4f8,#e8edf3);
+      padding:10px 12px;font-size:12px;font-weight:700;color:#334155;
+      border-bottom:2px solid var(--deal);cursor:pointer;user-select:none;
+    }
+    .cat-section-header td .cat-hdr-inner{
+      display:flex;align-items:center;gap:10px;
+    }
+    .cat-section-header td .cat-hdr-name{font-size:13px;font-weight:800;color:var(--deal)}
+    .cat-section-header td .cat-hdr-stat{
+      display:flex;gap:12px;font-size:11px;font-weight:600;color:var(--muted);
+    }
+    .cat-section-header td .cat-hdr-arrow{
+      margin-left:auto;font-size:10px;color:var(--muted);transition:transform .2s;
+    }
+    .cat-section-header.collapsed td .cat-hdr-arrow{transform:rotate(-90deg)}
+    .cat-section-header.collapsed + tr,
+    .cat-section-header.collapsed ~ tr:not(.cat-section-header){/* JS에서 처리 */}
+
     /* v3.9: 입금 입력 영역 */
     .pay-input-grid{display:grid;grid-template-columns:1fr 1fr;gap:10px;margin-bottom:8px}
     .pay-input-grid label{font-size:10px;color:var(--muted);font-weight:700;margin-bottom:3px;display:block}
@@ -445,7 +465,10 @@
           <div class="row r3" style="align-items:end">
             <div><label>📅 거래일</label><input type="date" id="inDealDate" /></div>
             <div><label>메모 <span class="opt">(선택)</span></label><input id="inMemo" placeholder="거래 메모" /></div>
-            <div></div>
+            <div>
+              <label>카테고리 <span class="opt">(선택)</span></label>
+              <select id="inCategory"><option value="">기타</option></select>
+            </div>
           </div>
         </div>
       </div>
@@ -737,6 +760,46 @@ var _restoreId = null; /* v2.9: 현재 리플레이 중인 거래 ID */
 var _sManuallyEdited = false; /* v3.0: S 실제 지급액 수동 편집 플래그 */
 var chipFilter = ""; /* v3.7: 상태 칩 필터 (""|"no-cost"|"unsettled"|"todo") */
 var _panelTradeId = null; /* v5.2: 현재 패널에 열린 거래 ID (null=신규) */
+
+/* ══════ v6.0: 카테고리 시스템 ══════ */
+var CATEGORY_KEY = "golab_deal_category_v1";
+var DEFAULT_CATEGORIES = ["대성금속 거래", "장비 판매", "기타업체/소모품", "장갑 및 기타"];
+/* 카테고리 마스터 로드/저장 */
+function _loadCategories() {
+  try { var c = JSON.parse(GoLabStorage.getItem(CATEGORY_KEY) || "null"); return Array.isArray(c) ? c : DEFAULT_CATEGORIES; }
+  catch(e) { return DEFAULT_CATEGORIES; }
+}
+function _saveCategories(cats) { GoLabStorage.setItem(CATEGORY_KEY, JSON.stringify(cats)); }
+/* 초기화: 마스터 없으면 기본값 저장 */
+if (!GoLabStorage.getItem(CATEGORY_KEY)) _saveCategories(DEFAULT_CATEGORIES);
+
+/* 카테고리 select 옵션 빌드 */
+function _buildCategoryOptions() {
+  var sel = $("inCategory");
+  if (!sel) return;
+  var cats = _loadCategories();
+  var html = '<option value="">기타</option>';
+  cats.forEach(function(c) { html += '<option value="' + esc(c) + '">' + esc(c) + '</option>'; });
+  sel.innerHTML = html;
+}
+
+/* 거래처 변경 시 자동 카테고리 제안 */
+function _autoCategorySuggest(partnerName) {
+  var sel = $("inCategory");
+  if (!sel) return;
+  if ((partnerName || "").indexOf("대성금속") >= 0) {
+    sel.value = "대성금속 거래";
+  }
+}
+
+/* 거래의 카테고리 결정 (저장값 우선, 없으면 "기타") */
+function _getDealCategory(t) {
+  if (t.category) return t.category;
+  return "기타";
+}
+
+/* 카테고리 섹션 접힘 상태 (세션 유지) */
+var _catCollapsed = {};
 
 /* ══════ v5.2: 아코디언 토글 ══════ */
 function _toggleAccordion(headerEl) {
@@ -1076,8 +1139,14 @@ $("inChannel").addEventListener("change", function() {
 /* ══════ 거래처 자동완성 ══════ */
 var acPartner = GoLabPartnerMaster.createAutocomplete($("acPartnerWrap"), {
   placeholder: "거래처 검색 또는 새 등록...",
-  onSelect: function(){}, onClear: function(){}
+  onSelect: function(p) {
+    /* v6.0: 거래처 변경 시 카테고리 자동 제안 */
+    if (p && p.name) _autoCategorySuggest(p.name);
+  },
+  onClear: function(){}
 });
+/* v6.0: 카테고리 옵션 빌드 */
+_buildCategoryOptions();
 
 /* ══════ 품목 동적 리스트 ══════ */
 var _items = []; /* 현재 편집 중인 품목 배열 */
@@ -2180,8 +2249,80 @@ function render() {
   if (!filtered.length) { tb.innerHTML = ""; $("emptyMsg").style.display = "block"; return; }
   $("emptyMsg").style.display = "none";
 
-  var html = "";
+  /* ══════ v6.0: 카테고리별 그룹핑 + 섹션 내 날짜 오름차순 ══════ */
+  var catOrder = _loadCategories().concat(["기타"]);
+  var grouped = {};
+  catOrder.forEach(function(c) { grouped[c] = []; });
   filtered.forEach(function(t) {
+    var cat = _getDealCategory(t);
+    if (!grouped[cat]) grouped[cat] = [];
+    grouped[cat].push(t);
+  });
+  /* 섹션 내부 정렬: 거래일 오름차순 (오래된 거래 먼저) */
+  Object.keys(grouped).forEach(function(cat) {
+    grouped[cat].sort(function(a, b) {
+      var da = a.deal_date || a.quote_at || a.created_at || "";
+      var db = b.deal_date || b.quote_at || b.created_at || "";
+      if (!da && !db) return 0;
+      if (!da) return 1;
+      if (!db) return -1;
+      return da.localeCompare(db); /* 오름차순 */
+    });
+  });
+  /* thead 컬럼 수 동적 계산 */
+  var _thCount = document.querySelectorAll(".list-table thead tr th").length;
+
+  var html = "";
+  catOrder.forEach(function(cat) {
+    var deals = grouped[cat];
+    if (!deals || !deals.length) return;
+    /* 섹션 공급가 합계 (calcTrade().total_supply reduce) */
+    var catSupplySum = deals.reduce(function(sum, t) {
+      return sum + (t.deal_status !== "cancelled" ? TE.calcTrade(t).total_supply : 0);
+    }, 0);
+    var isCollapsed = _catCollapsed[cat] ? " collapsed" : "";
+    html += '<tr class="cat-section-header' + isCollapsed + '" data-cat="' + esc(cat) + '">';
+    html += '<td colspan="' + _thCount + '"><div class="cat-hdr-inner">';
+    html += '<span class="cat-hdr-name">' + esc(cat) + '</span>';
+    html += '<span class="cat-hdr-stat"><span>' + deals.length + '건</span><span>공급가 ' + TE.fmt(catSupplySum) + '</span></span>';
+    html += '<span class="cat-hdr-arrow">▼</span>';
+    html += '</div></td></tr>';
+    if (!_catCollapsed[cat]) {
+      deals.forEach(function(t) {
+        html += _buildDealRow(t);
+      });
+    }
+  });
+  tb.innerHTML = html;
+
+  /* 섹션 헤더 접기/펼치기 이벤트 */
+  tb.querySelectorAll(".cat-section-header").forEach(function(hdr) {
+    hdr.addEventListener("click", function(e) {
+      var cat = hdr.dataset.cat;
+      _catCollapsed[cat] = !_catCollapsed[cat];
+      render();
+    });
+  });
+
+  /* 행 클릭 → 패널 열기 */
+  tb.querySelectorAll("tr[data-id]").forEach(function(row) {
+    row.addEventListener("click", function(e) {
+      if (e.target.closest("button")) return;
+      openPanel(row.dataset.id);
+    });
+  });
+
+  /* v3.3→v6.0: 정렬 UI — 비활성 상태 표시 */
+  updateSortUI();
+
+  /* v2.9: 현재 리플레이 중인 행 하이라이트 유지 */
+  if (_restoreId) _applyReplayHighlight(_restoreId);
+}
+
+/* ══════ v6.0: 거래 행 빌더 (render에서 분리) ══════ */
+function _buildDealRow(t) {
+  var html = "";
+  (function() {
     var calc = TE.calcTrade(t);
     var isCancelled = t.deal_status === "cancelled";
     var _saveRowCls = t.is_segyeong_save_deal ? ' save-row' : '';
@@ -2543,23 +2684,8 @@ function render() {
 
       html += '</div></td></tr>'; /* detail-panel */
     }
-  });
-  tb.innerHTML = html;
-
-  /* ── v5.2: 이벤트 바인딩 — 행 클릭 → 패널 오픈 ── */
-  tb.querySelectorAll("[data-toggle]").forEach(function(tr) {
-    tr.addEventListener("click", function(e) {
-      if (e.target.closest("button")) return;
-      openPanel(tr.dataset.toggle);
-    });
-  });
-  /* v5.2: 상세행 이벤트 제거 — 패널에서 처리 */
-
-  /* v3.3: 정렬 UI 동기화 */
-  updateSortUI();
-
-  /* v2.9: 현재 리플레이 중인 행 하이라이트 유지 */
-  if (_restoreId) _applyReplayHighlight(_restoreId);
+  })(); /* _buildDealRow IIFE 닫기 */
+  return html;
 }
 
 /* v3.7: 비용 빠른입력 저장 함수 */
@@ -2997,6 +3123,8 @@ function saveTrade() {
     /* v2.9c: 장부 기준일 */
     deal_date: $("inDealDate").value || new Date().toISOString().substring(0, 10),
     memo: ($("inMemo").value || "").trim(),
+    /* v6.0: 카테고리 태그 */
+    category: ($("inCategory").value || "").trim() || null,
     /* v4.2→v5.1: 세경 SAVE */
     is_segyeong_save_deal: $("inSegyeongSave").checked,
     segyeong_save_tx_type: $("inSegyeongSave").checked ? ($("sgTxDeduction").checked ? "deduction" : "accrual") : "accrual",
@@ -3078,6 +3206,8 @@ function startEdit(tid) {
   $("inMemo").value = t.memo || "";
   /* v2.9c: 거래일 복원 */
   $("inDealDate").value = t.deal_date || "";
+  /* v6.0: 카테고리 복원 */
+  $("inCategory").value = t.category || "";
 
   /* 품목 복원 */
   _items = (t.items || []).map(function(it, i) {
@@ -3166,6 +3296,8 @@ function clearForm() {
   $("inTradeType").dispatchEvent(new Event("change"));
   $("inChannel").value = "";
   $("inMemo").value = "";
+  /* v6.0: 카테고리 초기화 */
+  $("inCategory").value = "";
   /* v2.9c: 거래일 기본값 = 오늘 */
   $("inDealDate").value = new Date().toISOString().substring(0, 10);
 
@@ -3240,7 +3372,7 @@ $("periodBar").addEventListener("click", function(e) {
     fMonth.value = new Date().toISOString().substring(0, 7);
     fMonth.style.display = "none";
   } else if (period === "last") {
-    var d = new Date(); d.setMonth(d.getMonth() - 1);
+    var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); /* v6.0: setDate(1) 방어 */
     fMonth.value = d.toISOString().substring(0, 7);
     fMonth.style.display = "none";
   } else if (period === "custom") {
@@ -3261,18 +3393,13 @@ $("fMonth").addEventListener("change", function() {
   render();
 });
 
-/* v3.3: thead 정렬 클릭 */
+/* v3.3→v6.0: thead 정렬 클릭 — 카테고리 섹션 모드에서는 비활성화 */
 document.querySelectorAll(".list-table thead .sortable").forEach(function(th) {
+  th.style.cursor = "default"; /* v6.0: 비활성 상태 표시 */
+  th.style.opacity = "0.6";
   th.addEventListener("click", function() {
-    var key = th.dataset.sort;
-    if (currentSortKey === key) {
-      currentSortDir = currentSortDir === "desc" ? "asc" : "desc";
-    } else {
-      currentSortKey = key;
-      currentSortDir = "desc";
-    }
-    _expandedId = null;
-    render();
+    /* v6.0: 카테고리 아코디언 구조에서는 정렬 비활성화 — 섹션 내 오름차순 고정 */
+    return;
   });
 });
 

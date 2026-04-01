@@ -1153,17 +1153,11 @@ function renderTimeline(){
 function renderPaymentDue(){
   const TE = GoLabTradeEngine;
   let deliveryNoteAmt=0, invoiceAmt=0, unpaidAmt=0, vatUnpaidAmt=0;
-  /* 진행업체별 미수금 (대성금속 거래의 memo에서 "진행:XXX" 추출) */
+  /* v6.0: 전체 거래 기준 미수금 (대성금속 필터 제거) */
   const channelDue = new Map();
-
-  /* 대성금속 partner_id 찾기 */
-  const dsPartner = GoLabPartnerMaster.findByName("대성금속");
-  const dsId = dsPartner ? dsPartner.partner_id : null;
 
   TE.loadAll().forEach(t => {
     if(t.deal_status === "cancelled") return;
-    /* 대성금속 거래만 필터 */
-    if(t.partner_id !== dsId && t.partner_name_snapshot !== "대성금속") return;
 
     const calc = TE.calcTrade(t);
     const ps = TE.calcPaymentStatus(t);

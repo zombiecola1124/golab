@@ -504,11 +504,11 @@ function monthEnd(){
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(new Date(d.getFullYear(),d.getMonth()+1,0).getDate()).padStart(2,"0");
 }
 function lastMonthStart(){
-  var d=new Date(); d.setMonth(d.getMonth()-1);
+  var d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); /* v6.0: setDate(1) 방어 */
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-01";
 }
 function lastMonthEnd(){
-  var d=new Date(); d.setMonth(d.getMonth()-1);
+  var d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-1); /* v6.0: setDate(1) 방어 */
   return d.getFullYear()+"-"+String(d.getMonth()+1).padStart(2,"0")+"-"+String(new Date(d.getFullYear(),d.getMonth()+1,0).getDate()).padStart(2,"0");
 }
 function quarterStart(){
@@ -565,7 +565,7 @@ function getDateRange(){
 function getPrevDateRange(){
   if(currentRange === "month") return { from: lastMonthStart(), to: lastMonthEnd() };
   if(currentRange === "lastMonth"){
-    var d=new Date(); d.setMonth(d.getMonth()-2);
+    var d=new Date(); d.setDate(1); d.setMonth(d.getMonth()-2); /* v6.0: setDate(1) 방어 */
     var y=d.getFullYear(), m=String(d.getMonth()+1).padStart(2,"0");
     var last=new Date(d.getFullYear(),d.getMonth()+1,0).getDate();
     return { from: y+"-"+m+"-01", to: y+"-"+m+"-"+String(last).padStart(2,"0") };
