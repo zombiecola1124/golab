@@ -1153,6 +1153,7 @@ function renderTimeline(){
 function renderPaymentDue(){
   const TE = GoLabTradeEngine;
   let deliveryNoteAmt=0, invoiceAmt=0, unpaidAmt=0, vatUnpaidAmt=0;
+  let deliveryNoteCnt=0, invoiceCnt=0; /* v6.0: 건수 카운터 */
   /* v6.0: 전체 거래 기준 미수금 (대성금속 필터 제거) */
   const channelDue = new Map();
 
@@ -1164,8 +1165,8 @@ function renderPaymentDue(){
     if(ps.code === "paid") return;
 
     /* 카테고리별 집계 */
-    if(t.delivery_note_at && !t.invoice_at) deliveryNoteAmt += calc.total_supply;
-    if(t.invoice_at && !t.payment_at) invoiceAmt += calc.total_supply;
+    if(t.delivery_note_at && !t.invoice_at){ deliveryNoteAmt += calc.total_supply; deliveryNoteCnt++; }
+    if(t.invoice_at && !t.payment_at){ invoiceAmt += calc.total_supply; invoiceCnt++; }
     if(ps.code === "vat_pending") vatUnpaidAmt += calc.vat_amount - n(t.paid_vat);
     if(ps.code === "unpaid") unpaidAmt += calc.total_supply - n(t.paid_supply);
 
@@ -1181,8 +1182,8 @@ function renderPaymentDue(){
 
   let html = `<div class="card-header"><h2>입금 · 마감 임박</h2><span class="count">미수금 현황</span></div>`;
   html += `<div class="payment-summary">
-    <div class="ps-row"><span class="ps-dot brown"></span>거래명세서<span class="ps-amt">${fmt(deliveryNoteAmt)}</span></div>
-    <div class="ps-row"><span class="ps-dot red"></span>계산서<span class="ps-amt">${fmt(invoiceAmt)}</span></div>
+    <div class="ps-row"><span class="ps-dot brown"></span>거래명세서<span class="ps-amt">${deliveryNoteCnt}건</span></div>
+    <div class="ps-row"><span class="ps-dot red"></span>계산서<span class="ps-amt">${invoiceCnt}건</span></div>
     <div class="ps-row"><span class="ps-dot gray"></span>미입금<span class="ps-amt">${fmt(unpaidAmt)}</span></div>
     <div class="ps-row"><span class="ps-dot gray"></span>VAT 미입금<span class="ps-amt">${fmt(vatUnpaidAmt)}</span></div>
   </div>`;
