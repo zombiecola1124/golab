@@ -271,7 +271,7 @@
     }
     .panel-overlay.open{opacity:1;visibility:visible}
     .side-panel{
-      position:fixed;top:0;right:0;bottom:0;width:520px;
+      position:fixed;top:0;right:0;bottom:0;width:720px;
       background:var(--card);border-left:1px solid var(--line);
       box-shadow:-8px 0 30px rgba(0,0,0,.1);z-index:100;
       transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1);
@@ -480,13 +480,13 @@
           <div style="overflow:auto">
             <table class="item-table">
               <thead><tr>
-                <th style="min-width:140px">품목명 *</th>
-                <th style="width:80px">수량 *</th>
-                <th style="width:100px">단가 *</th>
-                <th style="width:100px">공급가</th>
-                <th style="width:100px" id="costHeader">원가</th>
-                <th style="width:100px">메모</th>
-                <th style="width:36px"></th>
+                <th style="min-width:120px">품목명 *</th>
+                <th style="width:60px">수량 *</th>
+                <th style="width:80px">단가 *</th>
+                <th style="width:80px">공급가</th>
+                <th style="width:80px" id="costHeader">원가</th>
+                <th style="width:80px">메모</th>
+                <th style="width:32px"></th>
               </tr></thead>
               <tbody id="itemsBody"></tbody>
             </table>
@@ -2031,9 +2031,9 @@ function sortTrades(deals) {
 
   return deals.slice().sort(function(a, b) {
     if (key === "date") {
-      /* v3.15: deal_date 우선, fallback: quote_at → created_at */
-      var da = a.deal_date || a.quote_at || a.created_at || "";
-      var db = b.deal_date || b.quote_at || b.created_at || "";
+      /* v6.0: deal_date 우선, fallback: quote_at만 — created_at 제거 */
+      var da = a.deal_date || a.quote_at || "";
+      var db = b.deal_date || b.quote_at || "";
       /* null은 맨 아래 */
       if (!da && !db) return 0;
       if (!da) return 1;
@@ -2069,10 +2069,10 @@ function updateSortUI() {
 /* v3.15: 월 드롭다운 옵션 빌더 — 전체 거래 배열에서 YYYY-MM 추출 */
 var _prevMonthKey = "";  /* 불필요한 DOM 갱신 방지용 */
 function _buildMonthOptions(all) {
-  /* deal_date 우선, fallback: quote_at → created_at */
+  /* v6.0: deal_date 우선, fallback: quote_at만 — created_at 제거 */
   var monthSet = {};
   all.forEach(function(t) {
-    var dt = t.deal_date || t.quote_at || t.created_at || "";
+    var dt = t.deal_date || t.quote_at || "";
     var ym = dt.substring(0, 7);
     if (ym && ym.length === 7) monthSet[ym] = true;
   });
@@ -2106,10 +2106,10 @@ function render() {
   var paymentFilter = $("fPayment").value; /* v4.1: 입금 상태 필터 */
   var filtered = all;
 
-  /* v3.15: 월 필터 (deal_date 우선, fallback: quote_at → created_at) */
+  /* v6.0: 월 필터 (deal_date 우선, fallback: quote_at만 — created_at 제거) */
   if (monthFilter) {
     filtered = filtered.filter(function(t) {
-      var dt = t.deal_date || t.quote_at || t.created_at || "";
+      var dt = t.deal_date || t.quote_at || "";
       return dt.substring(0, 7) === monthFilter;
     });
   }
@@ -2258,11 +2258,11 @@ function render() {
     if (!grouped[cat]) grouped[cat] = [];
     grouped[cat].push(t);
   });
-  /* 섹션 내부 정렬: 거래일 오름차순 (오래된 거래 먼저) */
+  /* v6.0: 섹션 내부 정렬 — 거래일 오름차순, created_at 제거 */
   Object.keys(grouped).forEach(function(cat) {
     grouped[cat].sort(function(a, b) {
-      var da = a.deal_date || a.quote_at || a.created_at || "";
-      var db = b.deal_date || b.quote_at || b.created_at || "";
+      var da = a.deal_date || a.quote_at || "";
+      var db = b.deal_date || b.quote_at || "";
       if (!da && !db) return 0;
       if (!da) return 1;
       if (!db) return -1;
@@ -2332,7 +2332,7 @@ function _buildDealRow(t) {
     html += '<tr class="'+_saveRowCls+'" '+rowStyle+' data-id="'+t.id+'" data-toggle="'+t.id+'">';
 
     /* ① 날짜 */
-    var _dtDisp = (t.deal_date || t.quote_at || t.created_at || "").substring(0,10) || "—";
+    var _dtDisp = (t.deal_date || t.quote_at || "").substring(0,10) || "—";
     html += '<td style="white-space:nowrap;color:var(--muted);font-size:11px">'+_dtDisp+'</td>';
 
     /* ② 거래처 + 상태 칩 + v4.2 SAVE 배지 */
@@ -3208,6 +3208,10 @@ function startEdit(tid) {
   $("inDealDate").value = t.deal_date || "";
   /* v6.0: 카테고리 복원 */
   $("inCategory").value = t.category || "";
+  /* v6.0: category 없는 대성금속 거래 → 자동 제안 */
+  if (!t.category && (t.partner_name_snapshot || "").indexOf("대성금속") >= 0) {
+    $("inCategory").value = "대성금속 거래";
+  }
 
   /* 품목 복원 */
   _items = (t.items || []).map(function(it, i) {
