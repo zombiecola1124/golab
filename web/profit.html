@@ -610,7 +610,7 @@ var currentTarget = "all";          // "all"|"daesung"|"equipment"|"consumables"
 /* -- v3.2: 검색/정렬/미입금 상태 -- */
 var currentSearchQuery = "";        // 거래처명 검색어 (lowercase)
 var currentSortKey = "date";        // "date"|"revenue"|"myProfit"|"unpaid"
-var currentSortDir = "desc";        // "desc"|"asc"
+var currentSortDir = "asc";         // "desc"|"asc" — v6.0: 오래된 거래 우선
 var unpaidOnly = false;             // 미입금만 필터
 var _searchTimer = null;            // 검색 debounce 타이머
 var currentItemFilter = "";         // v5.6: 품목 필터 (품목명, ""=전체)
