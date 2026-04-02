@@ -283,6 +283,7 @@
     <button class="fbtn active" data-range="month">이번 달</button>
     <button class="fbtn" data-range="lastMonth">지난 달</button>
     <button class="fbtn" data-range="quarter">이번 분기</button>
+    <button class="fbtn" data-range="lastQuarter">직전 분기</button>
     <button class="fbtn" data-range="year">올해</button>
     <button class="fbtn" data-range="pickMonth">월 선택</button>
     <button class="fbtn" data-range="custom">직접 선택</button>
@@ -555,6 +556,8 @@ function getDateRange(){
   if(currentRange === "month") return { from: monthStart(), to: today };
   if(currentRange === "lastMonth") return { from: lastMonthStart(), to: lastMonthEnd() };
   if(currentRange === "quarter") return { from: quarterStart(), to: today };
+  /* v6.0: 직전 분기 */
+  if(currentRange === "lastQuarter") return { from: prevQuarterStart(), to: prevQuarterEnd() };
   if(currentRange === "year") return { from: yearStart(), to: today };
   /* v3.0: 월 선택기 & 직접 선택 모두 customFrom/customTo 사용 */
   if(currentRange === "pickMonth" || currentRange === "custom") return { from: customFrom || "0000-01-01", to: customTo || today };
@@ -571,6 +574,14 @@ function getPrevDateRange(){
     return { from: y+"-"+m+"-01", to: y+"-"+m+"-"+String(last).padStart(2,"0") };
   }
   if(currentRange === "quarter") return { from: prevQuarterStart(), to: prevQuarterEnd() };
+  /* v6.0: 직전 분기 → 그 전전 분기 대비 */
+  if(currentRange === "lastQuarter"){
+    var d=new Date(), q=Math.floor(d.getMonth()/3)*3;
+    var pd=new Date(d.getFullYear(), q-6, 1); /* 2분기 전 */
+    var pEnd=new Date(d.getFullYear(), q-3, 0); /* 2분기 전 마지막날 */
+    return { from: pd.getFullYear()+"-"+String(pd.getMonth()+1).padStart(2,"0")+"-01",
+             to: pEnd.getFullYear()+"-"+String(pEnd.getMonth()+1).padStart(2,"0")+"-"+String(pEnd.getDate()).padStart(2,"0") };
+  }
   if(currentRange === "year") return { from: prevYearStart(), to: prevYearEnd() };
   /* v3.0: 월 선택기 → 전월 자동 계산 */
   if(currentRange === "pickMonth"){

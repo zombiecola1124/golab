@@ -1303,7 +1303,7 @@ function buildCalendarEvents(){
   const dealGroupsByDate = {};
   const dealDedupeMap = new Map();
   try{
-    const trades = JSON.parse(GoLabStorage.getItem("golab_trade_v2") || "[]");
+    const trades = GoLabTradeEngine.loadAll(); /* v6.0: 직접읽기 → API 전환 */
     trades.forEach(trade => {
       if(trade.deal_status === "cancelled") return;
       const did = trade.id;
