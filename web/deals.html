@@ -760,6 +760,7 @@ var _restoreId = null; /* v2.9: 현재 리플레이 중인 거래 ID */
 var _sManuallyEdited = false; /* v3.0: S 실제 지급액 수동 편집 플래그 */
 var chipFilter = ""; /* v3.7: 상태 칩 필터 (""|"no-cost"|"unsettled"|"todo") */
 var _panelTradeId = null; /* v5.2: 현재 패널에 열린 거래 ID (null=신규) */
+var _periodMonth = ""; /* v6.0: periodBar에서 결정된 월 필터 값 ("" = 전체, "YYYY-MM" = 해당 월) */
 
 /* ══════ v6.0: 카테고리 시스템 ══════ */
 var CATEGORY_KEY = "golab_deal_category_v1";
@@ -2097,7 +2098,8 @@ function render() {
   /* v3.15: 월 드롭다운 항목 동적 생성 (all 기준) */
   _buildMonthOptions(all);
 
-  var monthFilter = $("fMonth").value;   /* "" = 전체, "YYYY-MM" = 해당 월 */
+  /* v6.0: periodBar 변수 우선, custom 모드일 때만 select 값 사용 */
+  var monthFilter = _periodMonth || $("fMonth").value || "";   /* "" = 전체, "YYYY-MM" = 해당 월 */
   var q = ($("fSearch").value || "").trim().toLowerCase();
   var statusFilter = $("fStatus").value;
   var tradeClassFilter = $("fTradeClass").value;
@@ -3373,17 +3375,19 @@ $("periodBar").addEventListener("click", function(e) {
   });
   var fMonth = $("fMonth");
   if (period === "this") {
-    fMonth.value = new Date().toISOString().substring(0, 7);
+    /* v6.0: select 옵션 재빌드에 영향 안 받도록 별도 변수로 관리 */
+    _periodMonth = new Date().toISOString().substring(0, 7);
     fMonth.style.display = "none";
   } else if (period === "last") {
     var d = new Date(); d.setDate(1); d.setMonth(d.getMonth() - 1); /* v6.0: setDate(1) 방어 */
-    fMonth.value = d.toISOString().substring(0, 7);
+    _periodMonth = d.toISOString().substring(0, 7);
     fMonth.style.display = "none";
   } else if (period === "custom") {
+    _periodMonth = ""; /* custom: fMonth select에서 결정 */
     fMonth.style.display = "";
-    /* fMonth 값은 유저가 선택 */
   } else {
     /* 전체 */
+    _periodMonth = "";
     fMonth.value = "";
     fMonth.style.display = "none";
   }
@@ -3391,6 +3395,7 @@ $("periodBar").addEventListener("click", function(e) {
 });
 /* fMonth 변경 시 기간 프리셋을 "월 선택"으로 동기화 */
 $("fMonth").addEventListener("change", function() {
+  _periodMonth = $("fMonth").value; /* v6.0: select 값을 _periodMonth로 동기화 */
   $("periodBar").querySelectorAll(".period-btn").forEach(function(b) {
     b.classList.toggle("active", b.dataset.period === "custom");
   });
@@ -3436,11 +3441,11 @@ window.addEventListener("storage", function(e) {
 $("inDealDate").value = new Date().toISOString().substring(0, 10);
 /* v3.0: 초기 유형 상태 반영 (solo → 비율 필드 숨김) */
 $("inTradeType").dispatchEvent(new Event("change"));
-/* v5.2: 진입 시 "이번 달" 자동 필터 적용 */
+/* v5.2→v6.0: 진입 시 "이번 달" 자동 필터 적용 — _periodMonth 변수 기준 */
 (function() {
   var _now = new Date();
   var _thisM = _now.getFullYear() + "-" + String(_now.getMonth() + 1).padStart(2, "0");
-  $("fMonth").value = _thisM;
+  _periodMonth = _thisM; /* v6.0: 핵심 — select가 아닌 변수로 관리 */
   /* 기간 프리셋 "이번 달" 활성화 */
   $("periodBar").querySelectorAll(".period-btn").forEach(function(b) {
     b.classList.toggle("active", b.dataset.period === "this");
