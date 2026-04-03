@@ -502,18 +502,19 @@
         </div>
       </div>
 
-      <!-- ③ 부대비용 -->
+      <!-- ③ 매입 및 지출 기록 (v6.0: 부대비용→매입기록 개편) -->
       <div class="acc-section" data-acc="extra">
-        <div class="acc-header"><span class="acc-num" style="background:var(--warn)">+</span> 부대비용 <span class="acc-arrow">▼</span></div>
+        <div class="acc-header"><span class="acc-num" style="background:var(--warn)">+</span> 매입 및 지출 기록 <span class="acc-arrow">▼</span></div>
         <div class="acc-body">
           <div style="overflow:auto">
             <table class="extra-table">
               <thead><tr>
-                <th style="min-width:120px">비용 유형</th>
-                <th style="width:120px">금액 *</th>
-                <th style="width:70px;text-align:center">수익 반영</th>
-                <th style="width:140px">메모</th>
-                <th style="width:36px"></th>
+                <th style="min-width:100px">비용 유형</th>
+                <th style="min-width:120px">매입처</th>
+                <th style="width:100px">금액 *</th>
+                <th style="width:60px;text-align:center">수익 반영</th>
+                <th style="width:120px">메모</th>
+                <th style="width:32px"></th>
               </tr></thead>
               <tbody id="extraCostsBody"></tbody>
             </table>
@@ -1495,6 +1496,7 @@ addItemRow();
 
 /* ══════ 부대비용 동적 리스트 (v2.8) ══════ */
 var _extraCosts = [];
+var _extraAcInstances = []; /* v6.0: 매입처 autocomplete 인스턴스 배열 */
 
 function addExtraCostRow(data) {
   var ec = data || { type: "shipping", label: "운송비", amount: "", affects_profit: true, memo: "" };
@@ -1510,6 +1512,10 @@ function removeExtraCostRow(idx) {
 }
 
 function renderExtraCosts() {
+  /* v6.0: 기존 autocomplete 인스턴스 정리 */
+  _extraAcInstances.forEach(function(ac) { if (ac && ac.destroy) ac.destroy(); });
+  _extraAcInstances = [];
+
   var tb = $("extraCostsBody");
   tb.innerHTML = "";
   var TYPES = TE.EXTRA_COST_TYPES;
@@ -1522,11 +1528,27 @@ function renderExtraCosts() {
     var apChecked = (ec.affects_profit !== false) ? ' checked' : '';
     tr.innerHTML =
       '<td><select class="ec-type" data-idx="'+idx+'">'+typeOpts+'</select></td>' +
-      '<td><input class="ec-amt" data-idx="'+idx+'" type="number" step="1" value="'+(ec.amount||"")+'" placeholder="금액" style="width:100px" /></td>' +
+      '<td class="ec-vendor-cell" data-idx="'+idx+'"></td>' +
+      '<td><input class="ec-amt" data-idx="'+idx+'" type="number" step="1" value="'+(ec.amount||"")+'" placeholder="금액" style="width:90px" /></td>' +
       '<td style="text-align:center"><input class="ec-ap" data-idx="'+idx+'" type="checkbox"'+apChecked+' title="수익 반영" /></td>' +
-      '<td><input class="ec-memo" data-idx="'+idx+'" value="'+esc(ec.memo||"")+'" placeholder="" style="width:120px" /></td>' +
+      '<td><input class="ec-memo" data-idx="'+idx+'" value="'+esc(ec.memo||"")+'" placeholder="" style="width:100px" /></td>' +
       '<td><button class="danger ec-del" data-idx="'+idx+'" style="padding:4px 8px;font-size:10px" title="삭제">✕</button></td>';
     tb.appendChild(tr);
+
+    /* v6.0: 매입처 autocomplete 생성 — setValue는 여기서 호출하지 않음 */
+    var vendorCell = tr.querySelector('.ec-vendor-cell[data-idx="'+idx+'"]');
+    var acInstance = GoLabPartnerMaster.createAutocomplete(vendorCell, {
+      placeholder: "매입처 검색...",
+      onSelect: function(p) {
+        _extraCosts[idx].vendor_id = p ? p.partner_id : null;
+        _extraCosts[idx].vendor_name_snapshot = p ? (p.name || "") : "";
+      },
+      onClear: function() {
+        _extraCosts[idx].vendor_id = null;
+        _extraCosts[idx].vendor_name_snapshot = "";
+      }
+    });
+    _extraAcInstances.push(acInstance);
   });
 
   /* 이벤트 바인딩 */
@@ -3102,17 +3124,24 @@ function saveTrade() {
       S_rate: TE.n($("inSRate").value),
       my_rate: TE.n($("inMyRate").value)
     },
-    /* 부대비용 (v2.8a: affects_profit 포함) */
-    extra_costs: _extraCosts.filter(function(ec) {
-      return TE.n(ec.amount) > 0;
-    }).map(function(ec) {
-      return {
-        type: ec.type || "misc",
-        amount: TE.n(ec.amount),
-        affects_profit: ec.affects_profit !== false,
-        memo: (ec.memo || "").trim()
-      };
-    }),
+    /* 부대비용→매입기록 (v6.0: vendor_id/vendor_name_snapshot 추가) */
+    extra_costs: (function() {
+      /* vendor 정보를 filter 전에 원본 인덱스 기준으로 수집 */
+      var result = [];
+      _extraCosts.forEach(function(ec, origIdx) {
+        if (TE.n(ec.amount) <= 0) return;
+        var vendorId = (_extraAcInstances[origIdx] && _extraAcInstances[origIdx].getValue) ? _extraAcInstances[origIdx].getValue() : null;
+        result.push({
+          type: ec.type || "misc",
+          amount: TE.n(ec.amount),
+          affects_profit: ec.affects_profit !== false,
+          memo: (ec.memo || "").trim(),
+          vendor_id: vendorId || null,
+          vendor_name_snapshot: vendorId ? ((GoLabPartnerMaster.getById(vendorId) || {}).name || "") : ""
+        });
+      });
+      return result;
+    })(),
     settlement: isChannel ? {
       actual_S_amount: TE.n($("inActualS_ch").value),
       memo: ($("inSettlementMemo_ch").value || "").trim()
@@ -3232,17 +3261,26 @@ function startEdit(tid) {
   /* v3.8: 편집 모드에서 기존 품목 참고 칩 재표시 */
   setTimeout(_refreshAllItemRefInfo, 50);
 
-  /* 부대비용 복원 (v2.8a: affects_profit 포함) */
+  /* 매입기록 복원 (v6.0: vendor_id/vendor_name_snapshot 포함) */
   _extraCosts = (t.extra_costs || []).map(function(ec) {
     return {
       type: ec.type || "misc",
       label: ec.label || (TE.EXTRA_COST_TYPES[ec.type] || "기타"),
       amount: ec.amount,
       affects_profit: ec.affects_profit !== false,
-      memo: ec.memo || ""
+      memo: ec.memo || "",
+      vendor_id: ec.vendor_id || null,
+      vendor_name_snapshot: ec.vendor_name_snapshot || ""
     };
   });
+  /* Step 1: 행 렌더 + autocomplete 인스턴스 생성 */
   renderExtraCosts();
+  /* Step 2: 인스턴스 생성 완료 후 vendor_id 복원 (타이밍 엄수) */
+  _extraCosts.forEach(function(ec, idx) {
+    if (ec.vendor_id && _extraAcInstances[idx]) {
+      _extraAcInstances[idx].setValue(ec.vendor_id);
+    }
+  });
 
   /* v3.0: tracking_number / deal_owner 폐기 */
 
