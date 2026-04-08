@@ -222,6 +222,7 @@
     /* v3.7 상태 칩 */
     .status-chip{display:inline-block;border-radius:12px;font-size:11px;padding:2px 8px;font-weight:600;margin-right:4px;white-space:nowrap}
     .status-chip.no-cost{background:rgba(217,119,6,.12);color:#b45309}
+    .status-chip.no-items{background:rgba(100,116,139,.12);color:#475569}
     .status-chip.unsettled{background:rgba(37,99,235,.1);color:#1d4ed8}
     .status-chip.todo{background:rgba(220,38,38,.1);color:#dc2626}
     .status-chip.todo-urgent{background:rgba(220,38,38,.18);color:#991b1b}
@@ -350,6 +351,10 @@
     .ref-chip.ref-base{background:rgba(37,99,235,0.08);color:#2563eb}
     .ref-chip.ref-purchase{background:rgba(22,163,74,0.08);color:#16a34a}
     .ref-chip small{opacity:0.7}
+    /* v6 Step1: 원가 자동 입력 시각 구분 */
+    .it-cost.auto-filled{background:rgba(0,0,0,.04);border-color:rgba(22,163,74,.25)}
+    .cost-source{font-size:9px;color:var(--accent);font-weight:600;margin-top:2px;display:none;white-space:nowrap}
+    .cost-source.visible{display:block}
 
     /* -- v3.8: 품목 연결 상태 뱃지 -- */
     .item-link-badge{font-size:9px;padding:1px 5px;border-radius:4px;margin-left:4px;font-weight:600}
@@ -399,6 +404,41 @@
     .pay-progress-fill{height:100%;border-radius:3px;transition:width .3s ease}
     .pay-summary{font-size:11px;color:var(--muted);margin-top:4px;font-variant-numeric:tabular-nums}
     .pay-summary b{color:var(--text)}
+
+    /* ═══ v4 상세 모달 ═══ */
+    .modal-overlay{position:fixed;inset:0;background:rgba(0,0,0,.5);z-index:999;
+      opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
+    .modal-overlay.open{opacity:1;visibility:visible}
+    .detail-modal{position:fixed;top:50%;left:50%;transform:translate(-50%,-50%) scale(.96);
+      z-index:1000;background:var(--card);border-radius:14px;
+      width:min(800px,95vw);max-height:90vh;display:flex;flex-direction:column;
+      box-shadow:0 20px 60px rgba(0,0,0,.18);
+      opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s,transform .25s}
+    .detail-modal.open{opacity:1;visibility:visible;transform:translate(-50%,-50%) scale(1)}
+    .dm-top{display:flex;justify-content:space-between;align-items:center;
+      padding:16px 24px;border-bottom:1px solid var(--line);flex-shrink:0}
+    .dm-top h3{margin:0;font-size:14px;color:var(--deal);font-weight:700}
+    .dm-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);
+      width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:6px}
+    .dm-close:hover{background:rgba(0,0,0,.06)}
+    .dm-body{overflow-y:auto;flex:1;min-height:0}
+    .dm-footer{display:flex;gap:8px;justify-content:flex-end;padding:12px 24px;
+      border-top:1px solid var(--line);flex-shrink:0}
+    .dm-footer button{padding:7px 18px;font-size:12px;border-radius:8px;cursor:pointer;font-weight:600}
+    /* 🔍 버튼 — 거래처명 옆, 기본 약하게 보임, hover 시 강조 */
+    .btn-detail{background:none;border:1px solid transparent;border-radius:4px;
+      min-width:26px;height:26px;padding:4px 6px;cursor:pointer;font-size:12px;display:inline-flex;
+      align-items:center;justify-content:center;transition:all .15s;color:var(--muted);
+      opacity:.3;margin-left:5px;vertical-align:middle;flex-shrink:0}
+    tr[data-id]:hover .btn-detail{opacity:1;border-color:var(--line)}
+    .btn-detail:hover{background:rgba(8,145,178,.08);border-color:var(--deal);color:var(--deal)}
+    @media(max-width:768px){
+      .detail-modal{max-height:85vh;width:95vw}
+      .dm-top{padding:12px 16px}
+      .dm-footer{padding:10px 16px}
+      /* 모바일: hover 없으므로 항상 강조 표시 */
+      .btn-detail{opacity:.6;border-color:var(--line)}
+    }
   </style>
 </head>
 <body>
@@ -637,6 +677,20 @@
     </div>
   </div>
 
+  <!-- ═══ 상세 모달 (v4 읽기전용) ═══ -->
+  <div class="modal-overlay" id="modalOverlay"></div>
+  <div class="detail-modal" id="detailModal">
+    <div class="dm-top">
+      <h3 id="dmTitle">거래 상세</h3>
+      <button class="dm-close" id="dmClose">✕</button>
+    </div>
+    <div class="dm-body" id="dmBody"></div>
+    <div class="dm-footer">
+      <button class="secondary" id="dmEdit">수정</button>
+      <button class="secondary" id="dmCloseBtn">닫기</button>
+    </div>
+  </div>
+
   <!-- ═══ 거래 목록 ═══ -->
   <div class="card">
     <h2>📋 거래 목록 <span class="badge" id="listBadge">0</span></h2>
@@ -834,6 +888,19 @@ function openPanel(tradeId) {
     $("btnCancel").style.display = "none";
     $("btnPanelDel").style.display = "none";
     clearForm();
+    /* v6.1: 대표 거래처(is_primary) 자동 선택 — 신규 모드 전용 */
+    try {
+      var _primary = (GoLabPartnerMaster.loadAll() || []).find(function(p){ return p.is_primary === true; });
+      if (_primary) {
+        acPartner.setValue(_primary.partner_id);
+        /* default_trade_type 있으면 거래 유형도 자동 세팅 */
+        var _dtt = (_primary.default_trade_type || "").trim();
+        if (_dtt === "solo" || _dtt === "settle" || _dtt === "channel") {
+          $("inTradeType").value = _dtt;
+          $("inTradeType").dispatchEvent(new Event("change"));
+        }
+      }
+    } catch(e) { /* primary 없거나 오류 → 빈 상태 유지 */ }
     $("spView").style.display = "none";
     $("spTodoBody").innerHTML = '<div class="todo-empty">거래를 저장한 후 할일을 추가할 수 있습니다.</div>';
   }
@@ -1006,10 +1073,261 @@ function _renderPanelTodo(tid) {
   if (todoInp) todoInp.onkeydown = function(e) { if (e.key === "Enter") { e.preventDefault(); if (addBtn) addBtn.click(); } };
 }
 
+/* ══════ v4: 상세 모달 (읽기 전용) ══════ */
+var _modalTradeId = null;
+
+/* 모달 렌더 — expand 코드(비활성) 기반, 읽기 전용 */
+function _renderModal(tid) {
+  var t = TE.getById(tid);
+  if (!t) { $("dmBody").innerHTML = '<div style="padding:24px;color:var(--muted)">거래를 찾을 수 없습니다.</div>'; return; }
+  var calc = TE.calcTrade(t);
+  var html = '';
+
+  /* ═══ Hero 섹션 ═══ */
+  var _dtc = TE.classifyTrade(t);
+  var _dtcLabel;
+  if (_dtc === "channel") {
+    var _dch = CM.getById(t.channel_id);
+    var _dchName = _dch ? _dch.name : "알 수 없음";
+    _dtcLabel = '관리업체 · ' + _dchName;
+  } else {
+    _dtcLabel = _dtc === "settle" ? "직접-정산" : "직접-단독";
+  }
+  html += '<div class="detail-hero">';
+  html += '<div class="detail-hero-top">';
+  html += '<span class="dh-name">' + esc(t.partner_name_snapshot || t.partner_name || "—") + '</span>';
+  html += '<span class="type-badge ' + _dtc + '">' + _dtcLabel + '</span>';
+  if (t.deal_status === "cancelled") html += '<span class="status-badge st-cancelled">취소됨</span>';
+  else if (t.deal_status === "completed") html += '<span class="status-badge st-complete">완료</span>';
+  html += '</div>';
+  html += '<div class="detail-hero-meta">';
+  html += '<span class="dh-amount">내 최종 ' + TE.fmt(calc.final_my_amount) + '</span>';
+  html += '<span><b>매출</b> ' + TE.fmt(calc.total_supply) + '</span>';
+  if (t.deal_date) html += '<span><b>거래일</b> ' + t.deal_date + '</span>';
+  html += '<span><b>ID</b> ' + t.id + '</span>';
+  if (t.source === "migrated") html += '<span style="color:#92400e">v1 이전</span>';
+  html += '</div>';
+  html += '</div>';
+
+  /* ═══ 진행 바 (읽기 전용) ═══ */
+  html += '<div class="dp-zone">';
+  html += '<div class="detail-section"><div class="detail-section-title">거래 진행</div>';
+  html += renderProgressBar(t, false);
+  html += '</div></div>';
+
+  /* ═══ 품목 + 수익 ═══ */
+  html += '<div class="dp-zone"><div class="dp-2col">';
+
+  /* 좌: 품목 상세 */
+  html += '<div>';
+  html += '<div class="detail-section-title">품목 (' + (t.items || []).length + '건)</div>';
+  html += '<table style="width:100%;font-size:11px;border-collapse:collapse">';
+  html += '<tr style="color:var(--muted)"><th style="text-align:left;padding:4px 6px">품목</th><th>수량</th><th>단가</th><th>공급가</th><th>원가</th></tr>';
+  (t.items || []).forEach(function(item) {
+    html += '<tr>';
+    html += '<td style="padding:4px 6px">' + esc(item.name) + '</td>';
+    html += '<td style="text-align:right;padding:4px 6px">' + TE.n(item.qty) + '</td>';
+    html += '<td style="text-align:right;padding:4px 6px">' + TE.fmt(item.unit_price) + '</td>';
+    html += '<td style="text-align:right;padding:4px 6px;font-weight:600">' + TE.fmt(item.supply_amount) + '</td>';
+    html += '<td style="text-align:right;padding:4px 6px">' + (item.cost != null ? TE.fmt(item.cost) : '<span class="muted">—</span>') + '</td>';
+    html += '</tr>';
+  });
+  html += '</table>';
+
+  /* 부대비용 */
+  if (t.extra_costs && t.extra_costs.length > 0) {
+    html += '<div style="margin-top:12px"><div class="detail-section-title" style="color:#92400e">부대비용 (' + t.extra_costs.length + '건)</div>';
+    html += '<table style="width:100%;font-size:11px;border-collapse:collapse">';
+    html += '<tr style="color:#92400e"><th style="text-align:left;padding:4px 6px">유형</th><th style="text-align:right;padding:4px 6px">금액</th><th style="text-align:center;padding:4px 6px">반영</th><th style="padding:4px 6px">메모</th></tr>';
+    t.extra_costs.forEach(function(ec) {
+      var apLabel = (ec.affects_profit !== false) ? '✓' : '<span style="color:var(--muted)">—</span>';
+      html += '<tr>';
+      html += '<td style="padding:4px 6px">' + (ec.label || TE.EXTRA_COST_TYPES[ec.type] || ec.type) + '</td>';
+      html += '<td style="text-align:right;padding:4px 6px;font-weight:600">' + TE.fmt(ec.amount) + '</td>';
+      html += '<td style="text-align:center;padding:4px 6px">' + apLabel + '</td>';
+      html += '<td style="padding:4px 6px;color:var(--muted)">' + esc(ec.memo || "") + '</td>';
+      html += '</tr>';
+    });
+    html += '</table></div>';
+  }
+  html += '</div>';
+
+  /* 우: 수익 KPI */
+  html += '<div>';
+  html += '<div class="detail-section-title">수익 요약</div>';
+  html += '<div class="dp-kpi-row">';
+  html += '<div class="dp-kpi"><div class="dpk-label">내 최종</div><div class="dpk-value" style="color:var(--deal)">' + TE.fmt(calc.final_my_amount) + '</div></div>';
+  html += '<div class="dp-kpi"><div class="dpk-label">배분대상</div><div class="dpk-value" style="color:var(--text)">' + TE.fmt(calc.distributable) + '</div></div>';
+  html += '<div class="dp-kpi"><div class="dpk-label">총 공급가</div><div class="dpk-value" style="color:var(--text)">' + TE.fmt(calc.total_supply) + '</div></div>';
+  html += '</div>';
+
+  /* 비용 구조 상세 */
+  html += '<div style="margin-top:14px">';
+  html += '<div class="detail-section-title">비용 구조</div>';
+  html += '<div class="cockpit-row"><span class="lbl">총 원가</span><span class="val">' + TE.fmt(calc.total_cost) + '</span></div>';
+  html += '<div class="cockpit-row"><span class="lbl">순이익</span><span class="val" style="color:' + (calc.gross_profit >= 0 ? 'var(--accent)' : 'var(--bad)') + '">' + TE.fmt(calc.gross_profit) + '</span></div>';
+  if (calc.save_amount) html += '<div class="cockpit-row"><span class="lbl">SAVE 공제</span><span class="val">' + TE.fmt(calc.save_amount) + '</span></div>';
+  if (_dtc === "channel") html += '<div class="cockpit-row"><span class="lbl">리베이트</span><span class="val">' + TE.fmt(calc.rebate_amount) + '</span></div>';
+  html += '<div class="cockpit-row"><span class="lbl">배분대상</span><span class="val">' + TE.fmt(calc.distributable) + '</span></div>';
+  var _sAmt = (t.settlement && t.settlement.actual_S_amount) ? TE.n(t.settlement.actual_S_amount) : 0;
+  if (_sAmt) html += '<div class="cockpit-row"><span class="lbl">S 지급</span><span class="val">' + TE.fmt(_sAmt) + '</span></div>';
+  html += '<div class="cockpit-row highlight"><span class="lbl">내 최종</span><span class="val">' + TE.fmt(calc.final_my_amount) + '</span></div>';
+  html += '</div>';
+  html += '</div>';
+
+  html += '</div></div>'; /* dp-2col, dp-zone */
+
+  /* ═══ 입금 현황 (읽기 전용) ═══ */
+  html += '<div class="dp-zone">';
+  html += '<div class="detail-section-title">💰 입금 현황</div>';
+  var _payS = TE.calcPaymentStatus(t);
+  var _payCalc = calc;
+  var _barColor = _payS.code === "paid" ? "var(--accent)" : (_payS.code === "vat_pending" ? "var(--point)" : "var(--warn)");
+  html += '<div style="display:flex;align-items:center;gap:8px;margin-bottom:6px">';
+  html += '<span class="pay-badge ' + _payS.code + '">' + _payS.label + '</span>';
+  html += '<span style="font-size:20px;font-weight:800;color:var(--text)">' + _payS.progress + '%</span>';
+  html += '</div>';
+  html += '<div class="pay-progress-bar"><div class="pay-progress-fill" style="width:' + _payS.progress + '%;background:' + _barColor + '"></div></div>';
+  html += '<div class="pay-summary" style="margin-top:6px">';
+  html += '공급가: <b>' + TE.fmt(TE.n(t.paid_supply)) + '</b> / ' + TE.fmt(_payCalc.total_supply);
+  html += ' · VAT: <b>' + TE.fmt(TE.n(t.paid_vat)) + '</b> / ' + TE.fmt(_payCalc.vat_amount);
+  html += '</div>';
+  html += '<div class="pay-summary" style="margin-top:2px">';
+  html += '총 입금: <b>' + TE.fmt(TE.n(t.paid_supply) + TE.n(t.paid_vat)) + '</b> / ' + TE.fmt(_payCalc.total_amount);
+  html += '</div>';
+  html += '</div>';
+
+  /* ═══ 세경 SAVE (해당 시) ═══ */
+  if (t.is_segyeong_save_deal) {
+    var _dpIsSgDeduct = (t.segyeong_save_tx_type === "deduction");
+    var _dpBorderColor = _dpIsSgDeduct ? "#d97706" : "#7c3aed";
+    html += '<div class="dp-zone" style="border-left:3px solid ' + _dpBorderColor + '">';
+    if (_dpIsSgDeduct) {
+      html += '<div class="detail-section-title" style="color:#d97706">🔸 세경 SAVE 차감</div>';
+      html += '<div class="dp-2col"><div>';
+      html += '<div class="cockpit-row"><span class="lbl" style="color:#d97706;font-weight:700">차감 금액</span><span class="val" style="color:#d97706;font-weight:800;font-size:15px">−' + TE.fmt(TE.n(t.segyeong_deduction_amount)) + '</span></div>';
+      html += '</div><div>';
+      html += '<div class="cockpit-row" style="background:rgba(124,58,237,.06);border-radius:8px;padding:6px 8px"><span class="lbl" style="color:#7c3aed;font-weight:700">누적 SAVE 잔액</span><span class="val" style="color:#7c3aed;font-size:18px;font-weight:800">' + TE.fmt(TE.n(t.segyeong_running_balance)) + '</span></div>';
+      html += '</div></div>';
+    } else {
+      html += '<div class="detail-section-title" style="color:#7c3aed">💜 세경 SAVE 적립</div>';
+      html += '<div class="dp-2col"><div>';
+      html += '<div class="cockpit-row"><span class="lbl">세경 견적가</span><span class="val">' + TE.fmt(TE.n(t.segyeong_quote_amount)) + '</span></div>';
+      html += '<div class="cockpit-row"><span class="lbl">내 매출가</span><span class="val">' + TE.fmt(calc.total_supply) + '</span></div>';
+      html += '<div class="cockpit-divider"></div>';
+      html += '<div class="cockpit-row"><span class="lbl" style="color:#7c3aed;font-weight:700">세경 SAVE</span><span class="val" style="color:#7c3aed;font-weight:800;font-size:15px">' + TE.fmt(TE.n(t.segyeong_save_amount)) + '</span></div>';
+      html += '</div><div>';
+      html += '<div class="cockpit-row"><span class="lbl">이 거래 SAVE</span><span class="val" style="color:#7c3aed">' + TE.fmt(TE.n(t.segyeong_save_amount)) + '</span></div>';
+      html += '<div class="cockpit-row" style="background:rgba(124,58,237,.06);border-radius:8px;padding:6px 8px"><span class="lbl" style="color:#7c3aed;font-weight:700">누적 SAVE 잔액</span><span class="val" style="color:#7c3aed;font-size:18px;font-weight:800">' + TE.fmt(TE.n(t.segyeong_running_balance)) + '</span></div>';
+      html += '</div></div>';
+    }
+    html += '</div>';
+  }
+
+  /* ═══ 거래 정보 + 메모 ═══ */
+  html += '<div class="dp-zone"><div class="dp-2col">';
+  /* 좌: 거래 정보 */
+  html += '<div>';
+  html += '<div class="detail-section-title">거래 정보</div>';
+  html += '<div style="display:flex;flex-direction:column;gap:8px">';
+  html += '<div class="dp-field"><span class="dp-field-label">유형</span><span class="dp-field-value"><span class="type-badge ' + _dtc + '">' + _dtcLabel + '</span></span></div>';
+  html += '<div class="dp-field"><span class="dp-field-label">상태</span><span class="dp-field-value">';
+  if (t.deal_status === "cancelled") html += '<span class="status-badge st-cancelled">취소됨</span>';
+  else if (t.deal_status === "completed") html += '<span class="status-badge st-complete">완료</span>';
+  else html += '<span class="status-badge st-new">진행중</span>';
+  html += '</span></div>';
+  if (t.deal_date) html += '<div class="dp-field"><span class="dp-field-label">거래일</span><span class="dp-field-value">' + t.deal_date + '</span></div>';
+  if (t.category) html += '<div class="dp-field"><span class="dp-field-label">카테고리</span><span class="dp-field-value">' + esc(t.category) + '</span></div>';
+  html += '</div></div>';
+  /* 우: 메모 */
+  html += '<div>';
+  html += '<div class="detail-section-title">메모</div>';
+  html += '<div style="font-size:12px;color:var(--text);white-space:pre-wrap;min-height:40px;padding:8px;background:rgba(0,0,0,.02);border-radius:6px">' + esc(t.memo || "—") + '</div>';
+  html += '</div>';
+  html += '</div></div>';
+
+  /* ═══ 할일 + 타임라인 (읽기 전용) ═══ */
+  html += '<div class="dp-zone"><div class="dp-2col">';
+  /* 좌: 할일 */
+  html += '<div>';
+  html += '<div class="detail-section-title">할일</div>';
+  var _todos = DealTodo.getByDeal(t.id);
+  var _today = new Date().toISOString().substring(0, 10);
+  if (_todos.length > 0) {
+    html += '<div class="todo-list">';
+    _todos.forEach(function(td) {
+      var isDone = td.status === "completed";
+      var isOverdue = !isDone && td.due_date && td.due_date <= _today;
+      html += '<div class="todo-item" style="pointer-events:none">';
+      html += '<input type="checkbox" disabled' + (isDone ? ' checked' : '') + '>';
+      html += '<span class="t-title ' + (isDone ? 'done' : '') + '">' + esc(td.title) + '</span>';
+      if (td.due_date) html += '<span class="todo-due' + (isOverdue ? ' overdue' : '') + '">' + td.due_date.substring(5) + '</span>';
+      html += '</div>';
+    });
+    html += '</div>';
+  } else {
+    html += '<div class="todo-empty">등록된 할일이 없습니다.</div>';
+  }
+  html += '</div>';
+  /* 우: 타임라인 */
+  html += '<div>';
+  if (t.timeline && t.timeline.length > 0) {
+    html += '<div class="detail-section-title">타임라인</div>';
+    html += '<ul class="timeline">';
+    t.timeline.slice().reverse().forEach(function(tl) {
+      var ts = tl.at ? tl.at.substring(0, 10) + " " + tl.at.substring(11, 16) : "";
+      html += '<li><span class="tl-dot"></span><span class="tl-date">' + ts + '</span><span>' + esc(tl.label) + '</span></li>';
+    });
+    html += '</ul>';
+  } else {
+    html += '<div class="detail-section-title">타임라인</div>';
+    html += '<div class="todo-empty">기록이 없습니다.</div>';
+  }
+  html += '</div>';
+  html += '</div></div>';
+
+  $("dmBody").innerHTML = html;
+  $("dmTitle").textContent = esc(t.partner_name_snapshot || "거래 상세") + ' — 상세';
+}
+
+/* 모달 열기/닫기 */
+function openModal(tradeId) {
+  _modalTradeId = tradeId;
+  _renderModal(tradeId);
+  $("detailModal").classList.add("open");
+  $("modalOverlay").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+function closeModal() {
+  $("detailModal").classList.remove("open");
+  $("modalOverlay").classList.remove("open");
+  _modalTradeId = null;
+  /* 사이드패널이 열려있지 않으면 스크롤 복원 */
+  if (!$("sidePanel").classList.contains("open")) {
+    document.body.style.overflow = "";
+  }
+}
+
+/* 모달 이벤트 바인딩 */
+$("modalOverlay").addEventListener("click", closeModal);
+$("dmClose").addEventListener("click", closeModal);
+$("dmCloseBtn").addEventListener("click", closeModal);
+$("dmEdit").addEventListener("click", function() {
+  var tid = _modalTradeId;
+  closeModal();
+  if (tid) openPanel(tid);
+});
+
 /* 패널 이벤트 바인딩 */
 $("panelOverlay").addEventListener("click", closePanel);
 $("spClose").addEventListener("click", closePanel);
-document.addEventListener("keydown", function(e) { if (e.key === "Escape" && $("sidePanel").classList.contains("open")) closePanel(); });
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Escape") {
+    /* 모달이 열려있으면 모달 먼저 닫기 */
+    if ($("detailModal").classList.contains("open")) { closeModal(); return; }
+    if ($("sidePanel").classList.contains("open")) closePanel();
+  }
+});
 $("btnNewDeal").addEventListener("click", function() { openPanel(null); });
 
 /* ══════ v3.7 DealTodo 모듈 ══════ */
@@ -1054,8 +1372,13 @@ var DealTodo = (function() {
 function _getStatusChips(deal) {
   var chips = [];
   if (deal.deal_status === "cancelled") return chips;
-  /* 🟡 비용미입력: 아이템 중 cost가 null/0 인 것이 있으면 */
-  var hasMissingCost = (deal.items || []).some(function(it) {
+  /* v6: 📦 품목 미입력 (items 0건) — 회색, no-cost와 분리 */
+  var _itemArr = deal.items || [];
+  if (_itemArr.length === 0) {
+    chips.push({ type: "no-items", label: "📦 품목 미입력" });
+  }
+  /* 🟡 비용미입력: items 1건 이상이면서 cost가 null/0 인 것이 있으면 */
+  var hasMissingCost = _itemArr.length > 0 && _itemArr.some(function(it) {
     return it.cost == null || it.cost === 0;
   });
   if (hasMissingCost) chips.push({ type: "no-cost", label: "비용미입력" });
@@ -1182,7 +1505,7 @@ function renderItems() {
       '<td><input class="it-qty" data-idx="'+idx+'" type="number" step="0.01" value="'+(item.qty||"")+'" placeholder="수량" style="width:70px" /></td>' +
       '<td><input class="it-up" data-idx="'+idx+'" type="number" step="1" value="'+(item.unit_price||"")+'" placeholder="단가" style="width:90px" /></td>' +
       '<td><div class="sa">'+(sa > 0 ? TE.fmt(sa) : "—")+'</div></td>' +
-      '<td><input class="it-cost" data-idx="'+idx+'" type="number" step="1" value="'+(item.cost!=null&&item.cost!==""?item.cost:"")+'" placeholder="선택" style="width:90px" /></td>' +
+      '<td><input class="it-cost" data-idx="'+idx+'" type="number" step="1" value="'+(item.cost!=null&&item.cost!==""?item.cost:"")+'" placeholder="선택" style="width:90px" /><div class="cost-source" data-cost-src="'+idx+'"></div></td>' +
       '<td><input class="it-memo" data-idx="'+idx+'" value="'+esc(item.memo||"")+'" placeholder="" style="width:90px" /></td>' +
       '<td><button class="danger it-del" data-idx="'+idx+'" style="padding:4px 8px;font-size:10px" title="삭제">✕</button></td>';
     tb.appendChild(tr);
@@ -1222,11 +1545,8 @@ function renderItems() {
         purchaseInfo = GoLabItemMaster.getLatestPurchaseCost(matched.item_id);
       }
       _showItemRefInfo(idx, matched, purchaseInfo);
-      if (purchaseInfo && purchaseInfo.cost > 0 && (_items[idx].cost == null || _items[idx].cost === "")) {
-        _items[idx].cost = purchaseInfo.cost;
-        var costInput = $("itemsBody").querySelector('.it-cost[data-idx="' + idx + '"]');
-        if (costInput) costInput.value = purchaseInfo.cost;
-      }
+      /* v6 Step1: 원가 자동 채움 (공통 함수) */
+      _autoFillCost(idx, purchaseInfo);
       updateCockpit();
     });
     /* v3.11: 키보드 네비게이션 (↑↓ Enter Esc) */
@@ -1295,7 +1615,10 @@ function renderItems() {
   });
   tb.querySelectorAll(".it-cost").forEach(function(el) {
     el.addEventListener("input", function() {
-      _items[+el.dataset.idx].cost = el.value !== "" ? el.value : null;
+      var idx = +el.dataset.idx;
+      _items[idx].cost = el.value !== "" ? el.value : null;
+      /* v6 Step1: 사용자가 직접 수정하면 자동 상태 해제 */
+      _clearAutoFillState(idx);
       updateCockpit();
     });
   });
@@ -1387,12 +1710,8 @@ function _selectDropdownItem(inputEl, item) {
     purchaseInfo = GoLabItemMaster.getLatestPurchaseCost(item.item_id);
   }
   _showItemRefInfo(idx, item, purchaseInfo);
-  /* cost가 비어있으면 구매가로 자동 채움 */
-  if (purchaseInfo && purchaseInfo.cost > 0 && (_items[idx].cost == null || _items[idx].cost === "")) {
-    _items[idx].cost = purchaseInfo.cost;
-    var costInput = $("itemsBody").querySelector('.it-cost[data-idx="' + idx + '"]');
-    if (costInput) costInput.value = purchaseInfo.cost;
-  }
+  /* v6 Step1: 원가 자동 채움 (공통 함수 사용) */
+  _autoFillCost(idx, purchaseInfo);
 
   updateCockpit();
 
@@ -1453,29 +1772,56 @@ document.addEventListener("mousedown", function(e) {
   if (!$("itemDropdown").contains(e.target) && !e.target.classList.contains("it-name")) _hideItemDropdown();
 });
 
-/* v3.8: 품목 참고 정보 칩 표시 (기준가 + 구매가) */
+/* v6 Step1: 원가 자동 채움 + 시각 구분 + 근거 칩 (공통 함수) */
+function _autoFillCost(idx, purchaseInfo) {
+  if (!purchaseInfo || purchaseInfo.cost <= 0) return;
+  if (_items[idx].cost != null && _items[idx].cost !== "") return; /* 이미 값 있으면 건드리지 않음 */
+
+  /* 자동 입력 */
+  _items[idx].cost = purchaseInfo.cost;
+  _items[idx]._costAutoFilled = true; /* 자동 입력 플래그 */
+  var costInput = $("itemsBody").querySelector('.it-cost[data-idx="' + idx + '"]');
+  if (costInput) {
+    costInput.value = purchaseInfo.cost;
+    costInput.classList.add("auto-filled");
+  }
+
+  /* 근거 칩 표시 */
+  var srcEl = $("itemsBody").querySelector('[data-cost-src="' + idx + '"]');
+  if (srcEl) {
+    var label = purchaseInfo.date ? "최근 매입가 (" + purchaseInfo.date + ")" : "최근 매입가 기준";
+    srcEl.textContent = label;
+    srcEl.classList.add("visible");
+  }
+
+  updateCockpit();
+}
+
+/* v6 Step1: 원가 수동 수정 시 자동 상태 해제 */
+function _clearAutoFillState(idx) {
+  _items[idx]._costAutoFilled = false;
+  var costInput = $("itemsBody").querySelector('.it-cost[data-idx="' + idx + '"]');
+  if (costInput) costInput.classList.remove("auto-filled");
+  var srcEl = $("itemsBody").querySelector('[data-cost-src="' + idx + '"]');
+  if (srcEl) srcEl.classList.remove("visible");
+}
+
+/* v6 Step1: 품목 참고 정보 칩 (정리됨 — 핵심만 표시) */
 function _showItemRefInfo(idx, masterItem, purchaseInfo) {
   var infoEl = $("itemsBody").querySelector('.item-ref-info[data-idx="' + idx + '"]');
   if (!infoEl) return;
 
   var chips = [];
-  /* 기준가 칩 */
+  /* 카테고리 (작은 텍스트만) */
   if (masterItem) {
-    /* v3.12: 전략 가격 폴백 (rrp_price, legacy consumer_price 호환) */
-    var bp = masterItem.dealer_price || masterItem.rrp_price || masterItem.consumer_price || masterItem.target_buy_price;
-    if (bp) chips.push('<span class="ref-chip ref-base">기준가 ' + TE.fmt(bp) + '</span>');
-    /* 카테고리 배지 */
-    var cat = masterItem.category || "일반상품";
-    var catCls = cat === "원료" ? "cat-metal" : (cat === "장비" ? "cat-equip" : "cat-general");
-    chips.push('<span class="cat-badge ' + catCls + '">' + esc(cat) + '</span>');
-  }
-  /* 최근 구매가 칩 */
-  if (purchaseInfo && purchaseInfo.cost > 0) {
-    chips.push('<span class="ref-chip ref-purchase">구매가 ' + TE.fmt(purchaseInfo.cost) +
-               ' <small>(' + purchaseInfo.date + ')</small></span>');
+    var cat = masterItem.category || "";
+    if (cat) chips.push('<span style="font-size:9px;color:var(--muted)">' + esc(cat) + '</span>');
+    /* 기준가: 있으면 작게 표시 */
+    var bp = masterItem.dealer_price || masterItem.rrp_price || masterItem.target_buy_price;
+    if (bp) chips.push('<span style="font-size:9px;color:var(--point)">기준 ' + TE.fmt(bp) + '</span>');
   }
 
-  infoEl.innerHTML = chips.join("");
+  infoEl.innerHTML = chips.join('<span style="color:var(--line)">·</span>');
 }
 
 /* v3.8: 품목 참고 정보 초기화 (item_id 있는 품목에 칩 표시) */
@@ -2167,7 +2513,7 @@ function render() {
   var _cfNoCost = 0, _cfUnsettled = 0, _cfTodo = 0, _cfSave = 0;
   all.forEach(function(t) {
     if (t.deal_status === "cancelled") return;
-    if ((t.items||[]).some(function(it){ return it.cost == null || it.cost === 0; })) _cfNoCost++;
+    if ((t.items||[]).length > 0 && (t.items||[]).some(function(it){ return it.cost == null || it.cost === 0; })) _cfNoCost++;
     if (!t.payment_at) _cfUnsettled++;
     if (DealTodo.getByDeal(t.id).some(function(td){ return td.status !== "completed"; })) _cfTodo++;
     if (t.is_segyeong_save_deal) _cfSave++;
@@ -2181,6 +2527,7 @@ function render() {
   if (chipFilter === "no-cost") {
     filtered = filtered.filter(function(t) {
       return t.deal_status !== "cancelled" &&
+             (t.items||[]).length > 0 &&
              (t.items||[]).some(function(it){ return it.cost == null || it.cost === 0; });
     });
   } else if (chipFilter === "unsettled") {
@@ -2336,6 +2683,14 @@ function render() {
     });
   });
 
+  /* 🔍 버튼 클릭 → 모달 열기 */
+  tb.querySelectorAll("[data-modal]").forEach(function(btn) {
+    btn.addEventListener("click", function(e) {
+      e.stopPropagation();
+      openModal(btn.dataset.modal);
+    });
+  });
+
   /* v3.3→v6.0: 정렬 UI — 비활성 상태 표시 */
   updateSortUI();
 
@@ -2374,7 +2729,12 @@ function _buildDealRow(t) {
         ? '<span class="use-badge">USE</span>'
         : '<span class="save-badge">SAVE</span>';
     }
-    html += '<td class="col-text" title="'+esc(t.partner_name_snapshot)+'"><b>'+esc(t.partner_name_snapshot)+'</b>'+_saveTag+_chipHtml+'</td>';
+    html += '<td class="col-text" title="'+esc(t.partner_name_snapshot)+'">';
+    html += '<div style="display:flex;align-items:center">';
+    html += '<b>'+esc(t.partner_name_snapshot)+'</b>'+_saveTag;
+    html += '<button class="btn-detail" data-modal="'+t.id+'" title="상세 보기">🔍</button>';
+    html += '</div>';
+    html += _chipHtml+'</td>';
 
     /* ③ 품목 — hover 시 전체 텍스트 표시 */
     html += '<td class="col-text" title="'+esc(dispName)+'">'+esc(dispName)+_getItemLinkBadge(t)+'</td>';
@@ -3053,7 +3413,7 @@ function saveTrade() {
   var validItems = _items.filter(function(it) {
     return (it.name || "").trim() && TE.n(it.qty) > 0 && TE.n(it.unit_price) > 0;
   });
-  if (validItems.length === 0) { alert("품목을 1개 이상 입력해주세요.\n(품목명, 수량, 단가 필수)"); return; }
+  /* v6: 품목 0건 허용 — 차단 없이 바로 저장 */
 
   /* v5.5: 미연결 품목 경고 — item_id null인 품목 검출 */
   var _unlinkNames = [];

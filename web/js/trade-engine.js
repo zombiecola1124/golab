@@ -377,7 +377,9 @@ window.GoLabTradeEngine = (function () {
   /** 거래 생성 */
   function create(fields) {
     if (!fields.partner_id) throw new Error("거래처를 선택해주세요.");
-    if (!fields.items || fields.items.length === 0) throw new Error("품목을 1개 이상 추가해주세요.");
+    /* v6: 품목 0건 허용 — null/undefined/비배열 방어 */
+    var safeItems = Array.isArray(fields.items) ? fields.items : [];
+    fields.items = safeItems;
 
     var all = loadAll();
 
@@ -398,7 +400,7 @@ window.GoLabTradeEngine = (function () {
       deal_status:           DEAL_STATUS.ACTIVE,
 
       /* 품목 배열 (v3.8: snapshot 필드 추가) */
-      items: (fields.items || []).map(function (item, i) {
+      items: safeItems.map(function (item, i) {
         var snap = _snapshotFromMaster(item.item_id);
         return {
           seq:           i + 1,

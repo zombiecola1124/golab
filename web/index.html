@@ -3,1007 +3,597 @@
 <head>
   <meta charset="utf-8" />
   <meta name="viewport" content="width=device-width,initial-scale=1" />
-  <title>GoLab · 재고 관리 (Inventory)</title>
+  <title>GoLab · 재고 현황</title>
   <link rel="stylesheet" href="./css/ui.css">
   <style>
     :root{
-      --bg:#f5f7fa; --card:#ffffff; --muted:#64748b; --text:#0f172a;
-      --line:#e5e7eb; --accent:#16a34a; --warn:#d97706; --bad:#dc2626; --point:#2563eb;
-      --chip:#f8fafc;
+      --bg:#f5f7fa;--card:#ffffff;--muted:#64748b;--text:#0f172a;
+      --line:#e5e7eb;--accent:#16a34a;--warn:#d97706;--bad:#dc2626;--point:#2563eb;
+      --chip:#f8fafc;--inv:#2563eb;
     }
     *{box-sizing:border-box}
     body{margin:0;background:var(--bg);color:var(--text);
-      font-family: ui-sans-serif, system-ui, -apple-system, "Segoe UI", Roboto, "Apple SD Gothic Neo", "Noto Sans KR", Arial;}
-    /* [GoLab v4.1] header/tabs → ui.css로 이동 */
-    .wrap{max-width:1220px;margin:0 auto;padding:16px 16px 36px}
-    .grid{display:grid;grid-template-columns: 1fr; gap:14px}
-    .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
-    .card h2{margin:0 0 12px;font-size:13px;color:var(--point);display:flex;align-items:center;justify-content:space-between;gap:10px}
-    .kpis{display:grid;grid-template-columns: 1fr 1fr 1fr; gap:10px}
-    .kpi{padding:12px;border-radius:10px;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04)}
+      font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",Arial;}
+    .wrap{max-width:1440px;margin:0 auto;padding:16px 16px 36px}
+    .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    .card h2{margin:0 0 12px;font-size:13px;color:var(--inv);display:flex;align-items:center;gap:8px}
+
+    /* KPI */
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+    .kpi{padding:14px;border-radius:10px;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .kpi .t{font-size:11px;color:var(--muted)}
-    .kpi .v{margin-top:8px;font-size:24px;font-weight:600;color:var(--point)}
-    .btns{display:flex;gap:8px;flex-wrap:wrap}
-    button{
-      border:1px solid var(--line);background:var(--card);color:var(--text);
-      border-radius:10px;padding:10px 12px;font-size:12px;cursor:pointer;font-weight:700;
-    }
-    button:hover{border-color:#cbd5e1;background:#f8fafc}
-    button.primary{background:var(--point);border:none;color:#fff}
-    button.primary:hover{background:#1d4ed8}
-    button.save{background:var(--accent); border:none; color:#fff}
-    button.save.save-disabled{
-      background:#e5e7eb;
-      border:1px solid var(--line);
-      color:var(--muted);
-      opacity:0.7;
-      cursor:not-allowed;
-    }
-    button.save.save-ready{
-      background:var(--accent);
-      border:none;
-      color:#fff;
-    }
-    button.save.save-warning{
-      background:var(--warn);
-      border:none;
-      color:#fff;
-    }
-    button.save.save-error{
-      background:var(--bad);
-      border:none;
-      color:#fff;
-    }
-    button.secondary{background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);color:var(--point)}
-    button.danger{color:var(--bad);background:transparent;border:1px solid rgba(220,38,38,.3)}
-    .form{display:grid;grid-template-columns: 2fr 1fr 1fr 1fr 1fr 1fr; gap:8px}
-    input, textarea{
-      width:100%;border-radius:10px;border:1px solid var(--line);background:var(--chip);color:var(--text);
-      padding:10px;font-size:12px;outline:none;transition:border .2s
-    }
-    input:focus,textarea:focus{border-color:var(--point)}
-    input::placeholder{color:#94a3b8}
-    .field-required{
-      background:rgba(37,99,235,0.06);
-    }
-    .field-auto{
-      background:rgba(100,116,139,0.06);
-    }
-    textarea{grid-column:1 / -2; min-height:38px; resize:vertical}
-    .addWrap{display:flex;justify-content:flex-end;align-items:stretch}
-    .addWrap button{min-width:90px}
-    .mini{font-size:11px;color:var(--muted);margin-top:8px;line-height:1.5}
-    /* v3.4b: 테이블 프레임 — 데이터 영역만 감싸는 보더 */
-    .table-frame{border:1px solid var(--line);border-radius:10px;overflow:hidden;margin-top:10px}
-    .table-inner{overflow-x:hidden}
-    /* 독립 스크롤 레일 — 테이블 프레임 바깥, 바로 아래 밀착 */
-    .scroll-rail{overflow-x:auto;margin-top:2px;margin-bottom:0}
-    .scroll-rail::-webkit-scrollbar{height:10px}
-    .scroll-rail::-webkit-scrollbar-track{background:#f1f5f9;border-radius:5px}
-    .scroll-rail::-webkit-scrollbar-thumb{background:#cbd5e1;border-radius:5px}
-    .scroll-rail::-webkit-scrollbar-thumb:hover{background:#94a3b8}
-    .scroll-spacer{height:1px}
-    /* TIP 안내문 */
-    .table-tip{font-size:10px;color:#94a3b8;line-height:1.5;padding:8px 10px 10px;border-radius:0 0 10px 10px;background:transparent}
-    /* scroll-sticky: 필요 시 .scroll-rail에 이 클래스를 추가 */
-    .scroll-sticky{position:sticky;bottom:0;z-index:1;background:var(--bg)}
-    table{width:100%;border-collapse:collapse;min-width:980px;font-size:12px}
-    th{background:#f8fafc;color:var(--muted);text-align:left;padding:12px;position:sticky;top:0;border-bottom:1px solid var(--line)}
-    td{padding:12px;border-bottom:1px solid var(--line);vertical-align:middle}
-    .tag{display:inline-flex;align-items:center;gap:6px;padding:3px 9px;border-radius:999px;border:1px solid var(--line);font-size:11px}
-    .ok{color:var(--accent)}
-    .low{color:var(--warn)}
-    .zero{color:var(--bad)}
-    .right{display:flex;gap:8px;justify-content:flex-end}
+    .kpi .v{margin-top:6px;font-size:24px;font-weight:600;color:var(--inv)}
+    .kpi .sub{margin-top:4px;font-size:10px;color:var(--muted)}
+
+    /* 액션 바 */
+    .action-bar{display:flex;justify-content:flex-end;margin-bottom:12px}
+    .btn-new{padding:8px 18px;background:var(--inv);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px;transition:filter .15s}
+    .btn-new:hover{filter:brightness(.9)}
+
+    /* 필터 */
+    .filter-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
+    .filter-row input,.filter-row select{padding:7px 10px;border:1px solid var(--line);border-radius:8px;font-size:12px;background:var(--chip)}
+    .filter-row input{flex:1;min-width:140px}
+
+    /* 테이블 */
+    .tableWrap{overflow-x:auto;-webkit-overflow-scrolling:touch}
+    table.list-table{width:100%;border-collapse:collapse;font-size:12px}
+    table.list-table th{background:#f8fafc;color:var(--muted);text-align:left;padding:8px 6px;position:sticky;top:0;white-space:nowrap;z-index:2;border-bottom:1px solid var(--line);font-size:11px}
+    table.list-table td{padding:8px 6px;border-bottom:1px solid rgba(0,0,0,.04);vertical-align:middle}
+    table.list-table tr[data-id]{cursor:pointer;transition:background .1s}
+    table.list-table tr[data-id]:hover{background:rgba(37,99,235,.03)}
+    .num{text-align:right;font-variant-numeric:tabular-nums}
+    .badge{background:var(--inv);color:#fff;font-size:10px;font-weight:700;padding:2px 8px;border-radius:99px;vertical-align:middle}
+
+    /* 재고 부족 강조 */
+    .stock-low{background:rgba(220,38,38,.08);color:var(--bad);font-weight:700}
+
+    /* 사이드패널 */
+    .panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:90;
+      opacity:0;visibility:hidden;transition:opacity .25s,visibility .25s}
+    .panel-overlay.open{opacity:1;visibility:visible}
+    .side-panel{position:fixed;top:0;right:0;bottom:0;width:min(440px,90vw);background:var(--card);
+      box-shadow:-8px 0 30px rgba(0,0,0,.1);z-index:100;
+      display:flex;flex-direction:column;
+      transform:translateX(100%);transition:transform .3s cubic-bezier(.4,0,.2,1)}
+    .side-panel.open{transform:translateX(0)}
+    .sp-top{display:flex;justify-content:space-between;align-items:center;padding:16px 20px;border-bottom:1px solid var(--line);flex-shrink:0}
+    .sp-top h3{margin:0;font-size:14px;color:var(--inv);font-weight:700}
+    .sp-close{background:none;border:none;font-size:18px;cursor:pointer;color:var(--muted);width:32px;height:32px;display:flex;align-items:center;justify-content:center;border-radius:6px}
+    .sp-close:hover{background:rgba(0,0,0,.06)}
+    .sp-body{overflow-y:auto;flex:1;padding:20px}
+    .sp-body label{display:block;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px;margin-top:12px}
+    .sp-body label:first-child{margin-top:0}
+    .sp-body input,.sp-body textarea{width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--chip)}
+    .sp-body textarea{resize:vertical;min-height:40px}
+    .sp-body .info-field{font-size:12px;color:var(--text);padding:6px 0;border-bottom:1px solid rgba(0,0,0,.04)}
+    .sp-body .info-label{font-size:10px;color:var(--muted);font-weight:600}
+    .sp-form-btns{display:flex;gap:8px;padding:14px 20px;border-top:1px solid var(--line);flex-shrink:0}
+    .sp-form-btns button{padding:8px 20px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--line)}
+    .sp-form-btns .save{background:var(--inv);color:#fff;border-color:var(--inv)}
+    .sp-form-btns .save:hover{filter:brightness(.9)}
+    .sp-form-btns .danger{color:var(--bad);border-color:rgba(220,38,38,.3);background:rgba(220,38,38,.04)}
+    .sp-form-btns .danger:hover{background:rgba(220,38,38,.1)}
+    .sp-form-btns .secondary{background:var(--chip)}
+    .sp-form-btns .secondary:hover{background:rgba(0,0,0,.06)}
+    .sp-msg{padding:8px 12px;border-radius:8px;font-size:11px;font-weight:600;margin-top:8px;display:none}
+    .sp-msg.error{display:block;background:rgba(220,38,38,.08);color:var(--bad);border:1px solid rgba(220,38,38,.15)}
+
+    /* 카테고리 배지 */
+    .cat-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:600}
+    .cat-badge.원료{background:rgba(217,119,6,.1);color:#92400e}
+    .cat-badge.장비{background:rgba(37,99,235,.1);color:#1e40af}
+    .cat-badge.일반상품{background:rgba(22,163,74,.1);color:#15803d}
+
+    /* 빈 상태 */
     .muted{color:var(--muted)}
-    input[type="file"]{display:none}
-    .kpi-total-qty{display:none}
-    .inv-main{display:grid;grid-template-columns:minmax(0,2fr) minmax(0,1.3fr);gap:12px;align-items:flex-start;margin-top:10px}
-    .detailCard{
-      border-radius:10px;
-      border:1px solid var(--line);
-      background:var(--card);
-      padding:12px;
-      font-size:12px;
-      box-shadow:0 1px 3px rgba(0,0,0,.04);
+
+    /* 모바일 */
+    @media(max-width:768px){
+      .kpi-grid{grid-template-columns:repeat(2,1fr)}
+      .col-desk{display:none!important}
     }
-    .detailCard h3{margin:0 0 6px;font-size:13px;color:var(--point)}
-    .detail-row{display:flex;justify-content:space-between;gap:8px;margin-top:4px}
-    .detail-row .label{color:var(--muted);font-size:11px}
-    .detail-row .value{font-weight:700}
-    .detail-actions{display:flex;gap:8px;margin-top:10px;justify-content:flex-end}
-    .detail-mini{margin-top:8px;font-size:11px;color:var(--muted);line-height:1.5}
-    .row-selected{background:rgba(37,99,235,0.06)}
-    .modalBack{position:fixed;inset:0;background:rgba(0,0,0,.3);display:none;align-items:center;justify-content:center;z-index:999}
-    .modal{width:min(980px,92vw);max-height:86vh;overflow:auto;background:var(--card);border:1px solid var(--line);border-radius:12px;padding:14px;box-shadow:0 8px 30px rgba(0,0,0,.12)}
-    .modal h3{margin:0 0 10px;color:var(--text);font-size:14px}
-    .modal .topRow{display:flex;align-items:center;justify-content:space-between;gap:10px;margin-bottom:8px}
-    .closeX{border:1px solid var(--line);background:transparent;color:var(--muted);border-radius:10px;padding:8px 10px;cursor:pointer}
-    .closeX:hover{border-color:#cbd5e1;background:#f8fafc}
-    /* v7: deal_id 클릭 링크 */
-    .deal-link{color:var(--point);text-decoration:underline;cursor:pointer;font-weight:600}
-    .deal-link:hover{color:#1d4ed8}
-    /* v7: 거래 요약 팝업 내부 */
-    .deal-popup-row{display:flex;justify-content:space-between;gap:8px;padding:6px 0;border-bottom:1px solid var(--line)}
-    .deal-popup-row .dp-label{color:var(--muted);font-size:12px;min-width:70px}
-    .deal-popup-row .dp-value{font-weight:700;font-size:12px;text-align:right}
-    .deal-popup-items{margin-top:8px;font-size:11px;border:1px solid var(--line);border-radius:8px;overflow:hidden}
-    .deal-popup-items table{min-width:auto;width:100%;font-size:11px}
-    .deal-popup-items th{font-size:10px;padding:6px 8px;background:#f8fafc}
-    .deal-popup-items td{padding:6px 8px;font-size:11px}
-    .deal-popup-footer{text-align:right;margin-top:12px}
-    .deal-popup-footer a{display:inline-block;padding:6px 14px;border-radius:8px;font-size:12px;font-weight:600;color:var(--point);background:rgba(37,99,235,.06);border:1px solid rgba(37,99,235,.25);text-decoration:none}
-    .deal-popup-footer a:hover{background:rgba(37,99,235,.12)}
-    .deal-popup-none{padding:16px;text-align:center;color:var(--muted);font-size:12px}
+    @media(max-width:480px){
+      .kpi-grid{grid-template-columns:1fr 1fr}
+    }
   </style>
 </head>
 <body>
-<header data-title="GoLab · 재고 관리"></header>
+<!-- GoLab Auth Guard — 인증 전 화면 차단 -->
+<div id="golab-auth-wall" style="position:fixed;inset:0;z-index:9999;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .3s,visibility .3s"></div>
+
+<header data-title="GoLab · 재고 현황"></header>
 <script src="./js/navbar.js"></script>
+
 <div class="wrap">
-  <div class="grid">
-    <div class="card">
-      <h2>
-        요약
-        <div class="btns">
-          <button id="btnHistory" class="secondary">최근 입고 히스토리</button>
-          <button id="btnCsv" class="secondary" style="background:rgba(37,99,235,.08);border-color:rgba(37,99,235,.3);color:var(--point)">📥 엑셀 저장</button>
-          <button id="btnExport" class="secondary">내보내기(JSON)</button>
-          <button id="btnImport" class="secondary">가져오기(JSON)</button>
-          <input id="fileIn" type="file" accept="application/json" />
-          <button id="btnMigrate" class="secondary">품목 마스터 마이그레이션</button>
-          <button id="btnReset" class="danger">초기화</button>
-        </div>
-      </h2>
-      <div class="kpis">
-        <div class="kpi field-auto" title="자동 합산: 수량 × 매입단가 기준으로 자동 계산된 금액입니다.">
-          <div class="t">전체 재고 금액</div>
-          <div id="kTotalValue" class="v">₩ 0</div>
-          <div class="mini">수량 × 매입단가(평균/최근)</div>
-        </div>
-        <div class="kpi field-auto kpi-total-qty" title="자동 합산: 수량 × 매입단가 기준으로 자동 계산된 금액입니다.">
-          <div class="t">전체 재고 수량(합)</div>
-          <div id="kTotalQty" class="v">0</div>
-          <div class="mini">모든 품목의 수량 합</div>
-        </div>
-        <div class="kpi field-auto" title="자동 합산: 수량 × 매입단가 기준으로 자동 계산된 금액입니다.">
-          <div class="t">부족/0 재고 품목</div>
-          <div id="kLow" class="v">0</div>
-          <div class="mini">수량=0 또는 최소수량 이하</div>
-        </div>
-      </div>
-      <div class="mini">
-        ✅ 이 페이지는 <b>재고(실물)</b> 중심입니다. 입고 원장(purchases)에서 "재고로 전송"하면 여기에 수량이 자동 반영됩니다.
-      </div>
+  <!-- KPI 카드 -->
+  <div class="kpi-grid">
+    <div class="kpi">
+      <div class="t">총 보유 자산 가치</div>
+      <div class="v" id="kAssetValue">₩0</div>
     </div>
-    <div class="card">
-      <h2>품목 추가/수정</h2>
-      <div class="form">
-        <div id="acNameWrap" style="grid-column:1/3"></div>
-        <input id="inSpec" placeholder="규격 (예: 1kg / 1ea)" />
-        <input id="inVendor" placeholder="매입처 (예: 일본/국내)" />
-        <select id="inType" style="padding:10px;font-size:12px">
-          <option value="general_goods">일반상품</option>
-          <option value="metal_material">원료(금속/소재)</option>
-          <option value="equipment">장비/설비</option>
-        </select>
-        <input id="inPrice" class="field-required" type="number" step="0.01" placeholder="매입단가(KRW)" />
-        <input id="inQty" class="field-required" type="number" step="0.01" placeholder="수량" />
-        <input id="inMin" type="number" step="0.01" placeholder="최소수량" />
-        <textarea id="inNote" placeholder="비고/메모"></textarea>
-        <div class="addWrap">
-          <button id="btnAdd" class="primary save">추가</button>
-        </div>
-      </div>
-      <div id="saveStatus" class="mini"></div>
-      <div class="inv-main">
-        <div class="table-col">
-          <!-- 테이블 프레임: 데이터 영역만 보더로 감싸고, 스크롤바는 바깥 -->
-          <div class="table-frame">
-            <div class="table-inner" id="tableInner">
-              <table>
-                <thead>
-                  <tr>
-                    <th>품목명</th>
-                    <th>규격</th>
-                    <th>매입처</th>
-                    <th>매입단가</th>
-                    <th>수량</th>
-                    <th>최소수량</th>
-                    <th>재고총액</th>
-                    <th>상태</th>
-                    <th>비고</th>
-                    <th style="text-align:right">작업</th>
-                  </tr>
-                </thead>
-                <tbody id="tbody"></tbody>
-              </table>
-            </div>
-          </div>
-          <!-- 독립 스크롤 레일 -->
-          <div class="scroll-rail" id="scrollRail">
-            <div class="scroll-spacer" id="scrollSpacer"></div>
-          </div>
-          <div class="table-tip">TIP: 수량/단가는 숫자만 입력하세요. "입고/원가"에서 전송된 품목은 매입단가가 <b>실단가(KRW)</b> 기준으로 자동 업데이트됩니다.</div>
-        </div>
-        <aside class="detailCard" id="detailPanel">
-          <h3>📄 품목 디테일</h3>
-          <div id="detailEmpty" class="detail-mini">👈 왼쪽 리스트에서 품목을 선택하세요.</div>
-          <div id="detailBody" style="display:none">
-            <div class="detail-row">
-              <div class="label">품목명</div>
-              <div class="value" id="detailName"></div>
-            </div>
-            <div class="detail-row">
-              <div class="label">규격 / 매입처</div>
-              <div class="value" id="detailSpecVendor"></div>
-            </div>
-            <div class="detail-row">
-              <div class="label">제품유형</div>
-              <div class="value" id="detailType">일반상품</div>
-            </div>
-            <div class="detail-row">
-              <div class="label">현재 수량</div>
-              <div class="value" id="detailQty"></div>
-            </div>
-            <div class="detail-row">
-              <div class="label">최소수량</div>
-              <div class="value" id="detailMin"></div>
-            </div>
-            <div class="detail-row">
-              <div class="label">매입단가</div>
-              <div class="value" id="detailPrice"></div>
-            </div>
-            <div class="detail-row">
-              <div class="label">재고총액</div>
-              <div class="value" id="detailTotal"></div>
-            </div>
-            <div class="detail-row">
-              <div class="label">메모</div>
-              <div class="value" id="detailNote"></div>
-            </div>
-            <div class="detail-actions">
-              <button id="detailEdit" class="secondary">이 품목 수정</button>
-              <button id="detailDelete" class="danger">이 품목 삭제</button>
-            </div>
-            <!-- v6: 입출고 통합 이력 -->
-            <div class="detail-mini" style="margin-top:10px;font-weight:600">📋 최근 입출고 이력</div>
-            <div id="detailHist" class="detail-mini"></div>
-          </div>
-        </aside>
-      </div>
-      <!-- TIP은 .table-col 안으로 이동됨 (v3.4) -->
-      <!-- [CSV PATCH] 저장 상태 표시 -->
-      <div id="csvSaveStatus" style="text-align:center;padding:8px;font-size:11px;color:var(--point);font-weight:600;opacity:0;transition:opacity .3s">💾 저장됨</div>
+    <div class="kpi">
+      <div class="t">재고 보유 품목 수</div>
+      <div class="v" id="kItemCount">0</div>
+    </div>
+    <div class="kpi">
+      <div class="t">총 실재고 수량</div>
+      <div class="v" id="kTotalStock">0</div>
+    </div>
+    <div class="kpi">
+      <div class="t">총 가용 재고 수량</div>
+      <div class="v" id="kAvailStock">0</div>
     </div>
   </div>
-</div>
-<div id="modalBack" class="modalBack">
-  <div class="modal">
-    <div class="topRow">
-      <h3>최근 입고 히스토리 (purchases → inventory 전송 기록)</h3>
-      <button id="btnClose" class="closeX">닫기</button>
+
+  <!-- 재고 테이블 카드 -->
+  <div class="card">
+    <h2>📦 재고 현황 <span class="badge" id="listBadge">0</span></h2>
+
+    <div class="action-bar">
+      <button class="btn-new" id="btnNew">＋ 재고 등록</button>
     </div>
+
+    <div class="filter-row">
+      <input type="text" id="fSearch" placeholder="🔍 품목명, 카테고리, 태그 검색" />
+      <select id="fCategory">
+        <option value="">전체 카테고리</option>
+        <option value="원료">원료</option>
+        <option value="장비">장비</option>
+        <option value="일반상품">일반상품</option>
+      </select>
+      <select id="fStock">
+        <option value="instock" selected>재고 있음</option>
+        <option value="all">전체</option>
+        <option value="zero">재고 없음</option>
+        <option value="low">부족</option>
+      </select>
+    </div>
+
     <div class="tableWrap">
-      <table>
+      <table class="list-table">
         <thead>
           <tr>
-            <th>전송일시</th>
-            <th>배치</th>
-            <th>품목</th>
-            <th>수량</th>
-            <th>실단가(KRW)</th>
-            <th>추가된 금액</th>
-            <th class="muted">메모</th>
+            <th>품목명</th>
+            <th class="col-desk">카테고리</th>
+            <th class="num">현재 수량</th>
+            <th class="col-desk num">예약 수량</th>
+            <th class="num">가용 수량</th>
+            <th class="col-desk num">최근 매입가</th>
+            <th class="num">보유 금액</th>
+            <th class="col-desk num">적정 재고</th>
+            <th class="col-desk">태그</th>
           </tr>
         </thead>
-        <tbody id="hbody"></tbody>
+        <tbody id="tbody"></tbody>
+        <tfoot id="tfoot" style="display:none">
+          <tr style="background:#eff6ff;font-weight:700;font-size:12px">
+            <td style="text-align:right;color:var(--muted)">합계</td>
+            <td class="col-desk"></td>
+            <td class="num" id="sumStock">0</td>
+            <td class="col-desk num" id="sumReserved">0</td>
+            <td class="num" id="sumAvail">0</td>
+            <td class="col-desk"></td>
+            <td class="num" id="sumValue" style="color:var(--inv);font-weight:800">₩0</td>
+            <td class="col-desk"></td>
+            <td class="col-desk"></td>
+          </tr>
+        </tfoot>
       </table>
     </div>
-    <div class="mini">※ 이 기록은 재고 수량/단가가 자동 변경된 "증빙 로그" 역할입니다.</div>
+    <div id="emptyMsg" class="muted" style="text-align:center;padding:24px;display:none">등록된 재고가 없습니다.</div>
+  </div>
+
+  <!-- 사이드패널 -->
+  <div class="panel-overlay" id="panelOverlay"></div>
+  <div class="side-panel" id="sidePanel">
+    <div class="sp-top">
+      <h3 id="spTitle">재고 등록</h3>
+      <button class="sp-close" id="spClose">✕</button>
+    </div>
+    <div class="sp-body" id="spBody">
+      <!-- 품목 선택 (등록 시) -->
+      <div id="itemSelectWrap">
+        <label>품목 선택 *</label>
+        <div id="acItemWrap"></div>
+      </div>
+      <!-- 품목 표시 (수정 시) -->
+      <div id="itemDisplayWrap" style="display:none">
+        <label>품목</label>
+        <div id="itemDisplay" style="font-size:14px;font-weight:700;padding:8px 0"></div>
+      </div>
+
+      <label>현재 수량 *</label>
+      <input type="number" id="inStock" min="0" step="1" placeholder="0" />
+
+      <label>최근 매입가 *</label>
+      <input type="number" id="inBuyPrice" min="0" step="1" placeholder="0" />
+
+      <label>적정 재고</label>
+      <input type="number" id="inTarget" min="0" step="1" value="0" />
+
+      <label>태그 <span style="color:var(--muted);font-weight:400">(예: #싸게확보)</span></label>
+      <input type="text" id="inTag" placeholder="#태그" />
+
+      <div class="sp-msg" id="spMsg"></div>
+
+      <!-- 읽기 전용 정보 (수정 시) -->
+      <div id="readonlyInfo" style="display:none;margin-top:16px;padding-top:12px;border-top:1px solid var(--line)">
+        <div class="info-label">최초 입고일</div>
+        <div class="info-field" id="infoFirstIn">—</div>
+        <div class="info-label" style="margin-top:8px">예약 수량</div>
+        <div class="info-field" id="infoReserved">0</div>
+        <div class="info-label" style="margin-top:8px">리드타임 (일)</div>
+        <div class="info-field" id="infoLeadTime">0</div>
+        <div class="info-label" style="margin-top:8px">최종 수정일</div>
+        <div class="info-field" id="infoUpdated">—</div>
+      </div>
+    </div>
+    <div class="sp-form-btns">
+      <button id="btnSave" class="save">등록</button>
+      <button id="btnCancel" class="secondary" style="display:none">취소</button>
+      <button id="btnDelete" class="danger" style="display:none">삭제</button>
+    </div>
   </div>
 </div>
-<!-- v7: 거래 요약 팝업 -->
-<div id="dealPopupBack" class="modalBack" style="display:none">
-  <div class="modal" style="width:min(520px,90vw);max-height:80vh">
-    <div class="topRow">
-      <h3 id="dealPopupTitle">거래 요약</h3>
-      <button id="dealPopupClose" class="closeX">닫기</button>
-    </div>
-    <div id="dealPopupBody"></div>
-    <div id="dealPopupFooter" class="deal-popup-footer">
-      <a id="dealPopupLink" href="deals.html">거래 탭에서 보기 →</a>
-    </div>
-  </div>
-</div>
-<!-- Firebase SDK (CDN) — 미로드 시 local 모드로 자동 fallback -->
+
+<!-- 스크립트 의존성 -->
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/storage-adapter.js"></script>
-<script src="js/item-master.js"></script>
+<script src="js/auth-guard.js"></script>
+<script src="js/item-master.js?v=312"></script>
 <script>
-  const INV_KEY = "golab_inventory_v01";
-  const HIST_KEY = "golab_inventory_inbound_history_v01";
-  const $ = (id) => document.getElementById(id);
-  let isEventBound = false;
-  let selectedItemId = null;
+/* ══════════════════════════════════════════════════════════════
+   GoLab 재고 관리 — v1 (golab_inventory_v1)
+   · item-master와 결합하여 품목명/카테고리 표시
+   · CRUD + 감사 로그 + KPI + 필터
+   ══════════════════════════════════════════════════════════════ */
+var INV_KEY = "golab_inventory_v1";
+var AUDIT_KEY = "golab_inventory_audit_v1";
 
-  /* ── 품목 자동완성 위젯 ── */
-  let acName = null; // DOMContentLoaded 후 초기화
-  function loadInv(){
-    try { return JSON.parse(localStorage.getItem(INV_KEY) || "[]"); }
-    catch { return []; }
-  }
-  function saveInv(list){
-    localStorage.setItem(INV_KEY, JSON.stringify(list));
-  }
-  function loadHist(){
-    try { return JSON.parse(localStorage.getItem(HIST_KEY) || "[]"); }
-    catch { return []; }
-  }
-  function n(v, fb=0){
-    const x = Number(v);
-    return Number.isFinite(x) ? x : fb;
-  }
-  function statusTag(qty, min){
-    if(qty <= 0) return `<span class="tag zero">0 재고</span>`;
-    if(qty <= min) return `<span class="tag low">부족</span>`;
-    return `<span class="tag ok">정상</span>`;
-  }
-  function compute(){
-    const inv = loadInv();
-    let totalValue = 0;
-    let totalQty = 0;
-    let lowCnt = 0;
-    inv.forEach(it=>{
-      const qty = n(it.qty);
-      const price = n(it.buyPrice);
-      totalQty += qty;
-      totalValue += qty * price;
-      if(qty <= 0 || qty <= n(it.minQty)) lowCnt += 1;
-    });
-    $("kTotalValue").textContent = "₩ " + Math.round(totalValue).toLocaleString();
-    $("kTotalQty").textContent = (Math.round(totalQty*100)/100).toLocaleString();
-    $("kLow").textContent = lowCnt.toLocaleString();
-  }
-  function clearDetail(){
-    const empty = $("detailEmpty");
-    const body = $("detailBody");
-    if(empty && body){
-      empty.style.display = "block";
-      body.style.display = "none";
-    }
-    const fields = ["detailName","detailSpecVendor","detailType","detailQty","detailMin","detailPrice","detailTotal","detailNote","detailHist"];
-    fields.forEach(id=>{
-      const el = $(id);
-      if(el) el.textContent = "";
-    });
-  }
-  function enterEditMode(it){
-    /* 품목 마스터 자동완성 설정 */
-    if (acName) {
-      if (it.item_id) {
-        acName.setValue(it.item_id);
-      } else {
-        // 레거시: 이름으로 마스터 검색
-        const results = GoLabItemMaster.search(it.name);
-        if (results.length > 0) acName.setValue(results[0].item_id);
-      }
-    }
-    $("inSpec").value = it.spec || "";
-    $("inVendor").value = it.vendor || "";
-    $("inPrice").value = n(it.buyPrice);
-    $("inQty").value = n(it.qty);
-    $("inMin").value = n(it.minQty);
-    $("inNote").value = it.note || "";
-    /* [A] product_type 로드 */
-    try{ $("inType").value = it.type || "general_goods"; }catch(_e){}
-    $("btnAdd").textContent = "저장";
-    $("btnAdd").dataset.editing = it.id;
-    validateForm();
-  }
-  function showDetail(it){
-    const empty = $("detailEmpty");
-    const body = $("detailBody");
-    if(!body || !empty) return;
-    empty.style.display = "none";
-    body.style.display = "block";
-    const qty = n(it.qty);
-    const min = n(it.minQty);
-    const price = n(it.buyPrice);
-    const total = qty * price;
-    $("detailName").textContent = it.name || "";
-    $("detailSpecVendor").textContent = `${it.spec || "-"} / ${it.vendor || "-"}`;
-    /* [A] 제품유형 표시 */
-    try{
-      const typeMap = {metal_material:"원료(금속/소재)", general_goods:"일반상품", equipment:"장비/설비"};
-      const dtEl = $("detailType");
-      if(dtEl) dtEl.textContent = typeMap[it.type] || typeMap["general_goods"];
-    }catch(_e){}
-    $("detailQty").textContent = (Math.round(qty*100)/100).toLocaleString();
-    $("detailMin").textContent = (Math.round(min*100)/100).toLocaleString();
-    $("detailPrice").textContent = "₩" + Math.round(price).toLocaleString();
-    $("detailTotal").textContent = "₩" + Math.round(total).toLocaleString();
-    $("detailNote").textContent = it.note || "-";
-    /* v6: 입출고 통합 이력 — inbound_history + stock_log 병합 */
-    const histBox = $("detailHist");
-    if(histBox){
-      const _STOCK_LOG_KEY = "golab_stock_log_v1";
-      const _txIcons = {
-        "inbound":        "📥 입고",
-        "sale_out":       "📤 판매출고",
-        "edit_reverse":   "🔄 수정복원",
-        "cancel_reverse": "❌ 삭제복원"
-      };
-      let merged = [];
+/* ── 헬퍼 ── */
+var $ = function(id) { return document.getElementById(id); };
+function fmt(v) { return "₩" + (Number(v) || 0).toLocaleString(); }
+function n(v) { return Number(v) || 0; }
+function esc(s) { return (s || "").replace(/&/g, "&amp;").replace(/</g, "&lt;").replace(/>/g, "&gt;"); }
+function today() { return new Date().toISOString().substring(0, 10); }
+function now() { return new Date().toISOString(); }
 
-      /* 1) 기존 입고 이력 (inbound_history) */
-      const inList = loadHist();
-      const inRelated = inList.filter(h => h.inventoryItemId ? h.inventoryItemId === it.id : (h.name||"") === (it.name||""));
-      inRelated.forEach(h => {
-        merged.push({
-          at: h.at || "",
-          type: "inbound",
-          qty: n(h.qty),
-          unit: h.unit || "",
-          price: n(h.unitPriceKrw),
-          ref: ""
-        });
-      });
+/* ── 데이터 로드/저장 ── */
+function loadInv() {
+  try { return JSON.parse(GoLabStorage.getItem(INV_KEY) || "[]"); } catch (e) { return []; }
+}
+function saveInv(list) {
+  GoLabStorage.setItem(INV_KEY, JSON.stringify(list));
+}
 
-      /* 2) stock_log (거래 연동 이력) — item_id 매칭 */
-      try {
-        const stockLogs = JSON.parse(localStorage.getItem(_STOCK_LOG_KEY) || "[]");
-        const itemRelated = stockLogs.filter(l => l.item_id === it.item_id);
-        itemRelated.forEach(l => {
-          merged.push({
-            at: l.created_at || "",
-            type: l.tx_type || "sale_out",
-            qty: n(l.qty_change),
-            unit: "",
-            price: 0,
-            ref: l.deal_id || ""
-          });
-        });
-      } catch(_e) {}
-
-      /* 3) 시간순 내림차순 정렬 */
-      merged.sort((a, b) => (b.at || "").localeCompare(a.at || ""));
-      const totalCount = merged.length;
-      const visible = merged.slice(0, 8);
-
-      if(visible.length === 0){
-        histBox.textContent = "이력이 없습니다.";
-      } else {
-        let html = visible.map(m => {
-          const dateStr = (m.at || "").replace("T", " ").slice(5, 16); /* MM-DD HH:MM */
-          const icon = _txIcons[m.type] || m.type;
-          let qtyStr = "";
-          if (m.type === "inbound") {
-            qtyStr = "+" + (Math.round(n(m.qty)*100)/100).toLocaleString() + (m.unit ? " " + m.unit : "");
-          } else {
-            const v = n(m.qty);
-            qtyStr = (v >= 0 ? "+" : "") + v;
-          }
-          let detail = "";
-          if (m.type === "inbound" && m.price > 0) {
-            detail = " · ₩" + Math.round(m.price).toLocaleString();
-          }
-          if (m.ref) {
-            /* v7: deal_id를 클릭 가능한 링크로 렌더링 */
-            detail += ' · <a href="#" class="deal-link" data-deal-id="' + m.ref.replace(/"/g, '&quot;') + '">' + m.ref + '</a>';
-          }
-          const color = m.type === "inbound" ? "var(--accent)"
-                      : m.type === "sale_out" ? "var(--bad)"
-                      : "var(--muted)";
-          return `<div style="padding:2px 0;border-bottom:1px solid var(--line)">`
-            + `<span style="color:var(--muted)">${dateStr}</span> `
-            + `${icon} `
-            + `<span style="font-weight:700;color:${color}">${qtyStr}</span>`
-            + `<span style="color:var(--muted);font-size:10px">${detail}</span>`
-            + `</div>`;
-        }).join("");
-        if (totalCount > 8) {
-          html += `<div style="padding:4px 0;font-size:10px;color:var(--point);font-weight:600">전체 ${totalCount}건 중 8건 표시</div>`;
-        }
-        histBox.innerHTML = html;
-        /* v7: deal_id 클릭 이벤트 위임 — histBox 단위 바인딩 */
-        histBox.onclick = function(e) {
-          var link = e.target.closest(".deal-link");
-          if (!link) return;
-          e.preventDefault();
-          e.stopPropagation();
-          var dealId = link.dataset.dealId;
-          if (dealId) _showDealPopup(dealId);
-        };
-      }
-    }
-    const btnEdit = $("detailEdit");
-    const btnDel = $("detailDelete");
-    if(btnEdit){
-      btnEdit.onclick = ()=> enterEditMode(it);
-    }
-    if(btnDel){
-      btnDel.onclick = ()=>{
-        if(!confirm("이 품목을 삭제하시겠습니까?")) return;
-        saveInv(loadInv().filter(x=>x.id !== it.id));
-        selectedItemId = null;
-        render(); compute();
-        validateForm();
-        clearDetail();
-      };
-    }
-  }
-  function updateRowSelection(){
-    const tb = $("tbody");
-    if(!tb) return;
-    tb.querySelectorAll("tr").forEach(tr=>{
-      if(tr.dataset && tr.dataset.id === selectedItemId){
-        tr.classList.add("row-selected");
-      }else{
-        tr.classList.remove("row-selected");
-      }
-    });
-  }
-  function render(){
-    const inv = loadInv();
-    const tb = $("tbody");
-    tb.innerHTML = "";
-    inv.forEach(it=>{
-      const qty = n(it.qty);
-      const min = n(it.minQty);
-      const price = n(it.buyPrice);
-      const total = qty * price;
-      const tr = document.createElement("tr");
-      tr.dataset.id = it.id;
-      tr.innerHTML = `
-        <td><b>${it.name || ""}</b></td>
-        <td class="muted">${it.spec || ""}</td>
-        <td class="muted">${it.vendor || ""}</td>
-        <td>₩${Math.round(price).toLocaleString()}</td>
-        <td><b>${(Math.round(qty*100)/100).toLocaleString()}</b></td>
-        <td class="muted">${(Math.round(min*100)/100).toLocaleString()}</td>
-        <td>₩${Math.round(total).toLocaleString()}</td>
-        <td>${statusTag(qty, min)}</td>
-        <td class="muted">${(it.note||"").replaceAll("<","&lt;")}</td>
-        <td style="text-align:right" class="right">
-          <button class="secondary" data-edit="${it.id}">수정</button>
-          <button class="danger" data-del="${it.id}">삭제</button>
-        </td>
-      `;
-      tr.addEventListener("click", ()=>{
-        selectedItemId = it.id;
-        updateRowSelection();
-        showDetail(it);
-      });
-      tb.appendChild(tr);
-    });
-    tb.querySelectorAll("button[data-del]").forEach(btn=>{
-      btn.onclick = (e)=>{
-        e.stopPropagation();
-        if(!confirm("삭제하시겠습니까?")) return;
-        const id = btn.dataset.del;
-        saveInv(loadInv().filter(x=>x.id!==id));
-        if(selectedItemId === id){
-          selectedItemId = null;
-          clearDetail();
-        }
-        render(); compute();
-        validateForm();
-      };
-    });
-    tb.querySelectorAll("button[data-edit]").forEach(btn=>{
-      btn.onclick = (e)=>{
-        e.stopPropagation();
-        const id = btn.dataset.edit;
-        const it = loadInv().find(x=>x.id===id);
-        if(!it) return;
-        selectedItemId = it.id;
-        updateRowSelection();
-        enterEditMode(it);
-        showDetail(it);
-      };
-    });
-    updateRowSelection();
-    syncScrollRail();
-  }
-
-  /* ── 독립 스크롤 레일 동기화 ── */
-  function syncScrollRail(){
-    var inner = $("tableInner");
-    var rail  = $("scrollRail");
-    var spacer = $("scrollSpacer");
-    if(!inner || !rail || !spacer) return;
-    var table = inner.querySelector("table");
-    if(!table) return;
-    /* 스페이서 너비 = 테이블 실제 너비 (min-width 포함) */
-    spacer.style.width = table.scrollWidth + "px";
-    /* 레일 스크롤 → 테이블 동기 */
-    rail.onscroll = function(){ inner.scrollLeft = rail.scrollLeft; };
-    /* 테이블 영역에서 직접 스크롤(터치 등)할 경우 역동기 */
-    inner.onscroll = function(){ rail.scrollLeft = inner.scrollLeft; };
-  }
-
-  function upsert(){
-    /* 품목 마스터에서 선택 필수 */
-    const masterItemId = acName ? acName.getValue() : null;
-    if (!masterItemId) { alert("품목을 마스터에서 선택해주세요. (자유 텍스트 입력 불가)"); return; }
-    const masterItem = GoLabItemMaster.getById(masterItemId);
-    if (!masterItem) { alert("선택된 품목이 마스터에 없습니다."); return; }
-
-    const _editing = $("btnAdd").dataset.editing;
-    const _existing = _editing ? loadInv().find(x=>x.id===_editing) : null;
-    const item = {
-      id: _editing || crypto.randomUUID(),
-      item_id: masterItem.item_id,       // 품목 마스터 참조 (핵심!)
-      name: masterItem.item_name,        // 비정규화 (표시용)
-      spec: $("inSpec").value.trim(),
-      vendor: $("inVendor").value.trim(),
-      type: $("inType").value || "general_goods",
-      buyPrice: n($("inPrice").value),
-      qty: n($("inQty").value),
-      minQty: n($("inMin").value),
-      note: $("inNote").value.trim(),
-      updatedAt: new Date().toISOString()
-    };
-    /* 기존 필드 보존 (마이그레이션 방지) */
-    if(_existing){ for(const k in _existing){ if(!(k in item)) item[k]=_existing[k]; } }
-    const inv = loadInv();
-    const idx = inv.findIndex(x=>x.id===item.id);
-    if(idx >= 0) inv[idx] = item;
-    else inv.unshift(item);
-    saveInv(inv);
-    if(acName) acName.clear();
-    $("inSpec").value=""; $("inVendor").value="";
-    $("inPrice").value=""; $("inQty").value=""; $("inMin").value=""; $("inNote").value="";
-    try{ $("inType").value="general_goods"; }catch(_e){}
-    $("btnAdd").textContent="추가";
-    delete $("btnAdd").dataset.editing;
-    render(); compute();
-  }
-  function exportJson(){
-    const data = localStorage.getItem(INV_KEY) || "[]";
-    const blob = new Blob([data], {type:"application/json"});
-    const a = document.createElement("a");
-    a.href = URL.createObjectURL(blob);
-    a.download = `GoLab_Inventory_${new Date().toISOString().slice(0,10)}.json`;
-    a.click();
-  }
-  function importJson(file){
-    const r = new FileReader();
-    r.onload = ()=>{
-      try{
-        const data = JSON.parse(r.result);
-        if(!Array.isArray(data)) throw new Error("not array");
-        saveInv(data);
-        render(); compute();
-        validateForm();
-        alert("가져오기 완료");
-      }catch(e){
-        alert("JSON 형식이 올바르지 않습니다.");
-      }
-    };
-    r.readAsText(file);
-  }
-  function openHistory(){
-    const list = loadHist();
-    const hb = $("hbody");
-    hb.innerHTML = "";
-    if(list.length === 0){
-      const tr = document.createElement("tr");
-      tr.innerHTML = `<td colspan="7" class="muted" style="padding:16px">히스토리가 없습니다. (purchases에서 '재고로 전송'을 사용해보세요)</td>`;
-      hb.appendChild(tr);
-    }else{
-      list.slice(0, 200).forEach(h=>{
-        const tr = document.createElement("tr");
-        tr.innerHTML = `
-          <td class="muted">${(h.at||"").replace("T"," ").slice(0,19)}</td>
-          <td><b>${h.batchName||""}</b></td>
-          <td>${h.name||""}</td>
-          <td>${(Math.round(n(h.qty)*100)/100).toLocaleString()} ${h.unit||""}</td>
-          <td>₩${Math.round(n(h.unitPriceKrw)).toLocaleString()}</td>
-          <td>₩${Math.round(n(h.addedValueKrw)).toLocaleString()}</td>
-          <td class="muted">${(h.memo||"").replaceAll("<","&lt;")}</td>
-        `;
-        hb.appendChild(tr);
-      });
-    }
-    $("modalBack").style.display = "flex";
-  }
-  function closeHistory(){
-    $("modalBack").style.display = "none";
-  }
-  function computeSaveButtonState(){
-    const hasName = acName ? !!acName.getValue() : false;
-    const priceRaw = $("inPrice")?.value || "";
-    const qtyRaw = $("inQty")?.value || "";
-    const minRaw = $("inMin")?.value || "";
-    const price = n(priceRaw);
-    const qty = n(qtyRaw);
-    const min = n(minRaw);
-    const hasPrice = priceRaw !== "" && price > 0;
-    const hasQty = qtyRaw !== "" && qty >= 0;
-    const hasMin = minRaw !== "";
-    if(!hasName || !hasPrice || !hasQty){
-      return {
-        state: "disabled",
-        message: "입력 확인: 품목명과 수량은 필수입니다. 빈칸을 확인해 주세요."
-      };
-    }
-    if(hasMin && qty <= min){
-      return {
-        state: "warning",
-        message: "재고 부족: 적정 재고 이하입니다. 추가 매입 검토가 필요합니다."
-      };
-    }
-    return {
-      state: "ready",
-      message: "입력값이 정상입니다. 추가/저장을 진행할 수 있습니다."
-    };
-  }
-  function applySaveButtonState(state, message){
-    const btn = $("btnAdd");
-    const statusEl = $("saveStatus");
-    if(!btn || !statusEl) return;
-    btn.classList.remove("save-disabled","save-ready","save-warning","save-error");
-    btn.disabled = false;
-    if(state === "disabled"){
-      btn.classList.add("save-disabled");
-      btn.disabled = true;
-    }else if(state === "warning"){
-      btn.classList.add("save-warning");
-    }else if(state === "error"){
-      btn.classList.add("save-error");
-    }else{
-      btn.classList.add("save-ready");
-    }
-    statusEl.textContent = message || "";
-  }
-  function updateSaveButtonState(){
-    const { state, message } = computeSaveButtonState();
-    applySaveButtonState(state, message);
-  }
-  function setSaveErrorState(message){
-    applySaveButtonState(
-      "error",
-      message || "치명적 오류가 발생했습니다. 저장에 실패했습니다. 잠시 후 다시 시도해주세요."
-    );
-  }
-  function validateForm(){
-    updateSaveButtonState();
-  }
-  function handleAddClick(){
-    const btn = $("btnAdd");
-    if(btn && btn.disabled) return;
-    try{
-      upsert();
-      validateForm();
-    }catch(e){
-      console.error(e);
-      setSaveErrorState("치명적 오류(전송 실패 등)가 발생했습니다. 잠시 후 다시 시도하거나 관리자에게 문의해주세요.");
-    }
-  }
-  /* ══════════════════════════════════════
-     v7: 거래 요약 팝업 (deal_id 클릭 → 거래 정보 표시)
-     — trade-engine.js 미로드, golab_trade_v2 직접 조회
-     ══════════════════════════════════════ */
-
-  /** golab_trade_v2에서 id 기준 거래 조회 (deal_id 아님) */
-  function _loadTradeById(tradeId) {
-    try {
-      var trades = JSON.parse(GoLabStorage.getItem("golab_trade_v2") || "[]");
-      for (var i = 0; i < trades.length; i++) {
-        if (trades[i].id === tradeId) return trades[i];
-      }
-    } catch(_e) {}
-    return null;
-  }
-
-  /** 거래 요약 팝업 열기 */
-  function _showDealPopup(dealId) {
-    var trade = _loadTradeById(dealId);
-    var bodyEl = $("dealPopupBody");
-    var footerEl = $("dealPopupFooter");
-    var titleEl = $("dealPopupTitle");
-    var linkEl = $("dealPopupLink");
-    if (!bodyEl) return;
-
-    if (!trade) {
-      /* 조회 실패 */
-      titleEl.textContent = "거래 요약";
-      bodyEl.innerHTML = '<div class="deal-popup-none">거래 데이터를 찾을 수 없습니다.<br><span style="font-size:11px">(삭제되었거나 ID 오류)</span></div>';
-      footerEl.style.display = "none";
-    } else {
-      /* 조회 성공 — raw 데이터에서 직접 합산 */
-      var items = trade.items || [];
-      var totalSupply = 0;
-      var totalCost = 0;
-      var hasCost = false;
-      items.forEach(function(it) {
-        totalSupply += Math.round(n(it.qty) * n(it.unit_price));
-        if (it.cost != null && it.cost !== "") {
-          totalCost += n(it.cost);
-          hasCost = true;
-        }
-      });
-      /* 부대비용 합산 */
-      var extraCosts = trade.extra_costs || [];
-      extraCosts.forEach(function(ec) {
-        if (ec.affects_profit !== false) {
-          totalCost += n(ec.amount);
-        }
-      });
-
-      var typeLabel = trade.trade_type === "channel" ? "관리업체" : "직접";
-      var channelInfo = trade.channel_name_snapshot ? (" (" + trade.channel_name_snapshot + ")") : "";
-
-      titleEl.textContent = "거래 요약 · " + (trade.id || "");
-
-      var html = "";
-      /* 기본 정보 행들 */
-      html += '<div class="deal-popup-row"><div class="dp-label">거래일</div><div class="dp-value">' + (trade.deal_date || "-") + '</div></div>';
-      html += '<div class="deal-popup-row"><div class="dp-label">거래처</div><div class="dp-value">' + (trade.partner_name_snapshot || "-") + '</div></div>';
-      html += '<div class="deal-popup-row"><div class="dp-label">유형</div><div class="dp-value">' + typeLabel + channelInfo + '</div></div>';
-      html += '<div class="deal-popup-row"><div class="dp-label">총 매출</div><div class="dp-value">₩' + Math.round(totalSupply).toLocaleString() + '</div></div>';
-      if (hasCost) {
-        html += '<div class="deal-popup-row"><div class="dp-label">총 원가</div><div class="dp-value">₩' + Math.round(totalCost).toLocaleString() + '</div></div>';
-        var gross = totalSupply - totalCost;
-        html += '<div class="deal-popup-row"><div class="dp-label">총이익</div><div class="dp-value" style="color:' + (gross >= 0 ? "var(--accent)" : "var(--bad)") + '">₩' + Math.round(gross).toLocaleString() + '</div></div>';
-      }
-      if (trade.memo) {
-        html += '<div class="deal-popup-row"><div class="dp-label">메모</div><div class="dp-value" style="font-weight:400;color:var(--muted)">' + (trade.memo || "").replace(/</g, "&lt;") + '</div></div>';
-      }
-
-      /* 품목 테이블 */
-      if (items.length > 0) {
-        html += '<div style="margin-top:10px;font-size:11px;font-weight:600;color:var(--muted)">품목 (' + items.length + '건)</div>';
-        html += '<div class="deal-popup-items"><table><thead><tr><th>품목명</th><th style="text-align:right">수량</th><th style="text-align:right">단가</th><th style="text-align:right">매출</th></tr></thead><tbody>';
-        items.forEach(function(it) {
-          var sa = Math.round(n(it.qty) * n(it.unit_price));
-          html += '<tr>';
-          html += '<td>' + ((it.name || "").replace(/</g, "&lt;") || "-") + '</td>';
-          html += '<td style="text-align:right">' + n(it.qty) + '</td>';
-          html += '<td style="text-align:right">₩' + Math.round(n(it.unit_price)).toLocaleString() + '</td>';
-          html += '<td style="text-align:right;font-weight:600">₩' + Math.round(sa).toLocaleString() + '</td>';
-          html += '</tr>';
-        });
-        html += '</tbody></table></div>';
-      }
-
-      bodyEl.innerHTML = html;
-      footerEl.style.display = "block";
-      linkEl.href = "deals.html";
-    }
-
-    $("dealPopupBack").style.display = "flex";
-  }
-
-  /** 거래 요약 팝업 닫기 */
-  function _closeDealPopup() {
-    $("dealPopupBack").style.display = "none";
-  }
-
-  function bindEvents(){
-    if(isEventBound) return;
-    isEventBound = true;
-    $("btnAdd").onclick = handleAddClick;
-    $("btnExport").onclick = exportJson;
-    $("btnImport").onclick = ()=> $("fileIn").click();
-    $("fileIn").addEventListener("change", (e)=>{
-      const f = e.target.files?.[0];
-      if(f) importJson(f);
-      e.target.value = "";
-    });
-    $("btnReset").onclick = ()=>{
-      if(!confirm("재고 데이터를 초기화할까요? (되돌릴 수 없음)")) return;
-      localStorage.removeItem(INV_KEY);
-      render(); compute();
-      validateForm();
-      alert("초기화 완료");
-    };
-    $("btnHistory").onclick = openHistory;
-    $("btnClose").onclick = closeHistory;
-    $("modalBack").addEventListener("click", (e)=>{
-      if(e.target.id === "modalBack") closeHistory();
-    });
-    /* v7: 거래 요약 팝업 닫기 이벤트 */
-    $("dealPopupClose").onclick = _closeDealPopup;
-    $("dealPopupBack").addEventListener("click", (e)=>{
-      if(e.target.id === "dealPopupBack") _closeDealPopup();
-    });
-    $("inPrice").addEventListener("input", validateForm);
-    $("inQty").addEventListener("input", validateForm);
-    $("inMin").addEventListener("input", validateForm);
-    /* 품목 마스터 마이그레이션 */
-    $("btnMigrate").onclick = () => {
-      const master = GoLabItemMaster.loadAll();
-      if (master.length > 0 && !confirm("이미 품목 마스터가 " + master.length + "건 있습니다. 추가 마이그레이션을 실행하시겠습니까?")) return;
-      if (master.length === 0 && !confirm("기존 데이터에서 품목 마스터를 생성합니다. 계속하시겠습니까?")) return;
-      const r = GoLabItemMaster.migrateFromExisting();
-      alert("마이그레이션 완료!\n생성: " + r.created + "건 / 기존: " + r.existing + "건 / 합계: " + r.total + "건\n매입 backfill: " + r.backfilled.purchases + "건\n매출 backfill: " + r.backfilled.sales + "건\n가격기록 backfill: " + r.backfilled.priceHistory + "건");
-      render(); compute();
-    };
-  }
-  /* ═══════════════════════════════════════════════
-     [CSV PATCH] 엑셀(CSV) 저장 + 저장 상태 표시
-     ═══════════════════════════════════════════════ */
-
-  // CSV 다운로드 (UTF-8 BOM 포함 → 엑셀 한글 정상)
-  function exportCsvInv(){
-    try{
-      const data = loadInv();
-      if(!data.length){ alert("다운로드할 데이터가 없습니다."); return; }
-      const headers = ["품목명","규격","매입처","매입단가","수량","최소수량","재고총액","상태","비고"];
-      const rows = data.map(it => {
-        const qty = n(it.qty);
-        const min = n(it.minQty);
-        const price = n(it.buyPrice);
-        const total = qty * price;
-        let status = "정상";
-        if(qty <= 0) status = "0 재고";
-        else if(qty <= min) status = "부족";
-        return [
-          it.name||"", it.spec||"", it.vendor||"",
-          price, qty, min, total, status, it.note||""
-        ];
-      });
-      const csvContent = [headers, ...rows].map(row =>
-        row.map(cell => '"' + String(cell).replace(/"/g,'""') + '"').join(",")
-      ).join("\n");
-      const blob = new Blob(["\uFEFF" + csvContent], {type:"text/csv;charset=utf-8"});
-      const a = document.createElement("a");
-      a.href = URL.createObjectURL(blob);
-      a.download = "GoLab_재고_" + new Date().toISOString().slice(0,10) + ".csv";
-      a.click();
-      URL.revokeObjectURL(a.href);
-    }catch(e){ console.warn("[CSV PATCH] exportCsvInv error:", e); alert("CSV 저장 실패: "+e.message); }
-  }
-
-  // 저장 상태 플래시
-  let _csvSaveTimer = null;
-  function flashCsvSaveStatus(){
-    try{
-      const el = $("csvSaveStatus");
-      if(!el) return;
-      el.style.opacity = "1";
-      clearTimeout(_csvSaveTimer);
-      _csvSaveTimer = setTimeout(()=>{ el.style.opacity="0"; }, 2500);
-    }catch(e){}
-  }
-
-  // 기존 saveInv() 래핑 → 저장 시 상태 표시
-  const _origSaveInv = saveInv;
-  saveInv = function(list){
-    _origSaveInv(list);
-    flashCsvSaveStatus();
-  };
-
-  document.addEventListener("DOMContentLoaded", () => {
-    /* 품목 자동완성 위젯 초기화 */
-    acName = GoLabItemMaster.createAutocomplete(
-      $("acNameWrap"),
-      {
-        placeholder: "품목 검색 또는 새 등록...",
-        onSelect: function(item) {
-          $("inSpec").value = item.spec || "";
-          $("inVendor").value = item.supplier || "";
-          const rev = GoLabItemMaster.CATEGORY_REVERSE[item.category];
-          if (rev) try{ $("inType").value = rev; }catch(_e){}
-          validateForm();
-        },
-        onClear: function() { validateForm(); }
-      }
-    );
-    render(); compute();
-    bindEvents();
-    validateForm();
-    // [CSV PATCH] 버튼 바인딩
-    try{ $("btnCsv").onclick = exportCsvInv; }catch(e){}
-    /* 리사이즈 시 스크롤 레일 재동기화 */
-    window.addEventListener("resize", syncScrollRail);
+/* ── 감사 로그 ── */
+function emitAudit(action, detail) {
+  var logs = [];
+  try { logs = JSON.parse(localStorage.getItem(AUDIT_KEY) || "[]"); } catch (e) {}
+  logs.unshift({
+    log_id: crypto.randomUUID(),
+    entity_type: "inventory",
+    action: action,
+    detail: detail,
+    actor: "owner",
+    created_at: now()
   });
+  /* 최근 500건만 유지 */
+  if (logs.length > 500) logs = logs.slice(0, 500);
+  localStorage.setItem(AUDIT_KEY, JSON.stringify(logs));
+}
+
+/* ── item-master 맵 ── */
+var _itemMap = {};
+function _buildItemMap() {
+  _itemMap = {};
+  var all = GoLabItemMaster.loadAll();
+  all.forEach(function(it) { _itemMap[it.item_id] = it; });
+}
+function _getItemName(itemId) {
+  var it = _itemMap[itemId];
+  return it ? it.item_name : "—";
+}
+function _getItemCategory(itemId) {
+  var it = _itemMap[itemId];
+  if (!it) return "";
+  /* category 영문 코드 → 한글 변환 */
+  var map = { general_goods: "일반상품", metal_material: "원료", equipment: "장비" };
+  return map[it.category] || it.category || "";
+}
+
+/* ── KPI 계산 ── */
+function computeKPI() {
+  var inv = loadInv();
+  var totalAsset = 0, itemCount = 0, totalStock = 0, totalAvail = 0;
+  inv.forEach(function(r) {
+    var cs = n(r.current_stock);
+    var rs = n(r.reserved_stock);
+    totalAsset += cs * n(r.last_buy_price);
+    if (cs > 0) itemCount++;
+    totalStock += cs;
+    totalAvail += Math.max(0, cs - rs);
+  });
+  $("kAssetValue").textContent = fmt(totalAsset);
+  $("kItemCount").textContent = itemCount.toLocaleString();
+  $("kTotalStock").textContent = totalStock.toLocaleString();
+  $("kAvailStock").textContent = totalAvail.toLocaleString();
+}
+
+/* ── 테이블 렌더 ── */
+function render() {
+  _buildItemMap();
+  var inv = loadInv();
+  var search = ($("fSearch").value || "").trim().toLowerCase();
+  var catFilter = $("fCategory").value;
+  var stockFilter = $("fStock").value;
+
+  /* 필터 적용 */
+  var filtered = inv.filter(function(r) {
+    var cs = n(r.current_stock);
+    var ts = n(r.target_stock);
+    var name = _getItemName(r.item_id).toLowerCase();
+    var cat = _getItemCategory(r.item_id).toLowerCase();
+    var tag = (r.memo_tag || "").toLowerCase();
+
+    /* 검색 */
+    if (search && name.indexOf(search) === -1 && cat.indexOf(search) === -1 && tag.indexOf(search) === -1) return false;
+    /* 카테고리 */
+    if (catFilter && _getItemCategory(r.item_id) !== catFilter) return false;
+    /* 재고 필터 */
+    if (stockFilter === "instock" && cs <= 0) return false;
+    if (stockFilter === "zero" && cs > 0) return false;
+    if (stockFilter === "low" && !(cs < ts && ts > 0)) return false;
+    return true;
+  });
+
+  /* 테이블 빌드 */
+  var tb = $("tbody");
+  var html = "";
+  var sumStock = 0, sumReserved = 0, sumAvail = 0, sumValue = 0;
+
+  filtered.forEach(function(r) {
+    var cs = n(r.current_stock);
+    var rs = n(r.reserved_stock);
+    var avail = Math.max(0, cs - rs);
+    var bp = n(r.last_buy_price);
+    var holdVal = cs * bp;
+    var ts = n(r.target_stock);
+    var isLow = ts > 0 && cs < ts;
+    var name = _getItemName(r.item_id);
+    var cat = _getItemCategory(r.item_id);
+
+    sumStock += cs;
+    sumReserved += rs;
+    sumAvail += avail;
+    sumValue += holdVal;
+
+    html += '<tr data-id="' + esc(r.item_id) + '">';
+    html += '<td><b>' + esc(name) + '</b></td>';
+    html += '<td class="col-desk">' + (cat ? '<span class="cat-badge ' + esc(cat) + '">' + esc(cat) + '</span>' : '<span style="color:var(--muted)">—</span>') + '</td>';
+    html += '<td class="num' + (isLow ? ' stock-low' : '') + '">' + cs + '</td>';
+    html += '<td class="col-desk num">' + rs + '</td>';
+    html += '<td class="num">' + avail + '</td>';
+    html += '<td class="col-desk num">' + fmt(bp) + '</td>';
+    html += '<td class="num" style="font-weight:600">' + fmt(holdVal) + '</td>';
+    html += '<td class="col-desk num">' + (ts > 0 ? ts : '<span style="color:var(--muted)">—</span>') + '</td>';
+    html += '<td class="col-desk">' + (r.memo_tag ? '<span style="color:var(--inv);font-size:11px">' + esc(r.memo_tag) + '</span>' : '') + '</td>';
+    html += '</tr>';
+  });
+
+  tb.innerHTML = html;
+
+  /* 합계 행 */
+  if (filtered.length > 0) {
+    $("tfoot").style.display = "";
+    $("sumStock").textContent = sumStock.toLocaleString();
+    $("sumReserved").textContent = sumReserved.toLocaleString();
+    $("sumAvail").textContent = sumAvail.toLocaleString();
+    $("sumValue").textContent = fmt(sumValue);
+  } else {
+    $("tfoot").style.display = "none";
+  }
+
+  /* 배지 & 빈 메시지 */
+  $("listBadge").textContent = filtered.length;
+  $("emptyMsg").style.display = filtered.length > 0 ? "none" : "";
+
+  /* 행 클릭 → 패널 */
+  tb.querySelectorAll("tr[data-id]").forEach(function(row) {
+    row.addEventListener("click", function() {
+      openPanel(row.dataset.id);
+    });
+  });
+
+  computeKPI();
+}
+
+/* ── 사이드패널 ── */
+var _panelItemId = null; /* null=등록, string=수정 */
+var _acItem = null; /* autocomplete 인스턴스 */
+
+function openPanel(itemId) {
+  _panelItemId = itemId || null;
+  _hideMsg();
+
+  if (_panelItemId) {
+    /* === 수정 모드 === */
+    var inv = loadInv();
+    var rec = null;
+    for (var i = 0; i < inv.length; i++) {
+      if (inv[i].item_id === _panelItemId) { rec = inv[i]; break; }
+    }
+    if (!rec) return;
+
+    $("spTitle").textContent = "재고 수정";
+    $("itemSelectWrap").style.display = "none";
+    $("itemDisplayWrap").style.display = "";
+    $("itemDisplay").textContent = _getItemName(rec.item_id);
+    $("inStock").value = n(rec.current_stock);
+    $("inBuyPrice").value = n(rec.last_buy_price);
+    $("inTarget").value = n(rec.target_stock);
+    $("inTag").value = rec.memo_tag || "";
+    $("btnSave").textContent = "저장";
+    $("btnCancel").style.display = "";
+    $("btnDelete").style.display = "";
+
+    /* 읽기 전용 정보 */
+    $("readonlyInfo").style.display = "";
+    $("infoFirstIn").textContent = rec.first_in_date || "—";
+    $("infoReserved").textContent = n(rec.reserved_stock);
+    $("infoLeadTime").textContent = n(rec.lead_time_days);
+    $("infoUpdated").textContent = rec.updated_at ? rec.updated_at.substring(0, 16).replace("T", " ") : "—";
+  } else {
+    /* === 등록 모드 === */
+    $("spTitle").textContent = "재고 등록";
+    $("itemSelectWrap").style.display = "";
+    $("itemDisplayWrap").style.display = "none";
+    $("inStock").value = "";
+    $("inBuyPrice").value = "";
+    $("inTarget").value = "0";
+    $("inTag").value = "";
+    $("btnSave").textContent = "등록";
+    $("btnCancel").style.display = "";
+    $("btnDelete").style.display = "none";
+    $("readonlyInfo").style.display = "none";
+
+    /* autocomplete 초기화 */
+    if (_acItem) _acItem.clear();
+  }
+
+  $("sidePanel").classList.add("open");
+  $("panelOverlay").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closePanel() {
+  $("sidePanel").classList.remove("open");
+  $("panelOverlay").classList.remove("open");
+  document.body.style.overflow = "";
+  _panelItemId = null;
+  _hideMsg();
+}
+
+function _showMsg(msg) {
+  var el = $("spMsg");
+  el.textContent = msg;
+  el.classList.add("error");
+  el.style.display = "block";
+}
+function _hideMsg() {
+  var el = $("spMsg");
+  el.style.display = "none";
+  el.classList.remove("error");
+}
+
+/* ── 저장 (등록/수정) ── */
+function save() {
+  var inv = loadInv();
+  var stock = Number($("inStock").value);
+  var buyPrice = Number($("inBuyPrice").value);
+  var target = Number($("inTarget").value) || 0;
+  var tag = $("inTag").value.trim();
+
+  /* 입력 검증: 0 이상 숫자만 허용 */
+  if (isNaN(stock) || stock < 0) { _showMsg("현재 수량은 0 이상이어야 합니다."); return; }
+  if (isNaN(buyPrice) || buyPrice < 0) { _showMsg("매입가는 0 이상이어야 합니다."); return; }
+
+  if (_panelItemId) {
+    /* === 수정 === */
+    for (var i = 0; i < inv.length; i++) {
+      if (inv[i].item_id === _panelItemId) {
+        var before = JSON.parse(JSON.stringify(inv[i]));
+        inv[i].current_stock = stock;
+        inv[i].last_buy_price = buyPrice;
+        inv[i].target_stock = target;
+        inv[i].memo_tag = tag;
+        inv[i].updated_at = now(); /* 수정 시마다 갱신 */
+        /* first_in_date 변경하지 않음 */
+        saveInv(inv);
+        emitAudit("UPDATE", { item_id: _panelItemId, before: before, after: JSON.parse(JSON.stringify(inv[i])) });
+        break;
+      }
+    }
+  } else {
+    /* === 등록 === */
+    var itemId = _acItem ? _acItem.getValue() : null;
+    if (!itemId) { _showMsg("품목을 선택해주세요."); return; }
+
+    /* 중복 방지: item_id PK */
+    for (var j = 0; j < inv.length; j++) {
+      if (inv[j].item_id === itemId) {
+        _showMsg("이미 등록된 품목입니다. 수정 기능을 이용하세요.");
+        return;
+      }
+    }
+
+    var newRec = {
+      item_id: itemId,
+      current_stock: stock,
+      reserved_stock: 0,
+      last_buy_price: buyPrice,
+      target_stock: target,
+      first_in_date: today(),   /* 등록 시점 오늘 */
+      memo_tag: tag,
+      lead_time_days: 0,
+      updated_at: now()         /* 생성 시각 */
+    };
+    inv.push(newRec);
+    saveInv(inv);
+    emitAudit("CREATE", { item_id: itemId, after: newRec });
+  }
+
+  closePanel();
+  render();
+}
+
+/* ── 삭제 ── */
+function deleteRecord() {
+  if (!_panelItemId) return;
+  if (!confirm("이 재고 레코드를 삭제하시겠습니까?")) return;
+
+  var inv = loadInv();
+  var deleted = null;
+  inv = inv.filter(function(r) {
+    if (r.item_id === _panelItemId) { deleted = r; return false; }
+    return true;
+  });
+  saveInv(inv);
+  if (deleted) emitAudit("DELETE", { item_id: _panelItemId, before: deleted });
+
+  closePanel();
+  render();
+}
+
+/* ── 이벤트 바인딩 ── */
+$("panelOverlay").addEventListener("click", closePanel);
+$("spClose").addEventListener("click", closePanel);
+$("btnNew").addEventListener("click", function() { openPanel(null); });
+$("btnSave").addEventListener("click", save);
+$("btnCancel").addEventListener("click", closePanel);
+$("btnDelete").addEventListener("click", deleteRecord);
+document.addEventListener("keydown", function(e) {
+  if (e.key === "Escape" && $("sidePanel").classList.contains("open")) closePanel();
+});
+
+/* 필터 이벤트 */
+$("fSearch").addEventListener("input", render);
+$("fCategory").addEventListener("change", render);
+$("fStock").addEventListener("change", render);
+
+/* ── autocomplete 초기화 ── */
+_acItem = GoLabItemMaster.createAutocomplete($("acItemWrap"), {
+  placeholder: "품목 검색 또는 새 등록...",
+  onSelect: function(item) { /* 선택 완료 */ },
+  onClear: function() { /* 클리어 */ }
+});
+
+/* ── 초기 렌더 ── */
+render();
 </script>
 </body>
 </html>

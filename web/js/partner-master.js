@@ -18,6 +18,8 @@ window.GoLabPartnerMaster = (function () {
 
   const MASTER_KEY = "golab_partner_master_v1";
   const AUDIT_KEY  = "golab_partner_master_audit";
+  /* v6.1 세션당 1회 dedup 가드 */
+  var _primaryDedupedThisSession = false;
 
   /* ── 거래처 유형 ── */
   const TYPES = ["매입처", "매출처", "겸용"];
@@ -97,8 +99,42 @@ window.GoLabPartnerMaster = (function () {
     p.billing_email  = p.billing_email  || "";
     /* v5.4 태그 필드 */
     p.partner_tag    = p.partner_tag    || "";
+    /* v6.1 기본 거래유형 — 거래처별 자동 세팅용 */
+    p.default_trade_type = p.default_trade_type || "";
+    /* v6.1 주거래 플래그 — 누락 시 false로 정규화 */
+    if (typeof p.is_primary !== "boolean") p.is_primary = false;
     /* 파생 필드 갱신 */
     return _buildDerived(p);
+  }
+
+  /**
+   * v6.1 is_primary 정합성 정리
+   * - is_primary === true 가 2개 이상이면 1개만 유지
+   * - 우선순위: updated_at 최신 → 없으면 배열 마지막 항목
+   * - 변경이 발생한 경우 true 반환 (호출측에서 _save 결정)
+   */
+  function _dedupePrimary(arr) {
+    var primaries = [];
+    for (var i = 0; i < arr.length; i++) {
+      if (arr[i] && arr[i].is_primary === true) primaries.push({ p: arr[i], i: i });
+    }
+    if (primaries.length <= 1) return false;
+    /* updated_at 있는 것 우선, 그중 최신, 없으면 배열에서 마지막 등장 */
+    var keepIdx = -1;
+    var keepTs = "";
+    for (var j = 0; j < primaries.length; j++) {
+      var ts = primaries[j].p.updated_at || "";
+      if (ts && ts > keepTs) { keepTs = ts; keepIdx = primaries[j].i; }
+    }
+    if (keepIdx < 0) keepIdx = primaries[primaries.length - 1].i;
+    var changed = false;
+    for (var k = 0; k < arr.length; k++) {
+      if (arr[k].is_primary === true && k !== keepIdx) {
+        arr[k].is_primary = false;
+        changed = true;
+      }
+    }
+    return changed;
   }
 
   /**
@@ -132,6 +168,15 @@ window.GoLabPartnerMaster = (function () {
       if (needSave) {
         _save(arr);
         emitAudit("MIGRATE_V22", { migrated: arr.length });
+      }
+      /* v6.1 is_primary 중복 정리 — 세션당 1회만 (성능) */
+      if (!_primaryDedupedThisSession) {
+        var dedupChanged = _dedupePrimary(arr);
+        if (dedupChanged) {
+          _save(arr);
+          emitAudit("MIGRATE_PRIMARY_DEDUP", { total: arr.length });
+        }
+        _primaryDedupedThisSession = true;
       }
       return arr;
     } catch { return []; }
@@ -190,12 +235,21 @@ window.GoLabPartnerMaster = (function () {
       billing_email:  (fields.billing_email || "").trim(),
       /* v5.4 태그 (주요거래처 분류용) */
       partner_tag:    (fields.partner_tag || "").trim(),
-      created_at:   new Date().toISOString()
+      /* v6.1 기본 거래유형 */
+      default_trade_type: (fields.default_trade_type || "").trim(),
+      /* v6.1 주거래 플래그 */
+      is_primary:   fields.is_primary === true,
+      created_at:   new Date().toISOString(),
+      updated_at:   new Date().toISOString()
     };
     if (!partner.name) throw new Error("거래처명은 필수입니다.");
     /* 파생 필드 생성 */
     _buildDerived(partner);
     const all = loadAll();
+    /* v6.1 신규 항목이 is_primary=true 면 기존 모두 false 처리 */
+    if (partner.is_primary) {
+      all.forEach(function(x) { if (x.is_primary) x.is_primary = false; });
+    }
     all.unshift(partner);
     _save(all);
     emitAudit("CREATE", { partner_id: partner.partner_id, name: partner.name });
@@ -228,6 +282,20 @@ window.GoLabPartnerMaster = (function () {
     if (fields.billing_email  !== undefined) all[idx].billing_email  = fields.billing_email.trim();
     /* v5.4 태그 */
     if (fields.partner_tag   !== undefined) all[idx].partner_tag   = fields.partner_tag.trim();
+    /* v6.1 기본 거래유형 */
+    if (fields.default_trade_type !== undefined) all[idx].default_trade_type = (fields.default_trade_type || "").trim();
+    /* v6.1 주거래 플래그 — true 로 설정 시 나머지 항목 모두 false 강제 */
+    if (fields.is_primary !== undefined) {
+      var nextPrimary = fields.is_primary === true;
+      all[idx].is_primary = nextPrimary;
+      if (nextPrimary) {
+        for (var pi = 0; pi < all.length; pi++) {
+          if (pi !== idx && all[pi].is_primary) all[pi].is_primary = false;
+        }
+      }
+    }
+    /* updated_at 갱신 (정합성 정리 우선순위 기준) */
+    all[idx].updated_at = new Date().toISOString();
     /* 파생 필드 재생성 (search_text, display_name 갱신) */
     _buildDerived(all[idx]);
     _save(all);

@@ -9,7 +9,7 @@
     { href: './console.html',        file: 'console.html',        label: '🏠 메인' },
     { href: './deals.html',          file: 'deals.html',          label: '🔥 거래' },
     { href: './item-master.html',    file: 'item-master.html',    label: '🏷 품목' },
-    /* [GoLab v4] inventory tab hidden - file kept at index.html */
+    { href: './index.html',          file: 'index.html',          label: '📦 재고' },
     { href: './profit.html',         file: 'profit.html',         label: '💰 수익' },
     { href: './partner-master.html', file: 'partner-master.html', label: '👥 거래처' }
   ];
