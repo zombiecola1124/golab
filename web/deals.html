@@ -888,19 +888,21 @@ function openPanel(tradeId) {
     $("btnCancel").style.display = "none";
     $("btnPanelDel").style.display = "none";
     clearForm();
-    /* v6.1: 대표 거래처(is_primary) 자동 선택 — 신규 모드 전용 */
+    /* v6.2: 신규 등록 기본값 — 대성금속(name 매칭) + settle 강제 (수정 모드 미적용)
+       — 파트너 목록에서 name === "대성금속"을 런타임 조회하여 partner_id 사용.
+       — 거래유형은 항상 "settle"로 강제 (대성금속의 default_trade_type보다 우선). */
     try {
-      var _primary = (GoLabPartnerMaster.loadAll() || []).find(function(p){ return p.is_primary === true; });
-      if (_primary) {
-        acPartner.setValue(_primary.partner_id);
-        /* default_trade_type 있으면 거래 유형도 자동 세팅 */
-        var _dtt = (_primary.default_trade_type || "").trim();
-        if (_dtt === "solo" || _dtt === "settle" || _dtt === "channel") {
-          $("inTradeType").value = _dtt;
-          $("inTradeType").dispatchEvent(new Event("change"));
-        }
+      var _daesung = (GoLabPartnerMaster.loadAll() || []).find(function(p){
+        return p && p.name === "대성금속";
+      });
+      if (_daesung && _daesung.partner_id) {
+        acPartner.setValue(_daesung.partner_id);
+        /* setValue → onSelect → default_trade_type가 자동 적용될 수 있으므로,
+           신규 등록 정책상 settle을 직후에 명시적으로 덮어쓴다. */
+        $("inTradeType").value = "settle";
+        $("inTradeType").dispatchEvent(new Event("change"));
       }
-    } catch(e) { /* primary 없거나 오류 → 빈 상태 유지 */ }
+    } catch(e) { /* 대성금속 미존재/오류 → 빈 상태 유지, 무시 */ }
     $("spView").style.display = "none";
     $("spTodoBody").innerHTML = '<div class="todo-empty">거래를 저장한 후 할일을 추가할 수 있습니다.</div>';
   }
@@ -1467,6 +1469,21 @@ var acPartner = GoLabPartnerMaster.createAutocomplete($("acPartnerWrap"), {
   onSelect: function(p) {
     /* v6.0: 거래처 변경 시 카테고리 자동 제안 */
     if (p && p.name) _autoCategorySuggest(p.name);
+    /* v6.2: 거래처에 default_trade_type 값이 있으면 거래유형 즉시 갱신.
+       — 신규/수정 모드 모두에서 동작하나, 수정 모드에선 startEdit의
+         명시적 inTradeType 복원이 직후에 덮어쓰므로 안전하다. */
+    try {
+      if (p && p.default_trade_type) {
+        var _dtt = String(p.default_trade_type).trim();
+        if (_dtt === "solo" || _dtt === "settle" || _dtt === "channel") {
+          var _ttEl = $("inTradeType");
+          if (_ttEl && _ttEl.value !== _dtt) {
+            _ttEl.value = _dtt;
+            _ttEl.dispatchEvent(new Event("change"));
+          }
+        }
+      }
+    } catch(_e) { /* default_trade_type 처리 실패는 무시 */ }
   },
   onClear: function(){}
 });
