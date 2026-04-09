@@ -352,8 +352,66 @@
     .unreg-panel-footer .uf-all:hover{background:#b45309}
     .unreg-panel-footer .uf-all:disabled{background:#94a3b8;cursor:not-allowed}
 
+    /* ═══════════════════════════════════════════
+       v6.5: 좌측 사이드바 네비게이션 (console 시범 적용)
+       — 상단 탭(.tabs)은 DOM 유지, CSS로만 비노출
+       — auth-guard.js가 .tabs를 querySelector로 참조하므로 DOM 제거 금지
+       ═══════════════════════════════════════════ */
+    /* 상단 탭 비노출 (DOM 유지) */
+    header .tabs{display:none !important}
+    /* header 축소 — "GoLab" 타이틀 + 로그아웃 버튼만 */
+    header{height:40px}
+    header h1{font-size:14px}
+
+    /* 앱 쉘: 사이드바 + 콘텐츠 2컬럼 */
+    .app-shell{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 40px)}
+
+    /* 사이드바 */
+    .sidebar-nav-col{
+      background:#111827;
+      border-right:1px solid #1f2937;
+      padding:18px 14px 24px;
+      position:sticky;
+      top:40px;
+      height:calc(100vh - 40px);
+      overflow-y:auto;
+    }
+    .sidebar-brand{
+      display:flex;align-items:center;gap:8px;
+      color:#f9fafb;font-size:11px;font-weight:700;
+      letter-spacing:1px;text-transform:uppercase;
+      padding:6px 12px 16px;opacity:.45;
+    }
+    .sidebar-nav{display:flex;flex-direction:column;gap:3px}
+    .sidebar-nav-col .nav-item{
+      display:flex;align-items:center;gap:12px;
+      padding:0 14px;height:42px;border-radius:10px;
+      color:#cbd5e1;font-size:13px;font-weight:600;
+      text-decoration:none;white-space:nowrap;
+      transition:background .15s,color .15s;
+    }
+    .sidebar-nav-col .nav-item:hover{background:#1f2937;color:#f9fafb}
+    .sidebar-nav-col .nav-item.active{background:#1f2937;color:#ffffff;font-weight:700}
+    .sidebar-nav-col .nav-item .ni-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+
+    /* 페이지 콘텐츠 영역 */
+    .page-content{min-width:0;background:var(--bg)}
+    /* bento를 page-content 내부에서 정상 동작하도록 조정 */
+    .page-content .bento{max-width:none;margin:0;padding:24px 28px 40px;min-height:auto}
+
     /* ─ Responsive ─ */
     @media(max-width:1023px){
+      .app-shell{grid-template-columns:1fr}
+      .sidebar-nav-col{
+        position:static;height:auto;top:auto;
+        padding:10px;border-right:none;border-bottom:1px solid #1f2937;
+      }
+      .sidebar-brand{display:none}
+      .sidebar-nav{flex-direction:row;gap:4px;overflow-x:auto}
+      .sidebar-nav-col .nav-item{
+        padding:0 12px;height:36px;font-size:11px;flex-shrink:0;
+      }
+      .page-content .bento{padding:14px}
       .bento{grid-template-columns:1fr;padding:14px}
     }
     @media(max-width:640px){
@@ -371,6 +429,20 @@
 <header data-title="GoLab"></header>
 <script src="./js/navbar.js"></script>
 
+<!-- ═══ v6.5: 좌측 사이드바 + 페이지 콘텐츠 쉘 ═══ -->
+<div class="app-shell">
+  <aside class="sidebar-nav-col">
+    <div class="sidebar-brand">GoLab</div>
+    <nav class="sidebar-nav">
+      <a class="nav-item active" href="./console.html"><span class="ni-icon">🏠</span>메인</a>
+      <a class="nav-item" href="./deals.html"><span class="ni-icon">🔥</span>거래</a>
+      <a class="nav-item" href="./item-master.html"><span class="ni-icon">🏷</span>품목</a>
+      <a class="nav-item" href="./index.html"><span class="ni-icon">📦</span>재고</a>
+      <a class="nav-item" href="./profit.html"><span class="ni-icon">💰</span>수익</a>
+      <a class="nav-item" href="./partner-master.html"><span class="ni-icon">👥</span>거래처</a>
+    </nav>
+  </aside>
+  <main class="page-content">
 <div class="bento">
   <!-- ═══ LEFT COLUMN (60%) — 실행 축 ═══ -->
   <main class="col-left">
@@ -452,6 +524,9 @@
     <div class="card" id="sPaymentCard"></div>
   </aside>
 </div>
+  </main>
+</div>
+<!-- ═══ /v6.5: 사이드바 + 콘텐츠 쉘 끝 ═══ -->
 
 <!-- ═══ 데이터 관리 (플로팅) ═══ -->
 <div class="dm-floating">
