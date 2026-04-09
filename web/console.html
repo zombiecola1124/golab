@@ -370,6 +370,9 @@
   <!-- ═══ LEFT COLUMN (60%) — 실행 축 ═══ -->
   <main class="col-left">
 
+    <!-- KPI 3카드 — v6.0 감각으로 좌측 최상단 복원 -->
+    <div class="kpi-row" id="kpiRow"></div>
+
     <!-- 오늘 현황 -->
     <div class="card today-summary" id="todaySummary"></div>
 
@@ -399,15 +402,28 @@
       <span class="uc-count" id="unregCount">0</span>
     </div>
 
-    <!-- S 지급 체크리스트 -->
-    <div class="card" id="sPaymentCard"></div>
+    <!-- 거래 진행 현황 (이번달) — 좌측으로 이동 -->
+    <div class="card" id="dealProgressCard"></div>
+
+    <!-- 최근 활동 — 좌측 최하단 -->
+    <div class="card" id="timelineCard">
+      <div class="card-header">
+        <h2>최근 활동</h2>
+        <span id="tlCount" class="count"></span>
+        <a class="link-btn" href="./deals.html">전체 보기 →</a>
+      </div>
+      <div class="tl-filters">
+        <button id="btnTlAll" class="filter-btn active">전체</button>
+        <button id="btnTlPurchase" class="filter-btn">구매</button>
+        <button id="btnTlSale" class="filter-btn">매출</button>
+        <button id="btnTlWork" class="filter-btn">업무</button>
+      </div>
+      <ul id="timeline" class="timeline"></ul>
+    </div>
   </main>
 
   <!-- ═══ RIGHT COLUMN (40%) — 모니터링 축 ═══ -->
   <aside class="col-right">
-
-    <!-- KPI 3카드 -->
-    <div class="kpi-row" id="kpiRow"></div>
 
     <!-- 캘린더 -->
     <div class="cal-card">
@@ -427,24 +443,8 @@
     <!-- 입금·마감 임박 -->
     <div class="card" id="paymentDueCard"></div>
 
-    <!-- 거래 진행 현황 -->
-    <div class="card" id="dealProgressCard"></div>
-
-    <!-- 최근 활동 -->
-    <div class="card" id="timelineCard">
-      <div class="card-header">
-        <h2>최근 활동</h2>
-        <span id="tlCount" class="count"></span>
-        <a class="link-btn" href="./deals.html">전체 보기 →</a>
-      </div>
-      <div class="tl-filters">
-        <button id="btnTlAll" class="filter-btn">전체</button>
-        <button id="btnTlPurchase" class="filter-btn">구매</button>
-        <button id="btnTlSale" class="filter-btn">매출</button>
-        <button id="btnTlWork" class="filter-btn active">업무</button>
-      </div>
-      <ul id="timeline" class="timeline"></ul>
-    </div>
+    <!-- 리베이트 / S 지급 체크리스트 — 우측으로 이동 -->
+    <div class="card" id="sPaymentCard"></div>
   </aside>
 </div>
 
@@ -727,7 +727,9 @@ function classifyActions(){
    헤더 배지 (미입금 / VAT / 지연)
    ══════════════════════════════════════════ */
 function renderHeaderBadges(){
-  /* v6.1: overdue(red) 단일 배지만 유지 — 미입금/VAT는 #paymentDueCard로 일원화 */
+  /* v6.0 복원: 3배지(미입금 / VAT / 지연) — 0건이면 dim 스타일 */
+  const TE = GoLabTradeEngine;
+  const ds = TE.getKPISummary();
   const b = classifyActions();
   let container = $("headerBadges");
   if(!container){
@@ -737,10 +739,14 @@ function renderHeaderBadges(){
     const hdr = document.querySelector("header");
     if(hdr) hdr.appendChild(container);
   }
+  /* 항상 3개 배지 표시 — 0건이면 dim 스타일 */
+  const unpaid = ds.supplyDue.count;
+  const vat = ds.vatDue.count;
   const overdue = b.overdue.length;
-  container.innerHTML = overdue
-    ? `<span class="hdr-badge red">지연 ${overdue}건</span>`
-    : "";
+  container.innerHTML = `
+    <span class="hdr-badge ${unpaid?'red':'dim'}">미입금 ${unpaid}건</span>
+    <span class="hdr-badge ${vat?'orange':'dim'}">VAT ${vat}건</span>
+    <span class="hdr-badge ${overdue?'blue':'dim'}">지연 ${overdue}건</span>`;
 }
 
 /* ══════════════════════════════════════════
@@ -1079,7 +1085,7 @@ function renderDealProgress(){
 /* ══════════════════════════════════════════
    TIMELINE
    ══════════════════════════════════════════ */
-let tlFilter = "work";  /* v6.1: 기본값 all→work (구매/매출은 deals.html이 본진) */
+let tlFilter = "all";  /* v6.0 복원: 기본값 all */
 
 function emitWorkAudit(event,detail){
   try{
