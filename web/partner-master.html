@@ -15,6 +15,72 @@
     body{margin:0;background:var(--bg);color:var(--text);
       font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",Arial;}
     /* [GoLab v4.1] header/tabs → ui.css로 이동 */
+
+    /* ═══════════════════════════════════════════
+       v6.7: 좌측 사이드바 네비게이션 (6페이지 통합)
+       — console/deals/profit v6.5~v6.6과 완전 동일한 블록
+       — 상단 탭(.tabs)은 DOM 유지, CSS로만 비노출
+       — auth-guard.js가 .tabs를 querySelector로 참조하므로 DOM 제거 금지
+       ═══════════════════════════════════════════ */
+    /* 상단 탭 비노출 (DOM 유지) */
+    header .tabs{display:none !important}
+    /* header 축소 — "GoLab" 타이틀 + 로그아웃 버튼만 */
+    header{height:40px}
+    header h1{font-size:14px}
+
+    /* 앱 쉘: 사이드바 + 콘텐츠 2컬럼 */
+    .app-shell{display:grid;grid-template-columns:220px 1fr;min-height:calc(100vh - 40px)}
+
+    /* 사이드바 */
+    .sidebar-nav-col{
+      background:#111827;
+      border-right:1px solid #1f2937;
+      padding:18px 14px 24px;
+      position:sticky;
+      top:40px;
+      height:calc(100vh - 40px);
+      overflow-y:auto;
+    }
+    .sidebar-brand{
+      display:flex;align-items:center;gap:8px;
+      color:#f9fafb;font-size:11px;font-weight:700;
+      letter-spacing:1px;text-transform:uppercase;
+      padding:6px 12px 16px;opacity:.45;
+    }
+    .sidebar-nav{display:flex;flex-direction:column;gap:3px}
+    .sidebar-nav-col .nav-item{
+      display:flex;align-items:center;gap:12px;
+      padding:0 14px;height:42px;border-radius:10px;
+      color:#cbd5e1;font-size:13px;font-weight:600;
+      text-decoration:none;white-space:nowrap;
+      transition:background .15s,color .15s;
+    }
+    .sidebar-nav-col .nav-item:hover{background:#1f2937;color:#f9fafb}
+    .sidebar-nav-col .nav-item.active{background:#1f2937;color:#ffffff;font-weight:700}
+    .sidebar-nav-col .nav-item .ni-icon{font-size:15px;width:20px;text-align:center;flex-shrink:0}
+
+    /* 페이지 콘텐츠 영역 */
+    .page-content{min-width:0;background:var(--bg)}
+    /* partner-master 전용: .wrap을 page-content 내부에서 정상 동작하도록 조정 */
+    .page-content .wrap{max-width:none;margin:0;padding:20px 22px 36px}
+
+    /* partner-master-shell 반응형: 1023px 이하 사이드바 상단 바로 축소 */
+    @media(max-width:1023px){
+      .app-shell{grid-template-columns:1fr}
+      .sidebar-nav-col{
+        position:static;height:auto;top:auto;
+        padding:10px;border-right:none;border-bottom:1px solid #1f2937;
+      }
+      .sidebar-brand{display:none}
+      .sidebar-nav{flex-direction:row;gap:4px;overflow-x:auto}
+      .sidebar-nav-col .nav-item{
+        padding:0 12px;height:36px;font-size:11px;flex-shrink:0;
+      }
+      .page-content .wrap{padding:14px}
+      /* side-panel: 사이드바가 상단 바로 바뀌면 패널은 전체 폭 */
+      .side-panel{width:100%;border-left:none}
+    }
+
     .wrap{max-width:1440px;margin:0 auto;padding:16px 16px 36px}
     .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .card h2{margin:0 0 12px;font-size:13px;color:var(--partner);display:flex;align-items:center;gap:8px}
@@ -145,17 +211,16 @@
     /* 패널 Edit: 폼 버튼 */
     .sp-form-btns{display:flex;gap:8px;margin-top:8px;padding:16px 20px;border-top:1px solid var(--line);flex-shrink:0;background:var(--card)}
 
-    /* ══ 반응형 ══ */
-    @media(max-width:900px){
+    /* ══ 반응형 (v6.7: 사이드바 220px만큼 +220 이동) ══ */
+    @media(max-width:1120px){
       .kpi-row{flex-wrap:wrap}
       .kpi{min-width:calc(50% - 5px)}
       .r3{grid-template-columns:1fr 1fr}
       .sp-kpi-bar{grid-template-columns:1fr 1fr}
       .sp-info-grid{grid-template-columns:1fr}
-      /* 모바일 패널: 전체화면 */
-      .side-panel{width:100%;border-left:none}
     }
-    @media(max-width:600px){
+    /* side-panel 100% 전환은 사이드바 해체 시점(@1023)과 맞춰서 위 블록으로 이동 */
+    @media(max-width:820px){
       .r3{grid-template-columns:1fr}
       .r2{grid-template-columns:1fr}
       .kpi{min-width:100%}
@@ -169,6 +234,20 @@
 <header data-title="GoLab · 거래처 관리"></header>
 <script src="./js/navbar.js"></script>
 
+<!-- ═══ v6.7: 좌측 사이드바 + 페이지 콘텐츠 쉘 ═══ -->
+<div class="app-shell">
+  <aside class="sidebar-nav-col">
+    <div class="sidebar-brand">GoLab</div>
+    <nav class="sidebar-nav">
+      <a class="nav-item" href="./console.html"><span class="ni-icon">🏠</span>메인</a>
+      <a class="nav-item" href="./deals.html"><span class="ni-icon">🔥</span>거래</a>
+      <a class="nav-item" href="./item-master.html"><span class="ni-icon">🏷</span>품목</a>
+      <a class="nav-item" href="./index.html"><span class="ni-icon">📦</span>재고</a>
+      <a class="nav-item" href="./profit.html"><span class="ni-icon">💰</span>수익</a>
+      <a class="nav-item active" href="./partner-master.html"><span class="ni-icon">👥</span>거래처</a>
+    </nav>
+  </aside>
+  <main class="page-content">
 <div class="wrap">
   <!-- KPI + 신규등록 버튼 -->
   <div class="kpi-row">
@@ -215,6 +294,9 @@
     <div id="emptyMsg" class="muted" style="text-align:center;padding:24px;display:none">등록된 거래처가 없습니다.</div>
   </div>
 </div>
+  </main>
+</div>
+<!-- ═══ /v6.7: 사이드바 + 콘텐츠 쉘 끝 (side-panel은 app-shell 바깥 유지) ═══ -->
 
 <!-- ══ 사이드 패널 (오버레이 + 패널) ══ -->
 <div class="panel-overlay" id="panelOverlay"></div>
