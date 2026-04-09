@@ -2562,6 +2562,29 @@ function render() {
     });
   }
 
+  /* ══════════════════════════════════════════
+     Drill-down: 콘솔에서 진입 시 stage/filter 파라미터 적용
+     — _drillStage  : 거래 단계 (trading/invoice-pending/payment-pending/completed)
+     — _drillFilter : 입금 상태 (vat-pending)  [unsettled은 chipFilter 재활용]
+     — 우선순위: deal_id > stage > filter (수신 IIFE에서 제어)
+     ══════════════════════════════════════════ */
+  if (window._drillStage) {
+    var _stage = window._drillStage;
+    filtered = filtered.filter(function(t) {
+      if (t.deal_status === "cancelled") return false;
+      if (_stage === "completed")       return !!t.payment_at;
+      if (_stage === "payment-pending") return !!t.invoice_at && !t.payment_at;
+      if (_stage === "invoice-pending") return !t.invoice_at && (!!t.delivery_note_at || !!t.order_at);
+      if (_stage === "trading")         return !t.invoice_at && !t.delivery_note_at && !t.order_at;
+      return true;
+    });
+  }
+  if (window._drillFilter === "vat-pending") {
+    filtered = filtered.filter(function(t) {
+      return TE.calcPaymentStatus(t).code === "vat_pending" && t.deal_status !== "cancelled";
+    });
+  }
+
   /* v3.3: 정렬 적용 */
   filtered = sortTrades(filtered);
 
@@ -3872,11 +3895,17 @@ render();
 
 /* ══════════════════════════════════════════
    v5.4: Deep Link 수신 — ?deal_id=Txxxx → 해당 거래 패널 자동 오픈
+   v6.3: Drill-down 수신 — ?stage=..., ?filter=... 도 함께 처리
+   우선순위: deal_id > stage > filter
    ══════════════════════════════════════════ */
 (function(){
   var params = new URLSearchParams(window.location.search);
   var dealId = params.get("deal_id");
-  if(!dealId) return;
+  var stage  = params.get("stage");
+  var filter = params.get("filter");
+
+  /* 아무것도 없으면 종료 */
+  if(!dealId && !stage && !filter) return;
 
   /* URL 파라미터 제거 (뒤로가기 시 재오픈 방지) */
   if(window.history && window.history.replaceState){
@@ -3884,27 +3913,81 @@ render();
     window.history.replaceState({}, document.title, cleanUrl);
   }
 
-  /* 해당 거래 존재 확인 */
-  var trade = TE.getById(dealId);
-  if(!trade) return;
+  /* ─── 우선순위 1: deal_id ─── */
+  if(dealId){
+    var trade = TE.getById(dealId);
+    if(!trade) return;
+    /* 필터 초기화 (해당 거래가 필터에 걸려 안 보일 수 있음) */
+    _periodMonth = "";
+    $("fMonth").value = "";
+    $("fMonth").style.display = "none";
+    $("fSearch").value = "";
+    chipFilter = "";
+    $("chipFilterBar").querySelectorAll(".chip-filter").forEach(function(b){
+      b.classList.toggle("active", b.dataset.chipFilter === "");
+    });
+    /* 기간 프리셋 "전체" 활성화 (data-period="" 가 전체) */
+    $("periodBar").querySelectorAll(".period-btn").forEach(function(b){
+      b.classList.toggle("active", b.dataset.period === "");
+    });
+    render();
+    /* 딜레이 후 패널 오픈 (렌더 완료 보장) */
+    setTimeout(function(){ openPanel(dealId); }, 200);
+    return;
+  }
 
-  /* 필터 초기화 (해당 거래가 필터에 걸려 안 보일 수 있음) */
-  $("fMonth").value = "";
-  $("fMonth").style.display = "none";
-  $("fSearch").value = "";
-  /* 칩 필터 "전체" 활성화 (data-filter="" 가 전체) */
-  var chipWrap = document.getElementById("fChip");
-  if(chipWrap) chipWrap.querySelectorAll(".chip-btn").forEach(function(b){
-    b.classList.toggle("active", !b.dataset.filter || b.dataset.filter === "all");
-  });
-  /* 기간 프리셋 "전체" 활성화 (data-period="" 가 전체) */
-  $("periodBar").querySelectorAll(".period-btn").forEach(function(b){
-    b.classList.toggle("active", b.dataset.period === "");
-  });
-  render();
+  /* ─── 우선순위 2: stage ─── */
+  if(stage){
+    /* 유효값 체크 */
+    var validStages = ["trading","invoice-pending","payment-pending","completed"];
+    if(validStages.indexOf(stage) === -1) return;
+    /* 기간/검색/칩 초기화 — 전체 범위에서 해당 단계 거래만 보이도록 */
+    _periodMonth = "";
+    $("fMonth").value = "";
+    $("fMonth").style.display = "none";
+    $("fSearch").value = "";
+    chipFilter = "";
+    $("chipFilterBar").querySelectorAll(".chip-filter").forEach(function(b){
+      b.classList.toggle("active", b.dataset.chipFilter === "");
+    });
+    $("periodBar").querySelectorAll(".period-btn").forEach(function(b){
+      b.classList.toggle("active", b.dataset.period === "");
+    });
+    /* drill 플래그 세팅 → render()가 감지 */
+    window._drillStage = stage;
+    render();
+    return;
+  }
 
-  /* 딜레이 후 패널 오픈 (렌더 완료 보장) */
-  setTimeout(function(){ openPanel(dealId); }, 200);
+  /* ─── 우선순위 3: filter ─── */
+  if(filter){
+    /* 기간/검색 초기화 */
+    _periodMonth = "";
+    $("fMonth").value = "";
+    $("fMonth").style.display = "none";
+    $("fSearch").value = "";
+    $("periodBar").querySelectorAll(".period-btn").forEach(function(b){
+      b.classList.toggle("active", b.dataset.period === "");
+    });
+    if(filter === "unsettled"){
+      /* 기존 chipFilter 재활용 */
+      chipFilter = "unsettled";
+      $("chipFilterBar").querySelectorAll(".chip-filter").forEach(function(b){
+        b.classList.toggle("active", b.dataset.chipFilter === "unsettled");
+      });
+    } else if(filter === "vat-pending"){
+      /* 전역 플래그 → render() 분기에서 처리 */
+      chipFilter = "";
+      $("chipFilterBar").querySelectorAll(".chip-filter").forEach(function(b){
+        b.classList.toggle("active", b.dataset.chipFilter === "");
+      });
+      window._drillFilter = "vat-pending";
+    } else {
+      return;
+    }
+    render();
+    return;
+  }
 })();
 </script>
 </body>

@@ -65,6 +65,11 @@
     .stat-box{text-align:center;padding:18px 8px;border:1px solid var(--border);border-radius:12px;background:var(--chip)}
     .stat-box .sb-num{font-size:26px;font-weight:900;color:var(--text)}
     .stat-box .sb-label{font-size:10px;color:var(--muted);font-weight:600;margin-top:4px}
+    /* Drill-down: 클릭 가능 카드/행 (옵션 C — 미니멀) */
+    .stat-box[data-drill]{cursor:pointer;transition:background .12s,border-color .12s}
+    .stat-box[data-drill]:hover{background:#f1f5f9;border-color:#cbd5e1}
+    .ps-row[data-drill]{cursor:pointer;transition:background .12s,border-color .12s}
+    .ps-row[data-drill]:hover{background:#f8fafc}
 
     /* ─ 할 일 카드 ─ */
     .add-row{display:flex;gap:8px;margin-bottom:14px}
@@ -809,10 +814,10 @@ function renderTodaySummary(){
       ${b.overdue.length ? `<span class="badge red">기간 지난 ${b.overdue.length}건</span>` : ""}
     </div>
     <div class="stat-grid">
-      <div class="stat-box"><div class="sb-num">${b.overdue.length + b.today.length}</div><div class="sb-label">오늘 할일</div></div>
-      <div class="stat-box"><div class="sb-num">${b.week.length}</div><div class="sb-label">이번주 할일</div></div>
-      <div class="stat-box"><div class="sb-num">${b.month.length}</div><div class="sb-label">이번달 할일</div></div>
-      <div class="stat-box"><div class="sb-num">${b.completed.length}</div><div class="sb-label">완료</div></div>
+      <div class="stat-box" data-drill="scroll:todoCard"><div class="sb-num">${b.overdue.length + b.today.length}</div><div class="sb-label">오늘 할일</div></div>
+      <div class="stat-box" data-drill="scroll:todoCard"><div class="sb-num">${b.week.length}</div><div class="sb-label">이번주 할일</div></div>
+      <div class="stat-box" data-drill="scroll:todoCard"><div class="sb-num">${b.month.length}</div><div class="sb-label">이번달 할일</div></div>
+      <div class="stat-box" data-drill="scroll:todoCard"><div class="sb-num">${b.completed.length}</div><div class="sb-label">완료</div></div>
     </div>`;
 }
 
@@ -1075,10 +1080,10 @@ function renderDealProgress(){
   $("dealProgressCard").innerHTML = `
     <div class="card-header"><h2>거래 진행 현황 (이번달)</h2></div>
     <div class="stat-grid">
-      <div class="stat-box"><div class="sb-num">${trading}</div><div class="sb-label">거래중</div></div>
-      <div class="stat-box"><div class="sb-num">${invoiced}</div><div class="sb-label">계산서</div></div>
-      <div class="stat-box"><div class="sb-num">${paymentPending}</div><div class="sb-label">입금확인</div></div>
-      <div class="stat-box"><div class="sb-num">${completed}</div><div class="sb-label">거래완료</div></div>
+      <div class="stat-box" data-drill="nav:deals.html?stage=trading"><div class="sb-num">${trading}</div><div class="sb-label">거래중</div></div>
+      <div class="stat-box" data-drill="nav:deals.html?stage=invoice-pending"><div class="sb-num">${invoiced}</div><div class="sb-label">계산서</div></div>
+      <div class="stat-box" data-drill="nav:deals.html?stage=payment-pending"><div class="sb-num">${paymentPending}</div><div class="sb-label">입금확인</div></div>
+      <div class="stat-box" data-drill="nav:deals.html?stage=completed"><div class="sb-num">${completed}</div><div class="sb-label">거래완료</div></div>
     </div>`;
 }
 
@@ -1183,10 +1188,10 @@ function renderPaymentDue(){
 
   let html = `<div class="card-header"><h2>입금 · 마감 임박</h2><span class="count">미수금 현황</span></div>`;
   html += `<div class="payment-summary">
-    <div class="ps-row"><span class="ps-dot brown"></span>거래명세서<span class="ps-amt">${deliveryNoteCnt}건</span></div>
-    <div class="ps-row"><span class="ps-dot red"></span>계산서<span class="ps-amt">${invoiceCnt}건</span></div>
-    <div class="ps-row"><span class="ps-dot gray"></span>미입금<span class="ps-amt">${fmt(unpaidAmt)}</span></div>
-    <div class="ps-row"><span class="ps-dot gray"></span>VAT 미입금<span class="ps-amt">${fmt(vatUnpaidAmt)}</span></div>
+    <div class="ps-row" data-drill="nav:deals.html?stage=invoice-pending"><span class="ps-dot brown"></span>거래명세서<span class="ps-amt">${deliveryNoteCnt}건</span></div>
+    <div class="ps-row" data-drill="nav:deals.html?stage=payment-pending"><span class="ps-dot red"></span>계산서<span class="ps-amt">${invoiceCnt}건</span></div>
+    <div class="ps-row" data-drill="nav:deals.html?filter=unsettled"><span class="ps-dot gray"></span>미입금<span class="ps-amt">${fmt(unpaidAmt)}</span></div>
+    <div class="ps-row" data-drill="nav:deals.html?filter=vat-pending"><span class="ps-dot gray"></span>VAT 미입금<span class="ps-amt">${fmt(vatUnpaidAmt)}</span></div>
   </div>`;
 
   $("paymentDueCard").innerHTML = html;
@@ -1750,6 +1755,26 @@ document.addEventListener("keydown",e=>{
 
 /* 크로스탭 동기화 */
 window.addEventListener("storage", e => { if(e.key === ACTION_KEY || e.key === "golab_trade_v2") renderAll(); });
+
+/* ══════════════════════════════════════════
+   Drill-down 클릭 처리 (이벤트 위임)
+   — data-drill="scroll:{id}"  → 같은 페이지 스크롤
+   — data-drill="nav:{url}"    → 페이지 이동
+   ══════════════════════════════════════════ */
+document.addEventListener("click", function(e){
+  const el = e.target.closest("[data-drill]");
+  if(!el) return;
+  const drill = el.dataset.drill || "";
+  if(drill.startsWith("scroll:")){
+    const id = drill.slice(7);
+    const target = document.getElementById(id);
+    if(target) target.scrollIntoView({behavior:"smooth", block:"start"});
+  } else if(drill.startsWith("nav:")){
+    const url = drill.slice(4);
+    /* 상대경로 — 같은 디렉토리 */
+    location.href = "./" + url;
+  }
+});
 
 /* ══════════════════════════════════════════
    DATA MANAGEMENT — 전체 백업/복원
