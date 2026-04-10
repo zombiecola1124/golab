@@ -64,10 +64,8 @@
     ".auth-msg.success{color:#16a34a}",
     ".auth-msg.info{color:#64748b}",
     ".auth-footer{font-size:11px;color:#94a3b8;margin:16px 0 0}",
-    /* ── D-2: 헤더 래퍼 (nav.tabs + 로그아웃 버튼) ── */
-    ".header-actions{display:flex;align-items:center;height:100%}",
-    /* ── 헤더 로그아웃 버튼 ── */
-    ".golab-logout-btn{background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;flex-shrink:0;font-family:inherit;margin-left:12px}",
+    /* ── D-2: 헤더 로그아웃 버튼 — 래퍼 없이 header 직속, margin-left:auto로 우측 끝 ── */
+    ".golab-logout-btn{margin-left:auto;background:rgba(255,255,255,.12);border:1px solid rgba(255,255,255,.2);color:rgba(255,255,255,.7);border-radius:6px;padding:5px 12px;font-size:11px;font-weight:600;cursor:pointer;transition:all .15s;flex-shrink:0;font-family:inherit}",
     ".golab-logout-btn:hover{background:rgba(255,255,255,.2);color:#fff}"
   ].join("\n");
   document.head.appendChild(styleEl);
@@ -256,12 +254,12 @@
   }
 
   /* ══════════════════════════════════════
-     D-2: 헤더 로그아웃 버튼 (래퍼 구조)
+     D-2: 헤더 로그아웃 버튼 (래퍼 없이 직접 삽입)
      ──────────────────────────────────────
-     navbar.js 수정 없이 header 내부를 재구조화:
-       기존: <header> <h1/> <nav.tabs/> </header>
-       변경: <header> <h1/> <div.header-actions> <nav.tabs/> <button/> </div> </header>
-     → space-between 2자식 유지 → 탭 위치 원복
+     v6.1: header가 flex-start + gap 기준이므로
+     래퍼 없이 버튼만 header 끝에 추가.
+     margin-left:auto로 우측 끝 배치.
+       결과: <header> <h1/> <nav.tabs/> <button.golab-logout-btn/> </header>
      ══════════════════════════════════════ */
   function _addLogoutButton() {
     var header = document.querySelector("header");
@@ -270,21 +268,7 @@
     /* Firebase 인증 상태일 때만 버튼 표시 */
     if (typeof window._GoLabFirebase === "undefined" || !window._GoLabFirebase.getUid()) return;
 
-    var nav = header.querySelector(".tabs");
-
-    /* 래퍼 생성: nav.tabs + 로그아웃 버튼을 감싸는 우측 영역 */
-    var wrapper = document.createElement("div");
-    wrapper.className = "header-actions";
-
-    if (nav) {
-      /* nav.tabs를 래퍼 안으로 이동 (header의 2자식 구조 유지) */
-      header.insertBefore(wrapper, nav);
-      wrapper.appendChild(nav);
-    } else {
-      header.appendChild(wrapper);
-    }
-
-    /* 로그아웃 버튼 생성 */
+    /* 로그아웃 버튼 생성 — header 직속 자식, margin-left:auto로 우측 끝 */
     var btn = document.createElement("button");
     btn.id = LOGOUT_ID;
     btn.className = "golab-logout-btn";
@@ -299,7 +283,7 @@
         });
       }
     });
-    wrapper.appendChild(btn);
+    header.appendChild(btn);
   }
 
   /* ══════════════════════════════════════

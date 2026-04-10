@@ -17,10 +17,9 @@
       font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
       font-size:13px;line-height:1.5}
 
-    /* ─ 헤더 탭 위치 보정 (다른 페이지와 통일) ─ */
-    header .tabs{margin-left:auto}
-    /* ─ 헤더 배지 (상단 우측) ─ */
-    .header-badges{display:flex;gap:6px;align-items:center;padding-left:12px;padding-right:4px}
+    /* ─ [v6.1] 헤더 탭 좌측 정렬 — ui.css 공통 flex-start 사용, 인라인 오버라이드 제거 ─ */
+    /* ─ 헤더 배지 (상단 우측) — margin-left:auto로 탭 뒤 남은 공간을 채워 우측 끝 배치 ─ */
+    .header-badges{display:flex;gap:6px;align-items:center;margin-left:auto;padding-left:12px;padding-right:4px}
     .hdr-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;white-space:nowrap;cursor:default}
     .hdr-badge.red{background:#fee2e2;color:#991b1b}
     .hdr-badge.orange{background:#fff7ed;color:#9a3412}
