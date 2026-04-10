@@ -85,17 +85,20 @@
     .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .card h2{margin:0 0 12px;font-size:13px;color:var(--partner);display:flex;align-items:center;gap:8px}
     /* KPI */
-    .kpi-row{display:flex;gap:10px;margin-bottom:16px;align-items:stretch}
+    .kpi-row{display:flex;gap:10px;margin-bottom:12px;align-items:stretch}
     .kpi{padding:14px;border-radius:10px;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04);flex:1}
     .kpi .t{font-size:11px;color:var(--muted)}
     .kpi .v{margin-top:6px;font-size:24px;font-weight:600;color:var(--partner)}
+    /* v6.9.4: 신규 등록 버튼 — dashed→solid, Action Row 독립 배치 */
+    .action-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
     .btn-new{
-      display:flex;align-items:center;justify-content:center;gap:6px;
-      padding:14px 20px;border-radius:10px;border:2px dashed var(--partner);
-      background:rgba(124,58,237,.04);color:var(--partner);font-size:13px;
+      display:flex;align-items:center;gap:6px;
+      padding:10px 20px;border-radius:10px;border:none;
+      background:var(--partner);color:#fff;font-size:12px;
       font-weight:800;cursor:pointer;white-space:nowrap;transition:background .2s;
+      box-shadow:0 1px 3px rgba(124,58,237,.3);
     }
-    .btn-new:hover{background:rgba(124,58,237,.1)}
+    .btn-new:hover{background:#6d28d9}
     /* Form */
     .row{display:grid;gap:10px;margin-bottom:10px}
     .r2{grid-template-columns:1fr 1fr}
@@ -249,7 +252,7 @@
   </aside>
   <main class="page-content">
 <div class="wrap">
-  <!-- KPI + 신규등록 버튼 -->
+  <!-- KPI -->
   <div class="kpi-row">
     <div class="kpi">
       <div class="t">전체 거래처</div>
@@ -263,12 +266,16 @@
       <div class="t">매입처</div>
       <div class="v" id="kBuy">0</div>
     </div>
-    <button class="btn-new" id="btnNew">+ 신규 등록</button>
+  </div>
+
+  <!-- v6.9.4: Action Row — KPI 아래 독립 배치 -->
+  <div class="action-bar">
+    <button class="btn-new" id="btnNew">＋ 신규 등록</button>
   </div>
 
   <!-- 목록 -->
   <div class="card">
-    <h2>📋 거래처 목록 <span class="badge" id="listBadge">0</span>
+    <h2 style="padding-left:10px;border-left:3px solid var(--partner);font-weight:800;font-size:14px;color:var(--text)">거래처 목록 <span class="badge" id="listBadge">0</span>
       <span style="flex:1"></span>
       <button id="btnMigrate" class="secondary" style="padding:5px 10px;font-size:10px">📥 매출에서 가져오기</button>
     </h2>

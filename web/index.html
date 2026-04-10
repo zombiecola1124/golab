@@ -83,16 +83,18 @@
     .card h2{margin:0 0 12px;font-size:13px;color:var(--inv);display:flex;align-items:center;gap:8px}
 
     /* KPI */
-    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
     .kpi{padding:14px;border-radius:10px;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .kpi .t{font-size:11px;color:var(--muted)}
     .kpi .v{margin-top:6px;font-size:24px;font-weight:600;color:var(--inv)}
     .kpi .sub{margin-top:4px;font-size:10px;color:var(--muted)}
 
-    /* 액션 바 */
-    .action-bar{display:flex;justify-content:flex-end;margin-bottom:12px}
-    .btn-new{padding:8px 18px;background:var(--inv);color:#fff;border:none;border-radius:8px;cursor:pointer;font-weight:700;font-size:12px;transition:filter .15s}
-    .btn-new:hover{filter:brightness(.9)}
+    /* v6.9.4: 액션 바 — KPI 아래 독립 배치 */
+    .action-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    .btn-new{padding:10px 20px;background:var(--inv);color:#fff;border:none;border-radius:10px;cursor:pointer;font-weight:800;font-size:12px;transition:background .15s;box-shadow:0 1px 3px rgba(37,99,235,.3)}
+    .btn-new:hover{background:#1d4ed8}
+    /* v6.9.4: 섹션 타이틀 포인트 바 */
+    .section-title{padding-left:10px;border-left:3px solid var(--inv);font-size:14px;font-weight:800;color:var(--text);margin:0 0 10px;display:flex;align-items:center;gap:8px}
 
     /* 필터 */
     .filter-row{display:flex;gap:8px;margin-bottom:12px;flex-wrap:wrap}
@@ -204,13 +206,14 @@
     </div>
   </div>
 
+  <!-- v6.9.4: Action Row — KPI 아래 독립 배치 -->
+  <div class="action-bar">
+    <button class="btn-new" id="btnNew">＋ 재고 등록</button>
+  </div>
+
   <!-- 재고 테이블 카드 -->
   <div class="card">
-    <h2>📦 재고 현황 <span class="badge" id="listBadge">0</span></h2>
-
-    <div class="action-bar">
-      <button class="btn-new" id="btnNew">＋ 재고 등록</button>
-    </div>
+    <h2 class="section-title">재고 현황 <span class="badge" id="listBadge">0</span></h2>
 
     <div class="filter-row">
       <input type="text" id="fSearch" placeholder="🔍 품목명, 카테고리, 태그 검색" />
