@@ -325,12 +325,15 @@
     .rp-btns .btn-commit:hover{background:#b91c1c}
     .rp-btns .btn-commit:disabled{background:#94a3b8;cursor:not-allowed}
 
-    /* ─ 미등록 거래처 ─ */
-    .unreg-card{display:flex;align-items:center;gap:10px;padding:14px 16px;border-radius:10px;border:1px solid var(--orange);background:rgba(217,119,6,.06);cursor:pointer;transition:all .15s;margin-bottom:0}
-    .unreg-card:hover{background:rgba(217,119,6,.12);border-color:var(--orange)}
-    .unreg-card .uc-icon{font-size:18px}
-    .unreg-card .uc-label{font-size:12px;font-weight:700;color:var(--text);flex:1}
-    .unreg-card .uc-count{font-size:11px;font-weight:800;color:#fff;background:var(--orange);padding:2px 10px;border-radius:12px}
+    /* ─ v6.9: 거래처 등록 대기 — 작업 카드 스타일 ─ */
+    .unreg-card{display:flex;align-items:stretch;gap:0;padding:0;border-radius:10px;border:1px solid #fde68a;background:#fffbeb;cursor:pointer;transition:all .15s;margin-bottom:0;overflow:hidden}
+    .unreg-card:hover{background:#fef3c7;border-color:#fbbf24}
+    .unreg-card .uc-bar{width:4px;background:#d97706;flex-shrink:0;border-radius:10px 0 0 10px}
+    .unreg-card .uc-body{display:flex;flex-direction:column;gap:2px;padding:12px 16px;flex:1;min-width:0}
+    .unreg-card .uc-title-row{display:flex;align-items:center;gap:8px}
+    .unreg-card .uc-label{font-size:12px;font-weight:800;color:var(--text)}
+    .unreg-card .uc-count{font-size:10px;font-weight:700;color:#92400e;background:#fde68a;padding:1px 8px;border-radius:10px}
+    .unreg-card .uc-desc{font-size:10px;color:#92400e;font-weight:400}
     .unreg-overlay{display:none;position:fixed;inset:0;background:rgba(0,0,0,.4);z-index:110;align-items:flex-start;justify-content:center;padding-top:80px}
     .unreg-overlay.open{display:flex}
     .unreg-panel{background:var(--card);border:1px solid var(--border);border-radius:12px;width:520px;max-width:92vw;max-height:75vh;overflow:hidden;display:flex;flex-direction:column;box-shadow:0 8px 30px rgba(0,0,0,.15)}
@@ -473,11 +476,16 @@
       <div class="more-btn" id="todayMore" style="display:none"></div>
     </div>
 
-    <!-- 미등록 거래처 카드 -->
+    <!-- v6.9: 거래처 등록 대기 카드 -->
     <div class="unreg-card" id="unregCard" style="display:none" onclick="openUnregPanel()">
-      <span class="uc-icon">⚠️</span>
-      <span class="uc-label">미등록 거래처</span>
-      <span class="uc-count" id="unregCount">0</span>
+      <div class="uc-bar"></div>
+      <div class="uc-body">
+        <div class="uc-title-row">
+          <span class="uc-label">거래처 등록 대기</span>
+          <span class="uc-count" id="unregCount">0건</span>
+        </div>
+        <div class="uc-desc">장부 누락 방지를 위해 거래처 등록이 필요합니다</div>
+      </div>
     </div>
 
     <!-- 거래 진행 현황 (이번달) — 좌측으로 이동 -->
@@ -1729,7 +1737,7 @@ function renderUnregCard(){
   const card = $("unregCard");
   if(unregs.length===0){ card.style.display="none"; return; }
   card.style.display="flex";
-  $("unregCount").textContent = unregs.length;
+  $("unregCount").textContent = unregs.length + "건";
 }
 
 function openUnregPanel(){
