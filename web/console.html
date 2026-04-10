@@ -17,9 +17,8 @@
       font-family:ui-sans-serif,system-ui,-apple-system,"Segoe UI",Roboto,"Apple SD Gothic Neo","Noto Sans KR",sans-serif;
       font-size:13px;line-height:1.5}
 
-    /* ─ [v6.1] 헤더 탭 좌측 정렬 — ui.css 공통 flex-start 사용, 인라인 오버라이드 제거 ─ */
-    /* ─ 헤더 배지 (상단 우측) — margin-left:auto로 탭 뒤 남은 공간을 채워 우측 끝 배치 ─ */
-    .header-badges{display:flex;gap:6px;align-items:center;margin-left:auto;padding-left:12px;padding-right:4px}
+    /* ─ [v6.8] 상태 배지 — 입금·마감 임박 카드 상단에 표시 ─ */
+    .status-badges{display:flex;gap:6px;flex-wrap:wrap;margin-bottom:12px}
     .hdr-badge{font-size:10px;font-weight:700;padding:3px 10px;border-radius:12px;white-space:nowrap;cursor:default}
     .hdr-badge.red{background:#fee2e2;color:#991b1b}
     .hdr-badge.orange{background:#fff7ed;color:#9a3412}
@@ -34,13 +33,14 @@
 
     /* ─ 공통 카드 ─ */
     .card{background:var(--card);border:1px solid var(--border);border-radius:10px;padding:20px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
+    /* v6.8: 섹션 제목 위계 강화 — 좌측 포인트 바 + 진한 제목 */
     .card-header{display:flex;align-items:center;gap:8px;margin-bottom:14px}
-    .card-header h2{font-size:14px;font-weight:700;color:var(--text)}
+    .card-header h2{font-size:14px;font-weight:800;color:var(--text);padding-left:10px;border-left:3px solid var(--primary)}
     .card-header .badge{font-size:10px;padding:2px 8px;border-radius:6px;font-weight:700}
     .card-header .badge.red{background:#fee2e2;color:var(--warn)}
     .card-header .badge.green{background:#dcfce7;color:var(--accent)}
     .card-header .badge.blue{background:#dbeafe;color:var(--primary)}
-    .card-header .count{margin-left:auto;font-size:11px;color:var(--muted);font-weight:400}
+    .card-header .count{margin-left:auto;font-size:10px;color:#94a3b8;font-weight:400}
     .card-header .link-btn{margin-left:auto;font-size:11px;color:var(--primary);font-weight:600;cursor:pointer;text-decoration:none}
     .card-header .link-btn:hover{text-decoration:underline}
 
@@ -57,9 +57,10 @@
     .kpi-v2 .kv-sub .down{color:var(--warn);font-weight:700}
 
     /* ─ 오늘 현황 (Summary Bar) ─ */
+    /* v6.8: 오늘 현황 — 제목 포인트 바 통일, 날짜 더 옅고 작게 */
     .today-summary .ts-header{display:flex;align-items:center;gap:10px;margin-bottom:14px}
-    .today-summary .ts-header h2{font-size:15px;font-weight:800}
-    .today-summary .ts-date{font-size:12px;color:var(--muted)}
+    .today-summary .ts-header h2{font-size:15px;font-weight:800;padding-left:10px;border-left:3px solid var(--primary)}
+    .today-summary .ts-date{font-size:11px;color:#94a3b8;font-weight:400}
     .stat-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px}
     .stat-box{text-align:center;padding:18px 8px;border:1px solid var(--border);border-radius:12px;background:var(--chip)}
     .stat-box .sb-num{font-size:26px;font-weight:900;color:var(--text)}
@@ -77,10 +78,11 @@
     .add-row button{background:var(--primary);border:none;color:#fff;border-radius:8px;padding:8px 16px;font-size:12px;cursor:pointer;font-weight:600;white-space:nowrap}
     .add-row button:hover{background:#1d4ed8}
 
-    .all-clear{text-align:center;padding:30px 20px;color:var(--accent)}
-    .all-clear .icon{font-size:32px;margin-bottom:8px}
-    .all-clear .msg{font-size:14px;font-weight:700}
-    .all-clear .sub{font-size:11px;color:var(--muted);margin-top:4px}
+    /* v6.8: 할 일 없음 — 높이 대폭 축소, 아이콘 압축 */
+    .all-clear{text-align:center;padding:12px 16px;color:var(--accent);display:flex;align-items:center;justify-content:center;gap:10px}
+    .all-clear .icon{font-size:18px;flex-shrink:0}
+    .all-clear .msg{font-size:12px;font-weight:700}
+    .all-clear .sub{font-size:10px;color:var(--muted);margin-left:4px}
 
     /* ─ Action Items ─ */
     .action-list{list-style:none}
@@ -464,9 +466,9 @@
       </div>
       <ul class="action-list" id="todayList"></ul>
       <div class="all-clear" id="todayClear" style="display:none">
-        <div class="icon">🟢</div>
-        <div class="msg">오늘 할 일 없음</div>
-        <div class="sub">새 Action을 추가하거나 Initiative에서 전환하세요</div>
+        <span class="icon">✓</span>
+        <span class="msg">오늘 할 일 없음</span>
+        <span class="sub">· 새 Action을 추가하거나 Initiative에서 전환하세요</span>
       </div>
       <div class="more-btn" id="todayMore" style="display:none"></div>
     </div>
@@ -806,7 +808,7 @@ function classifyActions(){
    헤더 배지 (미입금 / VAT / 지연)
    ══════════════════════════════════════════ */
 function renderHeaderBadges(){
-  /* v6.0 복원: 3배지(미입금 / VAT / 지연) — 0건이면 dim 스타일 */
+  /* v6.8: 배지를 입금·마감 임박 카드 상단으로 이동 — 헤더 시선 분산 제거 */
   const TE = GoLabTradeEngine;
   const ds = TE.getKPISummary();
   const b = classifyActions();
@@ -814,11 +816,11 @@ function renderHeaderBadges(){
   if(!container){
     container = document.createElement("div");
     container.id = "headerBadges";
-    container.className = "header-badges";
-    const hdr = document.querySelector("header");
-    if(hdr) hdr.appendChild(container);
+    container.className = "status-badges";
+    /* 입금·마감 임박 카드의 첫 번째 자식으로 삽입 */
+    const card = $("paymentDueCard");
+    if(card) card.prepend(container);
   }
-  /* 항상 3개 배지 표시 — 0건이면 dim 스타일 */
   const unpaid = ds.supplyDue.count;
   const vat = ds.vatDue.count;
   const overdue = b.overdue.length;
@@ -1790,7 +1792,6 @@ $("unregOverlay").onclick = e=>{ if(e.target===$("unregOverlay")) closeUnregPane
    RENDER ALL
    ══════════════════════════════════════════ */
 function renderAll(){
-  renderHeaderBadges();
   renderKPIRow();
   renderTodaySummary();
   renderTodayZone();
@@ -1798,6 +1799,7 @@ function renderAll(){
   renderTimeline();
   renderMiniCal();
   renderPaymentDue();
+  renderHeaderBadges(); /* v6.8: paymentDueCard innerHTML 이후에 prepend */
   renderSPaymentChecklist();
   renderUnregCard();
 }
