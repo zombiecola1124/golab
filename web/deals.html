@@ -86,7 +86,7 @@
     .card h2{margin:0 0 12px;font-size:13px;color:var(--deal);display:flex;align-items:center;gap:8px}
 
     /* KPI */
-    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:16px}
+    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
     .kpi{padding:14px;border-radius:10px;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .kpi .t{font-size:11px;color:var(--muted)}
     .kpi .v{margin-top:6px;font-size:24px;font-weight:600;color:var(--deal)}
@@ -238,7 +238,7 @@
     .sort-arrow.active{opacity:1}
 
     /* v4.1: 기간 프리셋 바 */
-    .period-bar{display:flex;gap:6px;margin-bottom:8px;flex-wrap:wrap}
+    .period-bar{display:flex;gap:6px;margin-bottom:4px;flex-wrap:wrap}
     .period-btn{padding:5px 14px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
     .period-btn:hover{border-color:#cbd5e1}
     .period-btn.active{background:var(--deal);color:#fff;border-color:transparent}
@@ -256,7 +256,7 @@
     .memo-save.saved{background:var(--accent)!important;color:#fff!important;border-color:var(--accent)!important}
 
     /* 필터 */
-    .filter-row{display:flex;gap:10px;align-items:center;margin-bottom:12px;flex-wrap:wrap}
+    .filter-row{display:flex;gap:8px;align-items:center;margin-bottom:8px;flex-wrap:wrap}
     .filter-row input,.filter-row select{width:auto;min-width:140px;flex:1}
 
     /* 부대비용 테이블 (v2.8) */
@@ -295,7 +295,8 @@
     .status-chip.todo-urgent{background:rgba(220,38,38,.18);color:#991b1b}
 
     /* v3.7 칩 필터 바 */
-    .chip-filter-bar{display:flex;gap:6px;margin-bottom:10px;flex-wrap:wrap}
+    /* v6.9.1: 필터 영역 간격 축소 — 목록 위로 끌어올림 */
+    .chip-filter-bar{display:flex;gap:6px;margin-bottom:6px;flex-wrap:wrap}
     .chip-filter{padding:5px 12px;border-radius:20px;border:1px solid var(--line);background:var(--card);color:var(--muted);font-size:11px;font-weight:600;cursor:pointer;transition:all .15s}
     .chip-filter:hover{border-color:#cbd5e1}
     .chip-filter.active{color:#fff;border-color:transparent}
@@ -382,14 +383,16 @@
     .sp-view-meta b{color:var(--text);font-weight:600}
 
     /* ══ v5.2: Action Bar ══ */
-    .action-bar{display:flex;align-items:center;gap:10px;margin-bottom:12px}
+    .action-bar{display:flex;align-items:center;gap:10px;margin-bottom:10px}
+    /* v6.9.1: 거래 등록 버튼 — 점선→채워진 primary, 핵심 액션 강조 */
     .btn-new-deal{
       display:flex;align-items:center;gap:6px;
-      padding:10px 18px;border-radius:10px;border:2px dashed var(--deal);
-      background:rgba(8,145,178,.04);color:var(--deal);font-size:12px;
+      padding:10px 20px;border-radius:10px;border:none;
+      background:var(--deal);color:#fff;font-size:12px;
       font-weight:800;cursor:pointer;white-space:nowrap;transition:background .2s;
+      box-shadow:0 1px 3px rgba(8,145,178,.3);
     }
-    .btn-new-deal:hover{background:rgba(8,145,178,.12)}
+    .btn-new-deal:hover{background:#0e7490}
 
     /* v5.2: 패널 내부 입금 추적 */
     .sp-pay-zone{margin-top:10px;padding:12px;background:rgba(0,0,0,.02);border-radius:10px}
@@ -774,7 +777,7 @@
 
   <!-- ═══ 거래 목록 ═══ -->
   <div class="card">
-    <h2>📋 거래 목록 <span class="badge" id="listBadge">0</span></h2>
+    <h2 style="padding-left:10px;border-left:3px solid var(--deal);font-weight:800">거래 목록 <span class="badge" id="listBadge">0</span></h2>
     <!-- v3.7 퀵 필터 바 -->
     <div class="chip-filter-bar" id="chipFilterBar">
       <button class="chip-filter active" data-chip-filter="">전체</button>
