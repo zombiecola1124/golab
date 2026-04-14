@@ -155,6 +155,80 @@
     /* 빈 상태 */
     .muted{color:var(--muted)}
 
+    /* v6.11: 재고 테이블 행의 [입고] 버튼 */
+    .btn-inbound{
+      padding:5px 10px;border-radius:6px;border:1px solid rgba(22,163,74,.3);
+      background:rgba(22,163,74,.08);color:var(--accent);font-size:11px;font-weight:700;
+      cursor:pointer;white-space:nowrap;
+    }
+    .btn-inbound:hover{background:rgba(22,163,74,.16)}
+
+    /* v6.11: 수정 패널 상단 안내 배너 (경고 아님, 중립 안내) */
+    .sp-notice{
+      margin-bottom:12px;padding:8px 10px;border-radius:8px;
+      background:#eff6ff;border:1px solid #dbeafe;
+      color:#1e40af;font-size:11px;line-height:1.5;
+    }
+    .sp-notice b{color:#1e3a8a}
+
+    /* v6.11: 입고 모달 — panel-overlay/side-panel과 z-index 체계 공유, 가운데 배치 */
+    .inbound-modal-back{
+      position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:200;
+      display:none;align-items:center;justify-content:center;padding:20px;
+    }
+    .inbound-modal-back.open{display:flex}
+    .inbound-modal{
+      width:min(440px,96vw);max-height:92vh;overflow-y:auto;
+      background:var(--card);border-radius:12px;
+      box-shadow:0 20px 50px rgba(0,0,0,.22);
+      display:flex;flex-direction:column;
+    }
+    .inbound-modal .im-top{
+      display:flex;justify-content:space-between;align-items:center;
+      padding:14px 18px;border-bottom:1px solid var(--line);
+    }
+    .inbound-modal .im-top h3{margin:0;font-size:14px;color:var(--accent);font-weight:800}
+    .inbound-modal .im-body{padding:18px}
+    .inbound-modal label{display:block;font-size:11px;color:var(--muted);font-weight:700;margin-bottom:4px;margin-top:14px}
+    .inbound-modal label:first-child{margin-top:0}
+    .inbound-modal input,.inbound-modal textarea{
+      width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;
+      font-size:13px;background:var(--chip);box-sizing:border-box;
+    }
+    .inbound-modal textarea{resize:vertical;min-height:40px}
+    .inbound-modal .im-readonly{
+      background:#f8fafc;border:1px solid var(--line);border-radius:8px;
+      padding:10px 12px;font-size:12px;
+    }
+    .inbound-modal .im-readonly .r{display:flex;justify-content:space-between;margin:3px 0}
+    .inbound-modal .im-readonly .r span:first-child{color:var(--muted);font-weight:600}
+    .inbound-modal .im-readonly .r span:last-child{font-weight:700;color:var(--text)}
+    .inbound-modal .im-preview{
+      margin-top:14px;padding:10px 12px;border-radius:8px;
+      background:rgba(22,163,74,.06);border:1px dashed rgba(22,163,74,.35);
+      font-size:12px;
+    }
+    .inbound-modal .im-preview .r{display:flex;justify-content:space-between;margin:3px 0}
+    .inbound-modal .im-preview .r span:first-child{color:#15803d;font-weight:600}
+    .inbound-modal .im-preview .r span:last-child{font-weight:800;color:#14532d}
+    .inbound-modal .im-msg{
+      padding:8px 12px;border-radius:8px;font-size:11px;font-weight:600;
+      margin-top:10px;display:none;
+    }
+    .inbound-modal .im-msg.error{display:block;background:rgba(220,38,38,.08);color:var(--bad);border:1px solid rgba(220,38,38,.15)}
+    .inbound-modal .im-btns{
+      display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line);
+    }
+    .inbound-modal .im-btns button{
+      padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;
+      cursor:pointer;border:1px solid var(--line);
+    }
+    .inbound-modal .im-btns .save{background:var(--accent);color:#fff;border-color:var(--accent)}
+    .inbound-modal .im-btns .save:hover{filter:brightness(.93)}
+    .inbound-modal .im-btns .save:disabled{opacity:.4;cursor:not-allowed}
+    .inbound-modal .im-btns .secondary{background:var(--chip)}
+    .inbound-modal .im-btns .secondary:hover{background:rgba(0,0,0,.06)}
+
     /* 모바일 (v6.7: 사이드바 220px만큼 +220 이동) */
     @media(max-width:988px){
       .kpi-grid{grid-template-columns:repeat(2,1fr)}
@@ -246,6 +320,7 @@
             <th class="num">보유 금액</th>
             <th class="col-desk num">적정 재고</th>
             <th class="col-desk">태그</th>
+            <th style="text-align:right">액션</th>
           </tr>
         </thead>
         <tbody id="tbody"></tbody>
@@ -261,6 +336,7 @@
             <td class="num" id="sumValue" style="color:var(--inv);font-weight:800">₩0</td>
             <td class="col-desk"></td>
             <td class="col-desk"></td>
+            <td></td>
           </tr>
         </tfoot>
       </table>
@@ -276,6 +352,11 @@
       <button class="sp-close" id="spClose">✕</button>
     </div>
     <div class="sp-body" id="spBody">
+      <!-- v6.11: 수정 모드 안내 배너 (중립 파란 톤, 경고 아님) -->
+      <div id="spNotice" class="sp-notice" style="display:none">
+        <b>📋 데이터 정정용입니다.</b> 실제 입고는 목록의 <b>[입고]</b> 버튼을 사용하세요.<br>
+        수정 시 평단가 자동 계산은 수행되지 않습니다.
+      </div>
       <!-- 품목 선택 (등록 시) -->
       <div id="itemSelectWrap">
         <label>품목 선택 *</label>
@@ -319,6 +400,48 @@
       <button id="btnDelete" class="danger" style="display:none">삭제</button>
     </div>
   </div>
+
+  <!-- v6.11: 입고 모달 (독립, 수정 패널과 분리) -->
+  <div class="inbound-modal-back" id="inboundBack">
+    <div class="inbound-modal" id="inboundModal">
+      <div class="im-top">
+        <h3>📦 입고 등록</h3>
+        <button class="sp-close" id="ibClose">✕</button>
+      </div>
+      <div class="im-body">
+        <label>품목</label>
+        <div id="ibItem" style="font-size:14px;font-weight:700;color:var(--text);margin-bottom:8px"></div>
+
+        <label>현재 상태</label>
+        <div class="im-readonly">
+          <div class="r"><span>현재 수량</span><span id="ibCurStock">—</span></div>
+          <div class="r"><span>현재 평단가</span><span id="ibCurAvg">—</span></div>
+          <div class="r"><span>최근 매입가</span><span id="ibCurLast">—</span></div>
+        </div>
+
+        <label>추가 입고 수량 *</label>
+        <input type="number" id="ibAddQty" min="1" step="1" placeholder="예: 50" />
+
+        <label>이번 매입 단가 * <span style="color:var(--muted);font-weight:400">(원/개)</span></label>
+        <input type="number" id="ibUnitCost" min="0" step="1" placeholder="예: 15000" />
+
+        <label>메모 <span style="color:var(--muted);font-weight:400">(선택)</span></label>
+        <input type="text" id="ibNote" placeholder="공급사 / 참고 사항" />
+
+        <div class="im-preview" id="ibPreview">
+          <div class="r"><span>📊 입고 후 수량</span><span id="ibNewStock">—</span></div>
+          <div class="r"><span>📊 입고 후 평단가</span><span id="ibNewAvg">—</span></div>
+        </div>
+
+        <div class="im-msg" id="ibMsg"></div>
+      </div>
+      <div class="im-btns">
+        <button id="ibCancel" class="secondary" style="margin-left:auto">취소</button>
+        <button id="ibSave" class="save" disabled>입고 확정</button>
+      </div>
+    </div>
+  </div>
+
 </div>
   </main>
 </div>
@@ -355,6 +478,65 @@ function loadInv() {
 }
 function saveInv(list) {
   GoLabStorage.setItem(INV_KEY, JSON.stringify(list));
+}
+
+/* v6.11: 입고 로그 키 + 로드/저장 */
+var INBOUND_KEY = "golab_inbound_logs_v1";
+function loadInbound() {
+  try { return JSON.parse(GoLabStorage.getItem(INBOUND_KEY) || "[]"); } catch (e) { return []; }
+}
+function saveInbound(list) {
+  GoLabStorage.setItem(INBOUND_KEY, JSON.stringify(list));
+}
+
+/* v6.11: 기존 재고 레코드에 avg_unit_price 필드 방어적 보강
+   · 필드 없음/null/undefined → last_buy_price로 fallback
+   · last_buy_price도 없으면 0
+   · 이미 숫자(0 포함)로 존재하면 건드리지 않음 (사용자 수정값 보호) */
+function _upgradeInvRecords() {
+  var inv;
+  try { inv = loadInv(); } catch (e) { return; }
+  if (!Array.isArray(inv)) return;
+  var changed = false;
+  inv.forEach(function(r){
+    if (r === null || typeof r !== "object") return;
+    if (r.avg_unit_price === undefined || r.avg_unit_price === null) {
+      var fallback = Number(r.last_buy_price);
+      r.avg_unit_price = isFinite(fallback) && fallback >= 0 ? fallback : 0;
+      changed = true;
+    }
+  });
+  if (changed) {
+    try { saveInv(inv); } catch (e) { /* 저장 실패해도 앱은 계속 동작 */ }
+  }
+}
+
+/* v6.11: 이동평균 계산기 (fallback 포함)
+   1순위: prevAvg > 0 — 그대로 기준값
+   2순위: prevAvg 없음/0 + prevLastBuy > 0 — last_buy_price fallback
+   3순위: 둘 다 없음 — 이번 입고 단가를 베이스라인으로
+   · prevQty == 0 이면 newAvg = addCost (신규 품목 첫 입고)
+   · 반환 newAvg는 Math.round (정수 원화 저장)
+*/
+function _applyInbound(prevQty, prevAvg, prevLastBuy, addQty, addCost) {
+  prevQty = Number(prevQty) || 0;
+  prevAvg = Number(prevAvg) || 0;
+  prevLastBuy = Number(prevLastBuy) || 0;
+  addQty = Number(addQty) || 0;
+  addCost = Number(addCost) || 0;
+
+  var basisAvg;
+  if (prevAvg > 0)           basisAvg = prevAvg;
+  else if (prevLastBuy > 0)  basisAvg = prevLastBuy;
+  else                       basisAvg = addCost;
+
+  var newQty = prevQty + addQty;
+  if (newQty <= 0) {
+    /* 방어: 이론상 불가 (addQty ≥ 1 강제) — basisAvg 리턴 */
+    return { newQty: 0, newAvg: Math.round(basisAvg) };
+  }
+  var newAvg = ((prevQty * basisAvg) + (addQty * addCost)) / newQty;
+  return { newQty: newQty, newAvg: Math.round(newAvg) };
 }
 
 /* ── 감사 로그 ── */
@@ -480,6 +662,10 @@ function render() {
     html += '<td class="num" style="font-weight:600">' + fmt(holdVal) + '</td>';
     html += '<td class="col-desk num">' + (ts > 0 ? ts : '<span style="color:var(--muted)">—</span>') + '</td>';
     html += '<td class="col-desk">' + (r.memo_tag ? '<span style="color:var(--inv);font-size:11px">' + esc(r.memo_tag) + '</span>' : '') + '</td>';
+    /* v6.11: 행 우측 입고 버튼 (독립 액션) */
+    html += '<td style="text-align:right;white-space:nowrap">' +
+              '<button class="btn-inbound" data-inbound="' + esc(r.item_id) + '">입고</button>' +
+            '</td>';
     html += '</tr>';
   });
 
@@ -500,10 +686,19 @@ function render() {
   $("listBadge").textContent = filtered.length;
   $("emptyMsg").style.display = filtered.length > 0 ? "none" : "";
 
-  /* 행 클릭 → 패널 */
+  /* 행 클릭 → 수정 패널 */
   tb.querySelectorAll("tr[data-id]").forEach(function(row) {
-    row.addEventListener("click", function() {
+    row.addEventListener("click", function(e) {
+      /* v6.11: 입고 버튼 클릭 시 행 클릭 버블링 방지 */
+      if (e.target && e.target.closest && e.target.closest("[data-inbound]")) return;
       openPanel(row.dataset.id);
+    });
+  });
+  /* v6.11: 입고 버튼 → 독립 모달 오픈 */
+  tb.querySelectorAll("[data-inbound]").forEach(function(btn){
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      openInboundModal(btn.dataset.inbound);
     });
   });
 
@@ -528,6 +723,7 @@ function openPanel(itemId) {
     if (!rec) return;
 
     $("spTitle").textContent = "재고 수정";
+    $("spNotice").style.display = ""; /* v6.11: 수정 모드에서만 안내 배너 노출 */
     $("itemSelectWrap").style.display = "none";
     $("itemDisplayWrap").style.display = "";
     $("itemDisplay").textContent = _getItemName(rec.item_id);
@@ -548,6 +744,7 @@ function openPanel(itemId) {
   } else {
     /* === 등록 모드 === */
     $("spTitle").textContent = "재고 등록";
+    $("spNotice").style.display = "none"; /* v6.11: 등록 모드에선 숨김 */
     $("itemSelectWrap").style.display = "";
     $("itemDisplayWrap").style.display = "none";
     $("inStock").value = "";
@@ -667,6 +864,143 @@ function deleteRecord() {
   render();
 }
 
+/* ══════════════════════════════════════════════════════════════
+   v6.11: 입고 모달 로직
+   · [수정]과 분리된 독립 플로우
+   · 이동평균 + 입고 로그 저장
+   ══════════════════════════════════════════════════════════════ */
+var _inboundItemId = null;
+var _inboundRec = null;  /* 현재 대상 재고 레코드 (읽기 전용 스냅샷) */
+
+function openInboundModal(itemId) {
+  if (!itemId) return;
+  var inv = loadInv();
+  var rec = null;
+  for (var i = 0; i < inv.length; i++) {
+    if (inv[i].item_id === itemId) { rec = inv[i]; break; }
+  }
+  if (!rec) { alert("해당 재고 레코드를 찾을 수 없습니다."); return; }
+
+  _inboundItemId = itemId;
+  _inboundRec = rec;
+
+  /* UI 채우기 */
+  $("ibItem").textContent = _getItemName(itemId);
+  $("ibCurStock").textContent = n(rec.current_stock).toLocaleString() + " 개";
+  $("ibCurAvg").textContent = fmt(n(rec.avg_unit_price));
+  $("ibCurLast").textContent = fmt(n(rec.last_buy_price));
+  $("ibAddQty").value = "";
+  $("ibUnitCost").value = "";
+  $("ibNote").value = "";
+  $("ibNewStock").textContent = "—";
+  $("ibNewAvg").textContent = "—";
+  _ibHideMsg();
+  $("ibSave").disabled = true;
+
+  $("inboundBack").classList.add("open");
+  document.body.style.overflow = "hidden";
+  setTimeout(function(){ $("ibAddQty").focus(); }, 30);
+}
+
+function closeInboundModal() {
+  $("inboundBack").classList.remove("open");
+  document.body.style.overflow = "";
+  _inboundItemId = null;
+  _inboundRec = null;
+}
+
+function _ibShowMsg(msg) {
+  var el = $("ibMsg");
+  el.textContent = msg;
+  el.classList.add("error");
+  el.style.display = "block";
+}
+function _ibHideMsg() {
+  var el = $("ibMsg");
+  el.style.display = "none";
+  el.classList.remove("error");
+}
+
+function _updateInboundPreview() {
+  if (!_inboundRec) return;
+  var addQty = Number($("ibAddQty").value);
+  var addCost = Number($("ibUnitCost").value);
+  var valid = !isNaN(addQty) && addQty > 0 && !isNaN(addCost) && addCost >= 0;
+  $("ibSave").disabled = !valid;
+  if (!valid) {
+    $("ibNewStock").textContent = "—";
+    $("ibNewAvg").textContent = "—";
+    return;
+  }
+  var r = _applyInbound(
+    n(_inboundRec.current_stock),
+    n(_inboundRec.avg_unit_price),
+    n(_inboundRec.last_buy_price),
+    addQty,
+    addCost
+  );
+  $("ibNewStock").textContent = r.newQty.toLocaleString() + " 개";
+  $("ibNewAvg").textContent = fmt(r.newAvg);
+}
+
+function applyInboundSave() {
+  if (!_inboundItemId) return;
+  var addQty = Number($("ibAddQty").value);
+  var addCost = Number($("ibUnitCost").value);
+
+  if (isNaN(addQty) || addQty <= 0) { _ibShowMsg("추가 입고 수량은 1 이상이어야 합니다."); return; }
+  if (isNaN(addCost) || addCost < 0) { _ibShowMsg("이번 매입 단가는 0 이상이어야 합니다."); return; }
+
+  var inv = loadInv();
+  var idx = -1;
+  for (var i = 0; i < inv.length; i++) {
+    if (inv[i].item_id === _inboundItemId) { idx = i; break; }
+  }
+  if (idx < 0) { _ibShowMsg("재고 레코드를 찾을 수 없습니다."); return; }
+
+  var before = JSON.parse(JSON.stringify(inv[idx]));
+  var prevQty  = n(before.current_stock);
+  var prevAvg  = n(before.avg_unit_price);
+  var prevLast = n(before.last_buy_price);
+
+  var calc = _applyInbound(prevQty, prevAvg, prevLast, addQty, addCost);
+
+  /* 재고 갱신 */
+  inv[idx].current_stock  = calc.newQty;
+  inv[idx].last_buy_price = addCost;            /* 요구사항: 입고 단가로 갱신 */
+  inv[idx].avg_unit_price = calc.newAvg;
+  inv[idx].updated_at     = now();
+  saveInv(inv);
+
+  /* 입고 로그 저장 (확장판: prev/new 스냅샷 포함) */
+  var logs = loadInbound();
+  var logEntry = {
+    id: crypto.randomUUID(),
+    item_id: _inboundItemId,
+    qty: addQty,
+    unit_cost: addCost,
+    prev_stock: prevQty,
+    prev_avg_unit_price: prevAvg,
+    new_stock: calc.newQty,
+    new_avg_unit_price: calc.newAvg,
+    note: $("ibNote").value.trim(),
+    created_at: now()
+  };
+  logs.unshift(logEntry);
+  saveInbound(logs);
+
+  /* 감사 로그 (기존 방식 재사용) */
+  emitAudit("INBOUND", {
+    item_id: _inboundItemId,
+    before: before,
+    after: JSON.parse(JSON.stringify(inv[idx])),
+    inbound_log_id: logEntry.id
+  });
+
+  closeInboundModal();
+  render();
+}
+
 /* ── 이벤트 바인딩 ── */
 $("panelOverlay").addEventListener("click", closePanel);
 $("spClose").addEventListener("click", closePanel);
@@ -675,8 +1009,20 @@ $("btnSave").addEventListener("click", save);
 $("btnCancel").addEventListener("click", closePanel);
 $("btnDelete").addEventListener("click", deleteRecord);
 document.addEventListener("keydown", function(e) {
-  if (e.key === "Escape" && $("sidePanel").classList.contains("open")) closePanel();
+  if (e.key === "Escape") {
+    if ($("inboundBack").classList.contains("open")) { closeInboundModal(); return; }
+    if ($("sidePanel").classList.contains("open")) closePanel();
+  }
 });
+/* v6.11: 입고 모달 이벤트 바인딩 */
+$("ibClose").addEventListener("click", closeInboundModal);
+$("ibCancel").addEventListener("click", closeInboundModal);
+$("ibSave").addEventListener("click", applyInboundSave);
+$("inboundBack").addEventListener("click", function(e){
+  if (e.target === $("inboundBack")) closeInboundModal();
+});
+$("ibAddQty").addEventListener("input", _updateInboundPreview);
+$("ibUnitCost").addEventListener("input", _updateInboundPreview);
 
 /* 필터 이벤트 */
 $("fSearch").addEventListener("input", render);
@@ -690,7 +1036,9 @@ _acItem = GoLabItemMaster.createAutocomplete($("acItemWrap"), {
   onClear: function() { /* 클리어 */ }
 });
 
-/* ── 초기 렌더 ── */
+/* ── 초기 렌더 ──
+   v6.11: render() 전에 avg_unit_price 필드 마이그레이션 1회 수행 */
+_upgradeInvRecords();
 render();
 </script>
 </body>
