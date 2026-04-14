@@ -291,13 +291,16 @@
     <div class="form-section-label">기본 정보</div>
     <div class="row r3">
       <div><label>품목명 *</label><input id="inName" placeholder="예: Ag Powder" /></div>
+      <div><label>브랜드 <span class="opt">(선택)</span></label><input id="inBrand" placeholder="예: TANAKA, 3M" /></div>
       <div><label>카테고리</label><select id="inCategory"><option value="원료">원료</option><option value="장비">장비</option><option value="일반상품" selected>일반상품</option></select></div>
-      <div><label>단위 <span class="opt">(선택)</span></label><input id="inUnit" placeholder="EA, BOX, kg, L ..." /></div>
     </div>
     <div class="row r3">
+      <div><label>단위 <span class="opt">(선택)</span></label><input id="inUnit" placeholder="EA, BOX, kg, L ..." /></div>
       <div><label>규격 <span class="opt">(선택)</span></label><input id="inSpec" placeholder="예: 20um / 1kg" /></div>
       <div><label>매입처(참고) <span class="opt">(선택)</span></label><input id="inSupplier" placeholder="예: 일본/TANAKA" /></div>
-      <div><label>별칭 <span class="opt">(콤마 구분)</span></label><input id="inAliases" placeholder="은분말, silver powder" /></div>
+    </div>
+    <div class="row r3">
+      <div style="grid-column:1 / -1"><label>별칭 <span class="opt">(콤마 구분)</span></label><input id="inAliases" placeholder="은분말, silver powder" /></div>
     </div>
 
     <div class="form-section-label">가격 전략 <span class="opt">(선택 입력)</span></div>
@@ -364,6 +367,7 @@
       <thead>
         <tr>
           <th>#</th>
+          <th>브랜드</th>
           <th>품목명</th>
           <th>카테고리</th>
           <th class="r">주 매입처</th>
@@ -592,6 +596,7 @@ function render(){
     }
     html += '<tr>' +
       '<td class="muted">' + (i+1) + '</td>' +
+      '<td>' + (item.brand ? '<span style="font-weight:600;color:var(--text)">' + esc(item.brand) + '</span>' : '<span class="muted">—</span>') + '</td>' +
       '<td><b>' + esc(item.item_name) + '</b>' + (item.unit ? ' <span class="muted" style="font-size:10px">(' + esc(item.unit) + ')</span>' : '') + '</td>' +
       '<td><span class="cat-badge ' + catClass(item.category) + '">' + esc(item.category) + '</span></td>' +
       '<td class="r muted">' + esc(qs.topBuyer || "—") + '</td>' +
@@ -626,12 +631,13 @@ function buildItemStatusPanel(item){
   var stats = GoLabItemMaster.calcItemStats(item.item_id);
   var inv = _invMap[item.item_id];
 
-  var html = '<tr class="detail-row"><td colspan="13"><div class="ip-panel">';
+  var html = '<tr class="detail-row"><td colspan="14"><div class="ip-panel">';
 
   /* ═══ Hero 섹션 (v3.10 개선) ═══ */
   var qs = _quickStats[item.item_id] || {};
   html += '<div class="ip-hero">';
   html += '<div class="ip-hero-top">';
+  if(item.brand) html += '<span class="ip-unit" style="background:#eff6ff;color:#2563eb;font-weight:700">' + esc(item.brand) + '</span>';
   html += '<span class="ip-name">' + esc(item.item_name) + '</span>';
   html += '<span class="cat-badge ' + catClass(item.category) + '">' + esc(item.category) + '</span>';
   if(item.unit) html += '<span class="ip-unit">' + esc(item.unit) + '</span>';
@@ -901,6 +907,7 @@ function saveItem(){
   var aliases = aliasRaw ? aliasRaw.split(",").map(function(s){ return s.trim(); }).filter(Boolean) : [];
   var fields = {
     item_name: name,
+    brand:     $("inBrand").value,
     category:  $("inCategory").value,
     unit:      $("inUnit").value,
     spec:      $("inSpec").value,
@@ -932,6 +939,7 @@ function startEdit(itemId){
   if(!item) return;
   editingId = item.item_id;
   $("inName").value     = item.item_name || "";
+  $("inBrand").value    = item.brand || "";
   $("inCategory").value = item.category || "일반상품";
   $("inUnit").value     = item.unit || "";
   $("inSpec").value     = item.spec || "";
@@ -964,7 +972,7 @@ function deleteItem(itemId){
 }
 
 function clearForm(){
-  $("inName").value = ""; $("inCategory").value = "일반상품"; $("inUnit").value = "";
+  $("inName").value = ""; $("inBrand").value = ""; $("inCategory").value = "일반상품"; $("inUnit").value = "";
   $("inSpec").value = ""; $("inSupplier").value = ""; $("inAliases").value = "";
   $("inNote").value = "";
   /* v3.12: 전략 가격 3종 */
@@ -1040,7 +1048,7 @@ $("btnCancel").addEventListener("click", clearForm);
 $("btnClear").addEventListener("click", clearForm);
 var _searchTimer = null;
 $("fSearch").addEventListener("input", function(){ clearTimeout(_searchTimer); _searchTimer = setTimeout(render, 200); });
-["inName","inUnit","inSpec","inSupplier","inAliases","inShippingNote"].forEach(function(id){
+["inName","inBrand","inUnit","inSpec","inSupplier","inAliases","inShippingNote"].forEach(function(id){
   $(id).addEventListener("keydown", function(e){ if(e.key==="Enter") saveItem(); });
 });
 $("filterRow").addEventListener("click", function(e){

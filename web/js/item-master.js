@@ -69,11 +69,12 @@ window.GoLabItemMaster = (function () {
     const contains = [];
     all.forEach(item => {
       const name = (item.item_name || "").toLowerCase();
+      const brand = (item.brand || "").toLowerCase();
       const spec = (item.spec || "").toLowerCase();
       const supplier = (item.supplier || "").toLowerCase();
       const aliasStr = (item.aliases || []).join(" ").toLowerCase();
       const note = (item.note || "").toLowerCase();
-      const combined = name + " " + spec + " " + supplier + " " + aliasStr + " " + note;
+      const combined = name + " " + brand + " " + spec + " " + supplier + " " + aliasStr + " " + note;
       if (name.startsWith(q)) prefix.push(item);
       else if (combined.includes(q)) contains.push(item);
     });
@@ -100,6 +101,7 @@ window.GoLabItemMaster = (function () {
     const item = {
       item_id:    crypto.randomUUID(),
       item_name:  (fields.item_name || "").trim(),
+      brand:      (fields.brand || "").trim(),
       category:   fields.category || "일반상품",
       spec:       (fields.spec || "").trim(),
       supplier:   (fields.supplier || "").trim(),
@@ -131,6 +133,7 @@ window.GoLabItemMaster = (function () {
     if (idx < 0) throw new Error("품목을 찾을 수 없습니다: " + itemId);
     const before = { ...all[idx] };
     if (fields.item_name !== undefined) all[idx].item_name = fields.item_name.trim();
+    if (fields.brand     !== undefined) all[idx].brand     = (fields.brand || "").trim();
     if (fields.category  !== undefined) all[idx].category  = fields.category;
     if (fields.spec      !== undefined) all[idx].spec      = fields.spec.trim();
     if (fields.supplier  !== undefined) all[idx].supplier  = fields.supplier.trim();
@@ -781,6 +784,8 @@ window.GoLabItemMaster = (function () {
     all.forEach(function(item) {
       if (!Array.isArray(item.aliases)) { item.aliases = []; changed = true; }
       if (item.unit === undefined)      { item.unit = ""; changed = true; }
+      /* v6.10: 브랜드 필드 기본값 보강 */
+      if (item.brand === undefined)     { item.brand = ""; changed = true; }
       if (!item.updated_at)             { item.updated_at = item.created_at || ""; changed = true; }
       /* v3.6a: 기준 가격 필드 (null = 미입력) */
       PRICE_FIELDS.forEach(function(f) {

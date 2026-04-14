@@ -236,6 +236,7 @@
       <table class="list-table">
         <thead>
           <tr>
+            <th>브랜드</th>
             <th>품목명</th>
             <th class="col-desk">카테고리</th>
             <th class="num">현재 수량</th>
@@ -250,6 +251,7 @@
         <tbody id="tbody"></tbody>
         <tfoot id="tfoot" style="display:none">
           <tr style="background:#eff6ff;font-weight:700;font-size:12px">
+            <td></td>
             <td style="text-align:right;color:var(--muted)">합계</td>
             <td class="col-desk"></td>
             <td class="num" id="sumStock">0</td>
@@ -386,6 +388,11 @@ function _getItemName(itemId) {
     ? it.item_name + " / " + it.spec
     : it.item_name;
 }
+/* v6.10: 브랜드 조회 헬퍼 — 빈 문자열 반환 (렌더 단에서 "—" 처리) */
+function _getItemBrand(itemId) {
+  var it = _itemMap[itemId];
+  return (it && it.brand) ? it.brand : "";
+}
 function _getItemCategory(itemId) {
   var it = _itemMap[itemId];
   if (!it) return "";
@@ -425,11 +432,12 @@ function render() {
     var cs = n(r.current_stock);
     var ts = n(r.target_stock);
     var name = _getItemName(r.item_id).toLowerCase();
+    var brand = _getItemBrand(r.item_id).toLowerCase();
     var cat = _getItemCategory(r.item_id).toLowerCase();
     var tag = (r.memo_tag || "").toLowerCase();
 
-    /* 검색 */
-    if (search && name.indexOf(search) === -1 && cat.indexOf(search) === -1 && tag.indexOf(search) === -1) return false;
+    /* 검색 — v6.10: 브랜드 포함 */
+    if (search && name.indexOf(search) === -1 && brand.indexOf(search) === -1 && cat.indexOf(search) === -1 && tag.indexOf(search) === -1) return false;
     /* 카테고리 */
     if (catFilter && _getItemCategory(r.item_id) !== catFilter) return false;
     /* 재고 필터 */
@@ -453,6 +461,7 @@ function render() {
     var ts = n(r.target_stock);
     var isLow = ts > 0 && cs < ts;
     var name = _getItemName(r.item_id);
+    var brand = _getItemBrand(r.item_id);
     var cat = _getItemCategory(r.item_id);
 
     sumStock += cs;
@@ -461,6 +470,7 @@ function render() {
     sumValue += holdVal;
 
     html += '<tr data-id="' + esc(r.item_id) + '">';
+    html += '<td>' + (brand ? '<span style="font-weight:600">' + esc(brand) + '</span>' : '<span style="color:var(--muted)">—</span>') + '</td>';
     html += '<td><b>' + esc(name) + '</b></td>';
     html += '<td class="col-desk">' + (cat ? '<span class="cat-badge ' + esc(cat) + '">' + esc(cat) + '</span>' : '<span style="color:var(--muted)">—</span>') + '</td>';
     html += '<td class="num' + (isLow ? ' stock-low' : '') + '">' + cs + '</td>';
