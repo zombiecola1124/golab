@@ -381,7 +381,10 @@ function _buildItemMap() {
 }
 function _getItemName(itemId) {
   var it = _itemMap[itemId];
-  return it ? it.item_name : "—";
+  if (!it) return "—";
+  return it.spec && it.spec.trim()
+    ? it.item_name + " / " + it.spec
+    : it.item_name;
 }
 function _getItemCategory(itemId) {
   var it = _itemMap[itemId];

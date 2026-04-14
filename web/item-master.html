@@ -528,7 +528,7 @@ function _buildQuickStats(){
 
 function _buildInvMap(){
   var inv = [];
-  try { inv = JSON.parse(localStorage.getItem("golab_inventory_v01") || "[]"); } catch(e) {}
+  try { inv = JSON.parse(GoLabStorage.getItem("golab_inventory_v1") || "[]"); } catch(e) {}
   var m = {};
   inv.forEach(function(it){ var iid = it.item_id || it.id; if(iid) m[iid] = { qty: Number(it.qty)||0 }; });
   _invMap = m;
