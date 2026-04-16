@@ -534,7 +534,8 @@ function _buildInvMap(){
   var inv = [];
   try { inv = JSON.parse(GoLabStorage.getItem("golab_inventory_v1") || "[]"); } catch(e) {}
   var m = {};
-  inv.forEach(function(it){ var iid = it.item_id || it.id; if(iid) m[iid] = { qty: Number(it.qty)||0 }; });
+  /* v1 스키마: current_stock (qty fallback 유지) */
+  inv.forEach(function(it){ var iid = it.item_id || it.id; if(iid) m[iid] = { qty: Number(it.current_stock) || Number(it.qty) || 0 }; });
   _invMap = m;
   return m;
 }

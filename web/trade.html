@@ -160,6 +160,7 @@
   </style>
 </head>
 <body>
+<div id="golab-auth-wall" style="position:fixed;inset:0;z-index:9999;background:#f5f7fa;display:flex;align-items:center;justify-content:center;font-family:ui-sans-serif,system-ui,-apple-system,'Segoe UI',Roboto,'Apple SD Gothic Neo','Noto Sans KR',sans-serif;opacity:0;visibility:hidden;pointer-events:none;transition:opacity .3s,visibility .3s"></div>
 <header data-title="GoLab · 구매 원장"></header>
 <script src="./js/navbar.js"></script>
 <div class="wrap">
@@ -446,6 +447,12 @@
   </div>
 </div>
 
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-app-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-auth-compat.js"></script>
+<script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
+<script src="js/firebase-config.js"></script>
+<script src="js/storage-adapter.js"></script>
+<script src="js/auth-guard.js"></script>
 <script src="js/costing.js"></script>
 <script>
 /* ═════════════════════════════════════════
@@ -456,8 +463,8 @@
 /* ── Constants ── */
 const TRADE_KEY = "golab_trade_v1";
 const AUDIT_KEY = "golab_trade_audit";
-const INV_KEY = "golab_inventory_v01";
-const HIST_KEY = "golab_inventory_inbound_history_v01";
+const INV_KEY = "golab_inventory_v1";         /* v01→v1 키 통일 */
+const HIST_KEY = "golab_inbound_logs_v1";      /* v01→v1 키 통일 */
 const ACTION_KEY = "golab_actions_v15";
 const VENDOR_KEY = "golab_vendors_v1";
 const PAGE_SIZE = 50;
@@ -904,60 +911,62 @@ function saveReceive(){
    INVENTORY UPDATE (Moving Average)
    ══════════════════════════════════════════ */
 function updateInventoryOnReceive(record, addQty){
+  /* v1 스키마 기준 — GoLabStorage 경유 */
   let inv = [];
-  try{ inv = JSON.parse(localStorage.getItem(INV_KEY)||"[]"); }catch{}
+  try{ inv = JSON.parse(GoLabStorage.getItem(INV_KEY)||"[]"); }catch{}
   let hist = [];
-  try{ hist = JSON.parse(localStorage.getItem(HIST_KEY)||"[]"); }catch{}
+  try{ hist = JSON.parse(GoLabStorage.getItem(HIST_KEY)||"[]"); }catch{}
 
-  // Find or create inventory item
-  let target = inv.find(x => x.id === record.itemId)
-            || inv.find(x => (x.name||"").trim() === (record.itemName||"").trim());
+  /* item_id 기준 검색 (v1은 품목명 직접 보유하지 않으므로 item_id만 사용) */
+  let target = inv.find(x => x.item_id === record.itemId);
 
   if(!target){
+    /* v1 스키마로 신규 재고 레코드 생성 */
     target = {
-      id: record.itemId || crypto.randomUUID(),
-      name: record.itemName,
-      spec: record.unit,
-      vendor: record.vendor,
-      buyPrice: 0,
-      qty: 0,
-      minQty: 0,
-      note: "",
-      updatedAt: new Date().toISOString()
+      item_id: record.itemId || crypto.randomUUID(),
+      current_stock: 0,
+      reserved_stock: 0,
+      last_buy_price: 0,
+      avg_unit_price: 0,
+      target_stock: 0,
+      first_in_date: todayStr(),
+      memo_tag: "",
+      lead_time_days: 0,
+      updated_at: new Date().toISOString()
     };
     inv.unshift(target);
   }
 
-  // 이동평균 단가 계산 (공통 함수 — js/costing.js)
-  // 반올림 규칙: Math.round (KRW 1원 단위) — costing.js 내부에서 적용
+  /* 이동평균 단가 계산 (공통 함수 — js/costing.js) */
+  const prevQty = n(target.current_stock);
+  const prevAvg = n(target.avg_unit_price) || n(target.last_buy_price);
   const avg = GoLabCosting.calcMovingAverageUnitCost(
-    n(target.qty), n(target.buyPrice), addQty, n(record.buyUnitPrice)
+    prevQty, prevAvg, addQty, n(record.buyUnitPrice)
   );
-  target.buyPrice = avg.newAvgCost;
-  target.qty = avg.newQty;
+  const prevStock = target.current_stock;
+  const prevAvgPrice = target.avg_unit_price;
+  target.last_buy_price = n(record.buyUnitPrice);
+  target.avg_unit_price = avg.newAvgCost;
+  target.current_stock = avg.newQty;
+  target.updated_at = new Date().toISOString();
 
-  const stamp = `입고 +${newQty}${record.unit} from ${record.vendor} (${todayStr()})`;
-  target.note = (target.note ? (target.note + " | ") : "") + stamp;
-  target.updatedAt = new Date().toISOString();
-
-  // Record history
+  /* v1 입고 로그 스키마로 기록 */
   hist.unshift({
-    at: new Date().toISOString(),
-    batchId: "",
-    batchName: "구매원장 입고처리",
-    date: todayStr(),
-    inventoryItemId: target.id,
-    name: record.itemName,
-    qty: newQty,
-    unit: record.unit,
-    unitPriceKrw: unitPrice,
-    addedValueKrw: newQty * unitPrice,
-    memo: record.memo || ""
+    id: crypto.randomUUID(),
+    item_id: target.item_id,
+    qty: addQty,
+    unit_cost: n(record.buyUnitPrice),
+    prev_stock: prevStock,
+    prev_avg_unit_price: prevAvgPrice,
+    new_stock: avg.newQty,
+    new_avg_unit_price: avg.newAvgCost,
+    note: record.memo || "",
+    created_at: new Date().toISOString()
   });
   while(hist.length > 500) hist.pop();
 
-  localStorage.setItem(INV_KEY, JSON.stringify(inv));
-  localStorage.setItem(HIST_KEY, JSON.stringify(hist));
+  GoLabStorage.setItem(INV_KEY, JSON.stringify(inv));
+  GoLabStorage.setItem(HIST_KEY, JSON.stringify(hist));
 }
 
 /* ══════════════════════════════════════════
@@ -1352,9 +1361,10 @@ async function sampleDryRun() {
 
   // idempotency 대조
   const importedIds = loadImportedIds();
-  const inv = JSON.parse(localStorage.getItem(INV_KEY) || "[]");
-  const invIdSet = new Set(inv.map(x => x.id));
-  const invNameSet = new Set(inv.map(x => (x.name || "").trim()));
+  /* v1 스키마 — GoLabStorage 경유 */
+  const inv = JSON.parse(GoLabStorage.getItem(INV_KEY) || "[]");
+  const invIdSet = new Set(inv.map(x => x.item_id));
+  const invNameSet = new Set(); /* v1은 품목명 미보유 — item_id 기준만 사용 */
 
   // 시뮬레이션 결과 집계
   const result = {
@@ -1379,16 +1389,14 @@ async function sampleDryRun() {
     const hash = sampleDupKey(r);
     if (importedIds.has(hash)) { result.dupSkip++; return; }
 
-    // 재고 매칭 시뮬레이션
+    /* v1 스키마 기준 재고 매칭 시뮬레이션 */
     const itemCode = normStr(r.itemId || r.partNo);
     const matchResult = GoLabCosting.matchOrRequestCreateItem(
-      new Set([...invIdSet, ...simInv.map(x => x.id)]),
+      new Set([...invIdSet, ...simInv.map(x => x.item_id)]),
       itemCode
     );
 
-    // 이름 매칭도 fallback 체크
-    const nameMatch = simInv.find(x => (x.name || "").trim() === normStr(r.itemName));
-    const isExisting = matchResult.action === "UPDATE_EXISTING" || !!nameMatch;
+    const isExisting = matchResult.action === "UPDATE_EXISTING";
 
     if (isExisting) {
       result.existingMatch.push({
@@ -1398,16 +1406,15 @@ async function sampleDryRun() {
         unitPrice: r.buyUnitPrice
       });
 
-      // 이동평균 시뮬레이션 (가상 재고에 적용)
-      const target = simInv.find(x => x.id === r.itemId)
-                  || simInv.find(x => (x.name || "").trim() === normStr(r.itemName));
+      /* v1 필드명: current_stock, avg_unit_price */
+      const target = simInv.find(x => x.item_id === r.itemId);
       if (target && normNum(r.qty) > 0) {
-        const before = { qty: n(target.qty), avg: n(target.buyPrice) };
+        const before = { qty: n(target.current_stock), avg: n(target.avg_unit_price) || n(target.last_buy_price) };
         const avg = GoLabCosting.calcMovingAverageUnitCost(
           before.qty, before.avg, normNum(r.qty), normNum(r.buyUnitPrice)
         );
-        target.qty = avg.newQty;
-        target.buyPrice = avg.newAvgCost;
+        target.current_stock = avg.newQty;
+        target.avg_unit_price = avg.newAvgCost;
         result.maSimulation.push({
           itemId: r.itemId,
           itemName: (r.itemName || "").slice(0, 28),
@@ -1418,15 +1425,15 @@ async function sampleDryRun() {
         });
       }
     } else {
-      // 2️⃣ 신규 품목 — confirm 안 띄우고 목록에만 추가
+      /* 신규 품목 — confirm 안 띄우고 목록에만 추가 */
       result.newItems.push({
         itemId: r.itemId,
         itemName: (r.itemName || "").slice(0, 40),
         qty: r.qty,
         unitPrice: r.buyUnitPrice
       });
-      // 시뮬레이션용 가상 추가 (다음 행 매칭용)
-      simInv.push({ id: r.itemId, name: r.itemName, qty: 0, buyPrice: 0 });
+      /* v1 스키마로 시뮬레이션용 가상 추가 */
+      simInv.push({ item_id: r.itemId, current_stock: 0, avg_unit_price: 0, last_buy_price: 0 });
     }
   });
 
@@ -1499,8 +1506,9 @@ function sampleCommit() {
   if (!confirm(`DRY_RUN 결과를 확인했습니까?\n${raw.length}건을 실제 반영합니다.`)) return;
 
   const importedIds = loadImportedIds();
-  let inv = JSON.parse(localStorage.getItem(INV_KEY) || "[]");
-  let hist = JSON.parse(localStorage.getItem(HIST_KEY) || "[]");
+  /* v1 스키마 — GoLabStorage 경유 */
+  let inv = JSON.parse(GoLabStorage.getItem(INV_KEY) || "[]");
+  let hist = JSON.parse(GoLabStorage.getItem(HIST_KEY) || "[]");
   const existing = load(); // golab_trade_v1
 
   // 결과 집계
@@ -1550,12 +1558,11 @@ function sampleCommit() {
       return;
     }
 
-    // 재고 품목 찾기
-    let target = inv.find(x => x.id === rec.itemId)
-              || inv.find(x => (x.name || "").trim() === (rec.itemName || "").trim());
+    /* v1 스키마: item_id 기준 검색 */
+    let target = inv.find(x => x.item_id === rec.itemId);
 
     if (!target) {
-      // 2️⃣ 신규 품목 — COMMIT에서만 confirm
+      /* 신규 품목 — COMMIT에서만 confirm */
       const approved = confirm(
         `신규 품목입니다. 등록하시겠습니까?\n\n` +
         `품목코드: ${rec.itemId}\n` +
@@ -1571,17 +1578,18 @@ function sampleCommit() {
         return;
       }
 
-      // 신규 등록
+      /* v1 스키마로 신규 등록 */
       target = {
-        id: rec.itemId || crypto.randomUUID(),
-        name: rec.itemName,
-        spec: rec.unit,
-        vendor: rec.vendor,
-        buyPrice: 0,
-        qty: 0,
-        minQty: 0,
-        note: "",
-        updatedAt: new Date().toISOString()
+        item_id: rec.itemId || crypto.randomUUID(),
+        current_stock: 0,
+        reserved_stock: 0,
+        last_buy_price: 0,
+        avg_unit_price: 0,
+        target_stock: 0,
+        first_in_date: todayStr(),
+        memo_tag: "",
+        lead_time_days: 0,
+        updated_at: new Date().toISOString()
       };
       inv.unshift(target);
       result.invNewApproved++;
@@ -1589,30 +1597,29 @@ function sampleCommit() {
       result.invExisting++;
     }
 
-    // 이동평균 계산 (공통 함수 — Math.round 내장)
+    /* 이동평균 계산 (공통 함수 — Math.round 내장) */
+    const prevStock = n(target.current_stock);
+    const prevAvg = n(target.avg_unit_price) || n(target.last_buy_price);
     const avg = GoLabCosting.calcMovingAverageUnitCost(
-      n(target.qty), n(target.buyPrice), qty, unitPrice
+      prevStock, prevAvg, qty, unitPrice
     );
-    target.buyPrice = avg.newAvgCost;
-    target.qty = avg.newQty;
-    target.updatedAt = new Date().toISOString();
+    target.last_buy_price = unitPrice;
+    target.avg_unit_price = avg.newAvgCost;
+    target.current_stock = avg.newQty;
+    target.updated_at = new Date().toISOString();
 
-    const stamp = `샘플입고 +${qty}${rec.unit} from ${rec.vendor} (${todayStr()})`;
-    target.note = (target.note ? (target.note + " | ") : "") + stamp;
-
-    // 입고 이력 기록
+    /* v1 입고 로그 스키마로 기록 */
     hist.unshift({
-      at: new Date().toISOString(),
-      batchId: "SAMPLE_IMPORT",
-      batchName: "샘플 10건 Import",
-      date: todayStr(),
-      inventoryItemId: target.id,
-      name: rec.itemName,
+      id: crypto.randomUUID(),
+      item_id: target.item_id,
       qty: qty,
-      unit: rec.unit,
-      unitPriceKrw: unitPrice,
-      addedValueKrw: qty * unitPrice,
-      memo: rec.memo || ""
+      unit_cost: unitPrice,
+      prev_stock: prevStock,
+      prev_avg_unit_price: prevAvg,
+      new_stock: avg.newQty,
+      new_avg_unit_price: avg.newAvgCost,
+      note: rec.memo || "",
+      created_at: new Date().toISOString()
     });
 
     result.details.push({
@@ -1626,12 +1633,12 @@ function sampleCommit() {
     importedIds.add(hash);
   });
 
-  // 저장
+  /* 저장 — GoLabStorage 경유 */
   while (hist.length > 500) hist.pop();
   const merged = [...newRecords, ...existing];
   save(merged);
-  localStorage.setItem(INV_KEY, JSON.stringify(inv));
-  localStorage.setItem(HIST_KEY, JSON.stringify(hist));
+  GoLabStorage.setItem(INV_KEY, JSON.stringify(inv));
+  GoLabStorage.setItem(HIST_KEY, JSON.stringify(hist));
   saveImportedIds(importedIds);
 
   // audit 기록
@@ -1720,27 +1727,29 @@ function seedTestInventory() {
     { id:"item-c61ce647", name:"3M 스카치 슈퍼 35+ 비닐 전기 절연 테이프 레드" }
   ];
 
-  let inv = JSON.parse(localStorage.getItem(INV_KEY) || "[]");
-  const existingIds = new Set(inv.map(x => x.id));
+  /* v1 스키마 — GoLabStorage 경유 */
+  let inv = JSON.parse(GoLabStorage.getItem(INV_KEY) || "[]");
+  const existingIds = new Set(inv.map(x => x.item_id));
   let added = 0;
 
   seedItems.forEach(s => {
-    if (existingIds.has(s.id)) return; // 중복 방지
+    if (existingIds.has(s.id)) return; /* 중복 방지 */
     inv.unshift({
-      id: s.id,
-      name: s.name,
-      spec: "ea",
-      vendor: "SEED(테스트용)",
-      buyPrice: 0,
-      qty: 0,
-      minQty: 0,
-      note: "DEV seed — 테스트용 빈 껍데기",
-      updatedAt: new Date().toISOString()
+      item_id: s.id,
+      current_stock: 0,
+      reserved_stock: 0,
+      last_buy_price: 0,
+      avg_unit_price: 0,
+      target_stock: 0,
+      first_in_date: todayStr(),
+      memo_tag: "DEV seed — 테스트용",
+      lead_time_days: 0,
+      updated_at: new Date().toISOString()
     });
     added++;
   });
 
-  localStorage.setItem(INV_KEY, JSON.stringify(inv));
+  GoLabStorage.setItem(INV_KEY, JSON.stringify(inv));
   alert(`Seed 완료: ${added}건 등록 (기존 중복 ${seedItems.length - added}건 스킵)`);
 }
 

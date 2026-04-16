@@ -550,7 +550,7 @@ window.GoLabItemMaster = (function () {
 
     // 매출: golab_sales_v1 — item_id 매칭 → salesDate 내림차순 최신 1건
     try {
-      const sales = JSON.parse(localStorage.getItem("golab_sales_v1") || "[]");
+      const sales = JSON.parse(GoLabStorage.getItem("golab_sales_v1") || "[]");
       const matched = sales.filter(s => s.item_id === itemId);
       matched.sort((a, b) => (b.salesDate || "").localeCompare(a.salesDate || ""));
       if (matched.length > 0) {
@@ -566,7 +566,7 @@ window.GoLabItemMaster = (function () {
 
     // 매입: golab_price_history_v1 — item_id 매칭 → date 내림차순 최신 1건
     try {
-      const ph = JSON.parse(localStorage.getItem("golab_price_history_v1") || "[]");
+      const ph = JSON.parse(GoLabStorage.getItem("golab_price_history_v1") || "[]");
       const matched = ph.filter(p => p.item_id === itemId);
       matched.sort((a, b) => (b.date || "").localeCompare(a.date || ""));
       if (matched.length > 0) {
@@ -634,34 +634,26 @@ window.GoLabItemMaster = (function () {
     let created = 0;
     const existing = master.length;
 
-    /* Phase 1: 재고(inventory) → 마스터 */
-    const INV_KEY = "golab_inventory_v01";
+    /* Phase 1: 재고(inventory) → 마스터
+       v1 스키마에는 name/spec/vendor 없음 (item_id만 보유).
+       이미 item_id로 item-master에 연결되어 있으므로
+       v1에서 신규 마스터 레코드를 생성할 수 없다 (정상 동작).
+       item-master가 품목명의 SSoT이므로 이 Phase는 v1에서 사실상 no-op. */
+    const INV_KEY = "golab_inventory_v1";
     let inv = [];
-    try { inv = JSON.parse(localStorage.getItem(INV_KEY) || "[]"); } catch {}
+    try { inv = JSON.parse(GoLabStorage.getItem(INV_KEY) || "[]"); } catch {}
 
     inv.forEach(it => {
-      const nameKey = (it.name || "").trim().toLowerCase();
-      if (!nameKey) return;
-      if (masterById.has(it.id) || masterByName.has(nameKey)) return;
-      const m = {
-        item_id:    it.id, // 기존 UUID 재사용!
-        item_name:  (it.name || "").trim(),
-        category:   CATEGORY_MAP[it.type] || "일반상품",
-        spec:       (it.spec || "").trim(),
-        supplier:   (it.vendor || "").trim(),
-        note:       "",
-        created_at: new Date().toISOString()
-      };
-      master.push(m);
-      masterById.set(m.item_id, m);
-      masterByName.set(nameKey, m);
-      created++;
+      /* v1은 item_id가 PK — 이미 마스터에 존재하면 스킵 */
+      if (!it.item_id) return;
+      if (masterById.has(it.item_id)) return;
+      /* v1은 name 미보유 → 신규 마스터 생성 불가, 스킵 */
     });
 
     /* Phase 2: 매입(purchases) → 마스터에 없는 품목 */
     const PUR_KEY = "golab_purchases_v2";
     let batches = [];
-    try { batches = JSON.parse(localStorage.getItem(PUR_KEY) || "[]"); } catch {}
+    try { batches = JSON.parse(GoLabStorage.getItem(PUR_KEY) || "[]"); } catch {}
 
     batches.forEach(batch => {
       (batch.items || []).forEach(item => {
@@ -689,7 +681,7 @@ window.GoLabItemMaster = (function () {
     /* Phase 3: 매출(sales) → 마스터에 없는 품목 */
     const SALES_KEY = "golab_sales_v1";
     let sales = [];
-    try { sales = JSON.parse(localStorage.getItem(SALES_KEY) || "[]"); } catch {}
+    try { sales = JSON.parse(GoLabStorage.getItem(SALES_KEY) || "[]"); } catch {}
 
     sales.forEach(rec => {
       const name = (rec.itemName || "").trim();
@@ -724,7 +716,7 @@ window.GoLabItemMaster = (function () {
         if (m) { item.item_id = m.item_id; bfPurchases++; purChanged = true; }
       });
     });
-    if (purChanged) localStorage.setItem(PUR_KEY, JSON.stringify(batches));
+    if (purChanged) GoLabStorage.setItem(PUR_KEY, JSON.stringify(batches));
 
     // 매출 backfill
     sales.forEach(rec => {
@@ -733,32 +725,27 @@ window.GoLabItemMaster = (function () {
       const m = masterByName.get(nameKey);
       if (m) { rec.item_id = m.item_id; bfSales++; salesChanged = true; }
     });
-    if (salesChanged) localStorage.setItem(SALES_KEY, JSON.stringify(sales));
+    if (salesChanged) GoLabStorage.setItem(SALES_KEY, JSON.stringify(sales));
 
-    // 가격 기록 backfill
+    /* 가격 기록 backfill */
     const PH_KEY = "golab_price_history_v1";
     let ph = [];
-    try { ph = JSON.parse(localStorage.getItem(PH_KEY) || "[]"); } catch {}
+    try { ph = JSON.parse(GoLabStorage.getItem(PH_KEY) || "[]"); } catch {}
     ph.forEach(rec => {
       if (rec.item_id) return;
       const nameKey = (rec.productName || "").trim().toLowerCase();
       const m = masterByName.get(nameKey);
       if (m) { rec.item_id = m.item_id; bfPH++; phChanged = true; }
     });
-    if (phChanged) localStorage.setItem(PH_KEY, JSON.stringify(ph));
+    if (phChanged) GoLabStorage.setItem(PH_KEY, JSON.stringify(ph));
 
-    // 재고에 item_id 추가
+    /* 재고 backfill — v1은 item_id가 PK이므로 추가 backfill 불필요.
+       혹시 item_id 없는 레코드가 있으면 제거 대상 플래그만 남긴다. */
     let invChanged = false;
     inv.forEach(it => {
-      if (it.item_id) return;
-      if (masterById.has(it.id)) { it.item_id = it.id; invChanged = true; }
-      else {
-        const nameKey = (it.name || "").trim().toLowerCase();
-        const m = masterByName.get(nameKey);
-        if (m) { it.item_id = m.item_id; invChanged = true; }
-      }
+      if (!it.item_id) { invChanged = true; } /* item_id 없는 v1 레코드는 비정상 */
     });
-    if (invChanged) localStorage.setItem(INV_KEY, JSON.stringify(inv));
+    if (invChanged) GoLabStorage.setItem(INV_KEY, JSON.stringify(inv));
 
     /* 마스터 저장 */
     _save(master);
@@ -1094,7 +1081,7 @@ window.GoLabItemMaster = (function () {
 
     /* 1) golab_purchases_v2 배치 스캔 → item_id 매칭 → price×exchangeRate */
     try {
-      var batches = JSON.parse(localStorage.getItem("golab_purchases_v2") || "[]");
+      var batches = JSON.parse(GoLabStorage.getItem("golab_purchases_v2") || "[]");
       batches.forEach(function(batch) {
         var batchDate = batch.date || "";
         var ex = Number(batch.exchangeRate) || 1;
@@ -1118,7 +1105,7 @@ window.GoLabItemMaster = (function () {
 
     /* 2) golab_price_history_v1 스캔 → item_id 매칭 → price×fxRef */
     try {
-      var ph = JSON.parse(localStorage.getItem("golab_price_history_v1") || "[]");
+      var ph = JSON.parse(GoLabStorage.getItem("golab_price_history_v1") || "[]");
       ph.forEach(function(rec) {
         if (rec.item_id !== itemId) return;
         var dt = rec.date || "";

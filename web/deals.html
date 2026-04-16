@@ -3295,15 +3295,15 @@ function toggleDetail(tid) {
    v6: 재고↔거래 연동 — Phase 1
    ══════════════════════════════════════════════════════ */
 var _STOCK_LOG_KEY = "golab_stock_log_v1";
-var _INV_KEY = "golab_inventory_v01";
+var _INV_KEY = "golab_inventory_v1";          /* v01→v1 키 통일 */
 
-/* 재고 목록 로드/저장 */
+/* 재고 목록 로드/저장 — GoLabStorage 경유 */
 function _loadInv() {
-  try { return JSON.parse(localStorage.getItem(_INV_KEY) || "[]"); }
+  try { return JSON.parse(GoLabStorage.getItem(_INV_KEY) || "[]"); }
   catch(e) { return []; }
 }
 function _saveInv(arr) {
-  localStorage.setItem(_INV_KEY, JSON.stringify(arr));
+  GoLabStorage.setItem(_INV_KEY, JSON.stringify(arr));
 }
 
 /* stock_log 로드/저장 */
@@ -3360,10 +3360,11 @@ function _applyStockDeduction(trade) {
     }
     if (!invItem) return; /* 재고 레코드 없음 → 스킵 */
 
-    var qtyBefore = TE.n(invItem.qty);
+    /* v1 스키마: current_stock / updated_at */
+    var qtyBefore = TE.n(invItem.current_stock);
     var qtyChange = -Math.abs(TE.n(it.qty)); /* 판매 = 차감 */
-    invItem.qty = qtyBefore + qtyChange;
-    invItem.updatedAt = new Date().toISOString();
+    invItem.current_stock = qtyBefore + qtyChange;
+    invItem.updated_at = new Date().toISOString();
     changed = true;
 
     /* stock_log 기록 */
@@ -3375,7 +3376,7 @@ function _applyStockDeduction(trade) {
       tx_type:    "sale_out",
       qty_before: qtyBefore,
       qty_change: qtyChange,
-      qty_after:  invItem.qty,
+      qty_after:  invItem.current_stock,
       created_at: new Date().toISOString()
     });
   });
@@ -3408,10 +3409,11 @@ function _reverseStockForDeal(dealId) {
     }
     if (!invItem) return; /* 재고 레코드 삭제된 경우 스킵 */
 
-    var qtyBefore = TE.n(invItem.qty);
+    /* v1 스키마: current_stock / updated_at */
+    var qtyBefore = TE.n(invItem.current_stock);
     var qtyRestore = Math.abs(orig.qty_change); /* 차감의 절대값 = 복원량 */
-    invItem.qty = qtyBefore + qtyRestore;
-    invItem.updatedAt = new Date().toISOString();
+    invItem.current_stock = qtyBefore + qtyRestore;
+    invItem.updated_at = new Date().toISOString();
 
     /* 원본 sale_out에 복원 완료 마커 */
     orig._reversed = true;
@@ -3425,7 +3427,7 @@ function _reverseStockForDeal(dealId) {
       tx_type:    "cancel_reverse",
       qty_before: qtyBefore,
       qty_change: qtyRestore,
-      qty_after:  invItem.qty,
+      qty_after:  invItem.current_stock,
       created_at: new Date().toISOString()
     });
   });
@@ -3456,10 +3458,11 @@ function _reverseStockForEdit(dealId) {
     }
     if (!invItem) return;
 
-    var qtyBefore = TE.n(invItem.qty);
+    /* v1 스키마: current_stock / updated_at */
+    var qtyBefore = TE.n(invItem.current_stock);
     var qtyRestore = Math.abs(orig.qty_change);
-    invItem.qty = qtyBefore + qtyRestore;
-    invItem.updatedAt = new Date().toISOString();
+    invItem.current_stock = qtyBefore + qtyRestore;
+    invItem.updated_at = new Date().toISOString();
 
     /* 원본 sale_out에 복원 완료 마커 */
     orig._reversed = true;
@@ -3472,7 +3475,7 @@ function _reverseStockForEdit(dealId) {
       tx_type:    "edit_reverse",
       qty_before: qtyBefore,
       qty_change: qtyRestore,
-      qty_after:  invItem.qty,
+      qty_after:  invItem.current_stock,
       created_at: new Date().toISOString()
     });
   });
@@ -3505,7 +3508,8 @@ function _checkStockBeforeSave(validItems, tradeType) {
       noRecordNames.push("• " + (it.name || "") + " (재고 레코드 없음)");
       return;
     }
-    var currentQty = TE.n(invItem.qty);
+    /* v1 스키마: current_stock */
+    var currentQty = TE.n(invItem.current_stock);
     var needQty = TE.n(it.qty);
     if (currentQty < needQty) {
       shortageNames.push("• " + (it.name || "") + " (현재 " + currentQty + " / 필요 " + needQty + ")");

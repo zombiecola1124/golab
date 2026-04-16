@@ -32,14 +32,19 @@ window.GoLabOpportunity = (function () {
   /* ── 유틸 ── */
   function n(v, fb) { var x = Number(v); return Number.isFinite(x) ? x : (fb || 0); }
 
+  /* GoLabStorage 경유 (Firestore 동기화 대상 키 포함) */
   function safeJSON(key) {
-    try { return JSON.parse(localStorage.getItem(key) || "[]"); }
-    catch (e) { return []; }
+    try {
+      var store = typeof GoLabStorage !== "undefined" ? GoLabStorage : localStorage;
+      return JSON.parse(store.getItem(key) || "[]");
+    } catch (e) { return []; }
   }
 
   function safeJSONObj(key) {
-    try { return JSON.parse(localStorage.getItem(key) || "{}"); }
-    catch (e) { return {}; }
+    try {
+      var store = typeof GoLabStorage !== "undefined" ? GoLabStorage : localStorage;
+      return JSON.parse(store.getItem(key) || "{}");
+    } catch (e) { return {}; }
   }
 
   function todayStr() { return new Date().toISOString().substring(0, 10); }
@@ -178,19 +183,35 @@ window.GoLabOpportunity = (function () {
   }
 
   /* ══════════════════════════════════════════
-     4️⃣ 현재 재고 수준 (golab_inventory_v01)
+     4️⃣ 현재 재고 수준 (golab_inventory_v1)
+     v1 스키마: item_id, current_stock, avg_unit_price, last_buy_price
+     name은 item-master에서 join
      ══════════════════════════════════════════ */
   function buildStockMap() {
-    var stockMap = new Map(); // name → { qty, buyPrice }
+    var stockMap = new Map(); /* name → { qty, buyPrice } */
     try {
-      var inv = safeJSON("golab_inventory_v01");
+      var inv = safeJSON("golab_inventory_v1");
+      /* item-master에서 이름 조회용 맵 */
+      var masterItems = (typeof GoLabItemMaster !== "undefined") ? GoLabItemMaster.loadAll() : [];
+      var nameById = {};
+      masterItems.forEach(function(m) { nameById[m.item_id] = m.item_name || ""; });
+
+      /* GoLabItemMaster 미로드 시 item-master localStorage에서 직접 로드 */
+      if (masterItems.length === 0) {
+        try {
+          var store = typeof GoLabStorage !== "undefined" ? GoLabStorage : localStorage;
+          var raw = JSON.parse(store.getItem("golab_item_master_v1") || "[]");
+          raw.forEach(function(m) { nameById[m.item_id] = m.item_name || ""; });
+        } catch(e) {}
+      }
+
       inv.forEach(function (item) {
-        if (item.name) {
-          stockMap.set(item.name, {
-            qty: n(item.qty),
-            buyPrice: n(item.buyPrice)
-          });
-        }
+        var itemName = nameById[item.item_id] || "";
+        if (!itemName) return; /* 마스터에 없으면 스킵 */
+        stockMap.set(itemName, {
+          qty: n(item.current_stock),
+          buyPrice: n(item.avg_unit_price) || n(item.last_buy_price)
+        });
       });
     } catch (e) {
       console.warn("[Opportunity] 재고 로드 실패:", e);
@@ -224,7 +245,8 @@ window.GoLabOpportunity = (function () {
 
     // 보조 데이터 저장 (golab_items_meta_v1에만)
     try {
-      localStorage.setItem("golab_items_meta_v1", JSON.stringify(meta));
+      var store = typeof GoLabStorage !== "undefined" ? GoLabStorage : localStorage;
+      store.setItem("golab_items_meta_v1", JSON.stringify(meta));
     } catch (e) {
       console.warn("[Opportunity] meta 저장 실패:", e);
     }

@@ -321,7 +321,7 @@ const AUDIT_KEY = "golab_sales_audit";
 /* ── 매출 Import 전용 키 (데이터 저장 분리) ── */
 const SALES_IMPORT_RAW_KEY = "golab_sales_import_raw_log";
 const SALES_IMPORTED_IDS_KEY = "golab_sales_imported_ids";
-const INV_KEY = "golab_inventory_v01";
+const INV_KEY = "golab_inventory_v1";         /* v01→v1 키 통일 */
 const IS_DEV = new URLSearchParams(location.search).has("dev");
 const PAGE_SIZE = 50;
 const DEBOUNCE_MS = 300;
@@ -700,19 +700,25 @@ function clearForm(){
 /* ══════════════════════════════════════════
    역마진/저마진 경고 시스템
    ══════════════════════════════════════════ */
-/** 원가 조회 — costOverride → 재고 avgCost → null */
+/** 원가 조회 — costOverride → 재고 avg_unit_price → last_buy_price → null */
 function _lookupUnitCost(itemId, costOverrideVal){
-  // 1순위: 수동 원가 override
+  /* 1순위: 수동 원가 override */
   if(costOverrideVal != null && costOverrideVal !== ""){
     const co = n(costOverrideVal);
     if(co >= 0) return {cost:co, source:"수동입력"};
   }
-  // 2순위: 재고 마스터의 이동평균 단가
+  /* 2순위: 재고 마스터의 이동평균 단가 (v1 스키마 — GoLabStorage 경유) */
   if(itemId){
     try{
-      const inv = JSON.parse(localStorage.getItem(INV_KEY)||"[]");
+      const inv = JSON.parse(GoLabStorage.getItem(INV_KEY)||"[]");
       const match = inv.find(i=>i.item_id===itemId);
-      if(match && n(match.avgCost)>0) return {cost:n(match.avgCost), source:"재고 평균"};
+      if(match){
+        /* avg_unit_price 우선, fallback last_buy_price */
+        const avg = n(match.avg_unit_price);
+        if(avg > 0) return {cost:avg, source:"재고 평균"};
+        const lbp = n(match.last_buy_price);
+        if(lbp > 0) return {cost:lbp, source:"최근 매입가"};
+      }
     }catch{}
   }
   return {cost:null, source:"없음"};
@@ -986,7 +992,8 @@ async function salesDryRun() {
   localStorage.setItem(SALES_IMPORT_RAW_KEY, JSON.stringify(JSON.parse(JSON.stringify(raw))));
 
   const importedIds = loadSalesImportedIds();
-  const inv = JSON.parse(localStorage.getItem(INV_KEY) || "[]");
+  /* v1 스키마 — GoLabStorage 경유 */
+  const inv = JSON.parse(GoLabStorage.getItem(INV_KEY) || "[]");
 
   const result = {
     total: raw.length,
@@ -1027,12 +1034,12 @@ async function salesDryRun() {
     // 마진 시뮬 (재고 avgPrice 조회)
     const itemCode = normUpper(r.itemCode || r.partNo || "");
     const itemName = normStr(r.itemName || "");
+    /* v1 스키마: item_id 기준 검색 */
     let invItem = null;
-    if (itemCode) invItem = inv.find(x => x.id === itemCode);
-    if (!invItem && itemName) invItem = inv.find(x => normStr(x.name || "").indexOf(itemName.slice(0, 10)) >= 0);
+    if (itemCode) invItem = inv.find(x => x.item_id === itemCode);
 
     if (invItem) {
-      const avgPrice = n(invItem.buyPrice);
+      const avgPrice = n(invItem.avg_unit_price) || n(invItem.last_buy_price);
       const margin = (unitPrice - avgPrice) * qty;
       const rate = unitPrice > 0 ? ((unitPrice - avgPrice) / unitPrice * 100).toFixed(1) : "N/A";
       result.marginPreview.push({ row: rowId, vendor: normStr(r.vendor), item: itemName.slice(0, 25), qty, unitPrice, avgPrice, margin, rate });

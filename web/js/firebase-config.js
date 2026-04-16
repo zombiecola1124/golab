@@ -45,7 +45,9 @@ window._GoLabFirebase = (function () {
     "golab_item_master_v1":      "items",
     "golab_partner_master_v1":   "partners",
     "golab_actions_v15":         "actions",
-    "golab_channel_master_v1":   "channels"
+    "golab_channel_master_v1":   "channels",
+    "golab_inventory_v1":        "inventory",       /* v01→v1 통일 후 추가 */
+    "golab_inbound_logs_v1":     "inbound_logs"     /* v01→v1 통일 후 추가 */
   };
 
   /* 버전 태그 추출 (키 이름에서) */
@@ -54,7 +56,9 @@ window._GoLabFirebase = (function () {
     "golab_item_master_v1":      "v1",
     "golab_partner_master_v1":   "v1",
     "golab_actions_v15":         "v15",
-    "golab_channel_master_v1":   "v1"
+    "golab_channel_master_v1":   "v1",
+    "golab_inventory_v1":        "v1",              /* 추가 */
+    "golab_inbound_logs_v1":     "v1"               /* 추가 */
   };
 
   /* ══════════════════════════════════════

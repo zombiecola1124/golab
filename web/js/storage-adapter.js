@@ -31,7 +31,9 @@ window.GoLabStorage = (function () {
     "golab_item_master_v1",
     "golab_partner_master_v1",
     "golab_actions_v15",
-    "golab_channel_master_v1"
+    "golab_channel_master_v1",
+    "golab_inventory_v1",          /* v01→v1 키 통일 후 Firestore 동기화 추가 */
+    "golab_inbound_logs_v1"        /* v01→v1 키 통일 후 Firestore 동기화 추가 */
   ];
 
   /** 내부 메타 키 (StorageAdapter 자체 상태 저장용) */

@@ -228,6 +228,31 @@
     .inbound-modal .im-btns .save:disabled{opacity:.4;cursor:not-allowed}
     .inbound-modal .im-btns .secondary{background:var(--chip)}
     .inbound-modal .im-btns .secondary:hover{background:rgba(0,0,0,.06)}
+    .inbound-modal select{outline:none;transition:border-color .15s}
+    .inbound-modal select:focus{border-color:var(--point)}
+
+    /* v7.4: 통합 입출고 히스토리 모달 */
+    .history-modal-back{position:fixed;inset:0;background:rgba(0,0,0,.45);z-index:210;display:none;align-items:center;justify-content:center;padding:20px}
+    .history-modal-back.open{display:flex}
+    .history-modal{width:min(700px,96vw);max-height:92vh;background:var(--card);border-radius:12px;box-shadow:0 20px 50px rgba(0,0,0,.22);display:flex;flex-direction:column}
+    .history-modal .hm-top{display:flex;justify-content:space-between;align-items:center;padding:14px 18px;border-bottom:1px solid var(--line)}
+    .history-modal .hm-top h3{margin:0;font-size:14px;font-weight:800}
+    .history-modal .hm-summary{padding:12px 18px;background:#f8fafc;border-bottom:1px solid var(--line);font-size:12px;display:flex;gap:16px;align-items:center;flex-wrap:wrap}
+    .history-modal .hm-body{overflow-y:auto;flex:1;padding:0}
+    .hm-table{width:100%;border-collapse:collapse;font-size:12px}
+    .hm-table th{background:#f8fafc;color:var(--muted);text-align:left;padding:8px 12px;position:sticky;top:0;white-space:nowrap;border-bottom:1px solid var(--line);font-size:11px}
+    .hm-table td{padding:8px 12px;border-bottom:1px solid rgba(0,0,0,.04);vertical-align:middle}
+    .hm-table .num{text-align:right;font-variant-numeric:tabular-nums}
+    .hm-tag-in{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(22,163,74,.1);color:var(--accent)}
+    .hm-tag-out{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700;background:rgba(220,38,38,.08);color:var(--bad)}
+    .history-modal .hm-btns{display:flex;gap:8px;padding:12px 18px;border-top:1px solid var(--line)}
+    .history-modal .hm-btns button{padding:8px 18px;border-radius:8px;font-size:12px;font-weight:700;cursor:pointer;border:1px solid var(--line)}
+    .history-modal .hm-btns .secondary{background:var(--chip)}
+    .history-modal .hm-btns .secondary:hover{background:rgba(0,0,0,.06)}
+    #hmEmpty{text-align:center;padding:32px;color:var(--muted);font-size:12px}
+    /* v7.4: 행 수정 버튼 */
+    .btn-edit{padding:5px 10px;border-radius:6px;border:1px solid rgba(37,99,235,.3);background:rgba(37,99,235,.08);color:var(--point);font-size:11px;font-weight:700;cursor:pointer;white-space:nowrap}
+    .btn-edit:hover{background:rgba(37,99,235,.16)}
 
     /* 모바일 (v6.7: 사이드바 220px만큼 +220 이동) */
     @media(max-width:988px){
@@ -377,6 +402,9 @@
       <label>적정 재고</label>
       <input type="number" id="inTarget" min="0" step="1" value="0" />
 
+      <label>브랜드 <span style="color:var(--muted);font-weight:400">(품목 마스터 기준)</span></label>
+      <input type="text" id="inBrand" placeholder="예: 3M, SKF" />
+
       <label>태그 <span style="color:var(--muted);font-weight:400">(예: #싸게확보)</span></label>
       <input type="text" id="inTag" placeholder="#태그" />
 
@@ -425,6 +453,16 @@
         <label>이번 매입 단가 * <span style="color:var(--muted);font-weight:400">(원/개)</span></label>
         <input type="number" id="ibUnitCost" min="0" step="1" placeholder="예: 15000" />
 
+        <!-- v7.5: 거래 연결 (부대비용 배분용) -->
+        <label>거래 연결 <span style="color:var(--muted);font-weight:400">(선택 — 부대비용 자동 배분)</span></label>
+        <select id="ibTradeSelect" style="width:100%;padding:8px 10px;border:1px solid var(--line);border-radius:8px;font-size:13px;background:var(--chip);">
+          <option value="">연결 안 함 (수동 입고)</option>
+        </select>
+        <div id="ibFeeInfo" style="display:none;margin-top:8px;padding:10px 12px;border-radius:8px;background:rgba(37,99,235,.05);border:1px solid rgba(37,99,235,.15);font-size:11px;">
+          <div style="font-weight:700;color:var(--point);margin-bottom:4px">📋 부대비용 배분 내역</div>
+          <div id="ibFeeDetail"></div>
+        </div>
+
         <label>메모 <span style="color:var(--muted);font-weight:400">(선택)</span></label>
         <input type="text" id="ibNote" placeholder="공급사 / 참고 사항" />
 
@@ -442,6 +480,38 @@
     </div>
   </div>
 
+  <!-- v7.4: 통합 입출고 히스토리 모달 -->
+  <div class="history-modal-back" id="historyBack">
+    <div class="history-modal" id="historyModal">
+      <div class="hm-top">
+        <h3 id="hmTitle">📋 입출고 이력</h3>
+        <button class="sp-close" id="hmClose">✕</button>
+      </div>
+      <div class="hm-summary" id="hmSummary"></div>
+      <div class="hm-body">
+        <table class="hm-table">
+          <thead>
+            <tr>
+              <th>날짜</th>
+              <th>구분</th>
+              <th class="num">수량</th>
+              <th class="num">잔여재고</th>
+              <th class="num">단가</th>
+              <th>거래처</th>
+              <th>비고</th>
+            </tr>
+          </thead>
+          <tbody id="hmTbody"></tbody>
+        </table>
+        <div id="hmEmpty" style="display:none">입출고 이력이 없습니다.</div>
+      </div>
+      <div class="hm-btns">
+        <button id="hmEdit" class="secondary">수정</button>
+        <button id="hmClose2" class="secondary" style="margin-left:auto">닫기</button>
+      </div>
+    </div>
+  </div>
+
 </div>
   </main>
 </div>
@@ -454,6 +524,7 @@
 <script src="js/firebase-config.js"></script>
 <script src="js/storage-adapter.js"></script>
 <script src="js/auth-guard.js"></script>
+<script src="js/trade-engine.js"></script>
 <script src="js/item-master.js?v=312"></script>
 <script>
 /* ══════════════════════════════════════════════════════════════
@@ -487,6 +558,141 @@ function loadInbound() {
 }
 function saveInbound(list) {
   GoLabStorage.setItem(INBOUND_KEY, JSON.stringify(list));
+}
+
+/* v7.4: 매출 데이터 로더 (히스토리 전용, golab_sales_v1은 FIREBASE_KEYS 미포함이므로 localStorage 직접) */
+function loadSales() {
+  try { return JSON.parse(localStorage.getItem("golab_sales_v1") || "[]"); }
+  catch (e) { return []; }
+}
+
+/* v7.4: 통합 히스토리 빌드 — 입고(inbound_logs) + 출고(sales) 병합, 정규화, 정렬 */
+function buildHistory(itemId) {
+  var events = [];
+
+  /* 입고 이벤트 */
+  var inbounds = loadInbound();
+  inbounds.forEach(function(log) {
+    if (log.item_id !== itemId) return;
+    events.push({
+      at: log.created_at || "",
+      type: "in",
+      qty: n(log.qty),
+      unit_price: n(log.unit_cost),
+      partner_name: "",           /* 입고 로그에 공급사 필드 없음 */
+      note: (log.note || "").trim(),
+      source_id: log.id || ""
+    });
+  });
+
+  /* 출고 이벤트 */
+  var sales = loadSales();
+  sales.forEach(function(s) {
+    if (s.item_id !== itemId) return;
+    /* salesDate는 "YYYY-MM-DD" — ISO 변환 (정렬용) */
+    var atISO = s.salesDate ? s.salesDate + "T23:59:59" : (s.createdAt || "");
+    events.push({
+      at: atISO,
+      type: "out",
+      qty: n(s.qty),
+      unit_price: n(s.sellUnitPrice || s.sellPrice || 0),
+      partner_name: (s.client || s.clientName || "").trim(),
+      note: (s.memo || "").trim(),
+      source_id: s.id || ""
+    });
+  });
+
+  /* 최신순 정렬 (desc), 동일 시각이면 입고 우선 */
+  events.sort(function(a, b) {
+    if (a.at > b.at) return -1;
+    if (a.at < b.at) return 1;
+    if (a.type === "in" && b.type === "out") return -1;
+    if (a.type === "out" && b.type === "in") return 1;
+    return 0;
+  });
+
+  return events;
+}
+
+/* v7.4: 잔여재고 역산 — current_stock 앵커에서 최신→과거 역방향 워크 */
+function calcRunningBalance(events, currentStock) {
+  var running = n(currentStock);
+  for (var i = 0; i < events.length; i++) {
+    events[i]._balance = running;
+    if (events[i].type === "out") {
+      running += n(events[i].qty);  /* 출고 되돌리기 */
+    } else {
+      running -= n(events[i].qty);  /* 입고 되돌리기 */
+    }
+  }
+  return events;
+}
+
+/* v7.4: 히스토리 모달 */
+var _historyItemId = null;
+
+function openHistoryModal(itemId) {
+  if (!itemId) return;
+  _historyItemId = itemId;
+
+  /* 현재 재고 앵커 */
+  var inv = loadInv();
+  var rec = null;
+  for (var i = 0; i < inv.length; i++) {
+    if (inv[i].item_id === itemId) { rec = inv[i]; break; }
+  }
+  var currentStock = rec ? n(rec.current_stock) : 0;
+
+  /* 히스토리 빌드 + 잔여재고 계산 */
+  var events = buildHistory(itemId);
+  events = calcRunningBalance(events, currentStock);
+
+  /* 타이틀 + 서머리 */
+  var itemName = _getItemName(itemId);
+  $("hmTitle").textContent = "📋 " + itemName + " 입출고 이력";
+  var inCount = 0, outCount = 0;
+  events.forEach(function(e) { if (e.type === "in") inCount++; else outCount++; });
+  $("hmSummary").innerHTML =
+    '<span style="font-weight:700">' + esc(itemName) + '</span>' +
+    '<span>현재 재고: <b>' + currentStock + '</b></span>' +
+    '<span>입고: <b style="color:var(--accent)">' + inCount + '</b>건</span>' +
+    '<span>출고: <b style="color:var(--bad)">' + outCount + '</b>건</span>';
+
+  /* 테이블 렌더 */
+  var tb = $("hmTbody");
+  if (events.length === 0) {
+    tb.innerHTML = "";
+    $("hmEmpty").style.display = "";
+  } else {
+    $("hmEmpty").style.display = "none";
+    var html = "";
+    events.forEach(function(ev) {
+      var dateStr = ev.at ? ev.at.substring(0, 10) : "—";
+      var tagClass = ev.type === "in" ? "hm-tag-in" : "hm-tag-out";
+      var tagText = ev.type === "in" ? "입고" : "출고";
+      var qtyColor = ev.type === "in" ? "var(--accent)" : "var(--bad)";
+      var qtySign = ev.type === "in" ? "+" : "-";
+      html += '<tr>';
+      html += '<td>' + esc(dateStr) + '</td>';
+      html += '<td><span class="' + tagClass + '">' + tagText + '</span></td>';
+      html += '<td class="num" style="font-weight:700;color:' + qtyColor + '">' + qtySign + ev.qty + '</td>';
+      html += '<td class="num" style="font-weight:700">' + ev._balance + '</td>';
+      html += '<td class="num">' + fmt(ev.unit_price) + '</td>';
+      html += '<td>' + esc(ev.partner_name || "—") + '</td>';
+      html += '<td style="color:var(--muted);font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(ev.note || "") + '</td>';
+      html += '</tr>';
+    });
+    tb.innerHTML = html;
+  }
+
+  $("historyBack").classList.add("open");
+  document.body.style.overflow = "hidden";
+}
+
+function closeHistoryModal() {
+  $("historyBack").classList.remove("open");
+  document.body.style.overflow = "";
+  _historyItemId = null;
 }
 
 /* v6.11: 기존 재고 레코드에 avg_unit_price 필드 방어적 보강
@@ -662,8 +868,9 @@ function render() {
     html += '<td class="num" style="font-weight:600">' + fmt(holdVal) + '</td>';
     html += '<td class="col-desk num">' + (ts > 0 ? ts : '<span style="color:var(--muted)">—</span>') + '</td>';
     html += '<td class="col-desk">' + (r.memo_tag ? '<span style="color:var(--inv);font-size:11px">' + esc(r.memo_tag) + '</span>' : '') + '</td>';
-    /* v6.11: 행 우측 입고 버튼 (독립 액션) */
+    /* v7.4: 행 우측 수정+입고 버튼 */
     html += '<td style="text-align:right;white-space:nowrap">' +
+              '<button class="btn-edit" data-edit="' + esc(r.item_id) + '">수정</button> ' +
               '<button class="btn-inbound" data-inbound="' + esc(r.item_id) + '">입고</button>' +
             '</td>';
     html += '</tr>';
@@ -686,12 +893,19 @@ function render() {
   $("listBadge").textContent = filtered.length;
   $("emptyMsg").style.display = filtered.length > 0 ? "none" : "";
 
-  /* 행 클릭 → 수정 패널 */
+  /* v7.4: 행 클릭 → 히스토리 모달 */
   tb.querySelectorAll("tr[data-id]").forEach(function(row) {
     row.addEventListener("click", function(e) {
-      /* v6.11: 입고 버튼 클릭 시 행 클릭 버블링 방지 */
       if (e.target && e.target.closest && e.target.closest("[data-inbound]")) return;
-      openPanel(row.dataset.id);
+      if (e.target && e.target.closest && e.target.closest("[data-edit]")) return;
+      openHistoryModal(row.dataset.id);
+    });
+  });
+  /* v7.4: 수정 버튼 → 편집 패널 오픈 */
+  tb.querySelectorAll("[data-edit]").forEach(function(btn){
+    btn.addEventListener("click", function(e){
+      e.stopPropagation();
+      openPanel(btn.dataset.edit);
     });
   });
   /* v6.11: 입고 버튼 → 독립 모달 오픈 */
@@ -731,6 +945,9 @@ function openPanel(itemId) {
     $("inBuyPrice").value = n(rec.last_buy_price);
     $("inTarget").value = n(rec.target_stock);
     $("inTag").value = rec.memo_tag || "";
+    /* v7.3: 브랜드 — item-master SSoT에서 preload */
+    var _masterRec = _itemMap[rec.item_id];
+    $("inBrand").value = (_masterRec && _masterRec.brand) ? _masterRec.brand : "";
     $("btnSave").textContent = "저장";
     $("btnCancel").style.display = "";
     $("btnDelete").style.display = "";
@@ -751,6 +968,7 @@ function openPanel(itemId) {
     $("inBuyPrice").value = "";
     $("inTarget").value = "0";
     $("inTag").value = "";
+    $("inBrand").value = "";
     $("btnSave").textContent = "등록";
     $("btnCancel").style.display = "";
     $("btnDelete").style.display = "none";
@@ -792,6 +1010,7 @@ function save() {
   var buyPrice = Number($("inBuyPrice").value);
   var target = Number($("inTarget").value) || 0;
   var tag = $("inTag").value.trim();
+  var brand = ($("inBrand").value || "").trim();
 
   /* 입력 검증: 0 이상 숫자만 허용 */
   if (isNaN(stock) || stock < 0) { _showMsg("현재 수량은 0 이상이어야 합니다."); return; }
@@ -809,6 +1028,9 @@ function save() {
         inv[i].updated_at = now(); /* 수정 시마다 갱신 */
         /* first_in_date 변경하지 않음 */
         saveInv(inv);
+        /* v7.3: 브랜드 → item-master SSoT에 반영 (재고에 중복 저장 안 함) */
+        try { GoLabItemMaster.update(_panelItemId, { brand: brand }); } catch(e) { console.warn("[재고] 브랜드 마스터 반영 스킵:", e.message); }
+        _buildItemMap(); /* 브랜드 변경 후 맵 갱신 */
         emitAudit("UPDATE", { item_id: _panelItemId, before: before, after: JSON.parse(JSON.stringify(inv[i])) });
         break;
       }
@@ -839,6 +1061,11 @@ function save() {
     };
     inv.push(newRec);
     saveInv(inv);
+    /* v7.3: 등록 시에도 브랜드 → item-master SSoT 반영 */
+    if (brand) {
+      try { GoLabItemMaster.update(itemId, { brand: brand }); } catch(e) { console.warn("[재고] 브랜드 마스터 반영 스킵:", e.message); }
+      _buildItemMap();
+    }
     emitAudit("CREATE", { item_id: itemId, after: newRec });
   }
 
@@ -868,9 +1095,185 @@ function deleteRecord() {
    v6.11: 입고 모달 로직
    · [수정]과 분리된 독립 플로우
    · 이동평균 + 입고 로그 저장
+   v7.5: 거래 연결 → 부대비용 품목별 배분 → unit_cost 반영
    ══════════════════════════════════════════════════════════════ */
 var _inboundItemId = null;
 var _inboundRec = null;  /* 현재 대상 재고 레코드 (읽기 전용 스냅샷) */
+var _ibLinkedTrade = null;      /* 선택된 거래 객체 */
+var _ibAllocatedFee = 0;        /* 현재 품목에 배분된 부대비용 (원) */
+var _ibAllocatedFeePerUnit = 0; /* 개당 배분 부대비용 (원) */
+
+/* ── v7.5: 부대비용 품목별 배분 계산 (1원 보정 포함) ──
+   · 기준: 품목 원가(cost) 금액 비중
+   · 마지막 품목이 반올림 차액 흡수
+   · 반환: { item_id → allocated_fee } 맵 */
+function _calcAllocatedFees(trade) {
+  var items = trade.items || [];
+  var extraCosts = trade.extra_costs || [];
+
+  /* affects_profit 인 부대비용만 합산 */
+  var extraTotal = 0;
+  extraCosts.forEach(function(ec) {
+    if (ec.affects_profit !== false) extraTotal += n(ec.amount);
+  });
+  if (extraTotal <= 0 || items.length === 0) {
+    var empty = {};
+    items.forEach(function(it) { empty[it.item_id || it.name] = 0; });
+    return empty;
+  }
+
+  /* 품목 원가 합계 (cost가 null이면 qty * unit_price fallback) */
+  var costArr = items.map(function(it) {
+    return n(it.cost) > 0 ? n(it.cost) : Math.round(n(it.qty) * n(it.unit_price));
+  });
+  var costTotal = 0;
+  costArr.forEach(function(c) { costTotal += c; });
+
+  /* 배분 — 금액 비중 기준, 1원 보정 */
+  var result = {};
+  var allocated = 0;
+  items.forEach(function(it, i) {
+    var key = it.item_id || it.name;
+    if (costTotal <= 0) {
+      /* 원가 합계 0이면 균등 배분 */
+      if (i < items.length - 1) {
+        result[key] = Math.round(extraTotal / items.length);
+        allocated += result[key];
+      } else {
+        result[key] = extraTotal - allocated;
+      }
+    } else if (i < items.length - 1) {
+      result[key] = Math.round(extraTotal * (costArr[i] / costTotal));
+      allocated += result[key];
+    } else {
+      /* 마지막 품목: 잔여 전부 흡수 → 1원 보정 */
+      result[key] = extraTotal - allocated;
+    }
+  });
+  return result;
+}
+
+/* ── v7.5: 거래 드롭다운 옵션 빌드 ── */
+function _buildTradeOptions(itemId) {
+  var sel = $("ibTradeSelect");
+  /* 기존 옵션 초기화 */
+  sel.innerHTML = '<option value="">연결 안 함 (수동 입고)</option>';
+
+  if (typeof GoLabTradeEngine === "undefined") return;
+  var trades = GoLabTradeEngine.loadAll();
+
+  /* 해당 품목이 포함된 활성 거래만 필터 */
+  var filtered = [];
+  trades.forEach(function(t) {
+    if (t.deal_status === "cancelled") return;
+    var items = t.items || [];
+    for (var i = 0; i < items.length; i++) {
+      if (items[i].item_id === itemId || items[i].name === _getItemName(itemId)) {
+        filtered.push(t);
+        return;
+      }
+    }
+  });
+
+  /* 최신 거래 순 정렬 */
+  filtered.sort(function(a, b) {
+    return (b.deal_date || b.created_at || "").localeCompare(a.deal_date || a.created_at || "");
+  });
+
+  filtered.forEach(function(t) {
+    var opt = document.createElement("option");
+    opt.value = t.id;
+    var label = t.id + " · " + (t.partner_name_snapshot || "거래처 미지정");
+    var dateStr = t.deal_date ? " (" + t.deal_date + ")" : "";
+    opt.textContent = label + dateStr;
+    sel.appendChild(opt);
+  });
+}
+
+/* ── v7.5: 거래 선택 핸들러 ── */
+function _onTradeSelect() {
+  var tradeId = $("ibTradeSelect").value;
+  _ibLinkedTrade = null;
+  _ibAllocatedFee = 0;
+  _ibAllocatedFeePerUnit = 0;
+
+  if (!tradeId || typeof GoLabTradeEngine === "undefined") {
+    $("ibFeeInfo").style.display = "none";
+    _updateInboundPreview();
+    return;
+  }
+
+  var trade = GoLabTradeEngine.getById(tradeId);
+  if (!trade) {
+    $("ibFeeInfo").style.display = "none";
+    _updateInboundPreview();
+    return;
+  }
+
+  _ibLinkedTrade = trade;
+
+  /* 배분 계산 */
+  var feeMap = _calcAllocatedFees(trade);
+  var items = trade.items || [];
+
+  /* 현재 품목의 배분액 찾기 */
+  var matchKey = null;
+  for (var i = 0; i < items.length; i++) {
+    if (items[i].item_id === _inboundItemId || items[i].name === _getItemName(_inboundItemId)) {
+      matchKey = items[i].item_id || items[i].name;
+      break;
+    }
+  }
+  _ibAllocatedFee = n(feeMap[matchKey]);
+
+  /* 매칭된 품목의 수량 → 개당 부대비용 */
+  var matchItem = null;
+  for (var j = 0; j < items.length; j++) {
+    if (items[j].item_id === _inboundItemId || items[j].name === _getItemName(_inboundItemId)) {
+      matchItem = items[j]; break;
+    }
+  }
+  var matchQty = matchItem ? n(matchItem.qty) : 0;
+  _ibAllocatedFeePerUnit = matchQty > 0 ? Math.round(_ibAllocatedFee / matchQty) : 0;
+
+  /* UI 표시 */
+  var html = "";
+  var extraCosts = trade.extra_costs || [];
+  var extraTotal = 0;
+  extraCosts.forEach(function(ec) {
+    if (ec.affects_profit !== false) {
+      html += '<div style="display:flex;justify-content:space-between;margin:2px 0"><span style="color:var(--muted)">' + esc(ec.label || ec.type) + '</span><span>' + fmt(ec.amount) + '</span></div>';
+      extraTotal += n(ec.amount);
+    }
+  });
+  if (extraTotal > 0) {
+    html += '<div style="border-top:1px solid var(--line);margin:4px 0"></div>';
+    html += '<div style="display:flex;justify-content:space-between"><span style="font-weight:700">부대비용 합계</span><span style="font-weight:700">' + fmt(extraTotal) + '</span></div>';
+    html += '<div style="display:flex;justify-content:space-between;margin-top:2px"><span style="color:var(--point);font-weight:700">→ 이 품목 배분액</span><span style="color:var(--point);font-weight:800">' + fmt(_ibAllocatedFee) + '</span></div>';
+    if (matchQty > 0) {
+      html += '<div style="display:flex;justify-content:space-between;margin-top:1px"><span style="color:var(--muted)">→ 개당 배분</span><span style="font-weight:700">' + fmt(_ibAllocatedFeePerUnit) + '/개</span></div>';
+    }
+
+    /* 매칭 품목의 원가 자동 채우기 (unit_cost 비어있을 때) */
+    if (matchItem && n(matchItem.cost) > 0 && !$("ibUnitCost").value) {
+      /* 품목 원가(cost) ÷ 수량 = 매입 단가 */
+      var autoUnitCost = Math.round(n(matchItem.cost) / (matchQty > 0 ? matchQty : 1));
+      $("ibUnitCost").value = autoUnitCost;
+    }
+    /* 수량 자동 채우기 */
+    if (matchItem && n(matchItem.qty) > 0 && !$("ibAddQty").value) {
+      $("ibAddQty").value = n(matchItem.qty);
+    }
+  }
+
+  if (extraTotal <= 0) {
+    html = '<span style="color:var(--muted)">부대비용 없음 — 배분 없이 원가 그대로 반영</span>';
+  }
+  $("ibFeeDetail").innerHTML = html;
+  $("ibFeeInfo").style.display = "block";
+
+  _updateInboundPreview();
+}
 
 function openInboundModal(itemId) {
   if (!itemId) return;
@@ -883,6 +1286,9 @@ function openInboundModal(itemId) {
 
   _inboundItemId = itemId;
   _inboundRec = rec;
+  _ibLinkedTrade = null;
+  _ibAllocatedFee = 0;
+  _ibAllocatedFeePerUnit = 0;
 
   /* UI 채우기 */
   $("ibItem").textContent = _getItemName(itemId);
@@ -894,8 +1300,13 @@ function openInboundModal(itemId) {
   $("ibNote").value = "";
   $("ibNewStock").textContent = "—";
   $("ibNewAvg").textContent = "—";
+  $("ibFeeInfo").style.display = "none";
+  $("ibTradeSelect").value = "";
   _ibHideMsg();
   $("ibSave").disabled = true;
+
+  /* v7.5: 해당 품목 포함 거래 드롭다운 빌드 */
+  _buildTradeOptions(itemId);
 
   $("inboundBack").classList.add("open");
   document.body.style.overflow = "hidden";
@@ -907,6 +1318,9 @@ function closeInboundModal() {
   document.body.style.overflow = "";
   _inboundItemId = null;
   _inboundRec = null;
+  _ibLinkedTrade = null;
+  _ibAllocatedFee = 0;
+  _ibAllocatedFeePerUnit = 0;
 }
 
 function _ibShowMsg(msg) {
@@ -924,20 +1338,22 @@ function _ibHideMsg() {
 function _updateInboundPreview() {
   if (!_inboundRec) return;
   var addQty = Number($("ibAddQty").value);
-  var addCost = Number($("ibUnitCost").value);
-  var valid = !isNaN(addQty) && addQty > 0 && !isNaN(addCost) && addCost >= 0;
+  var rawCost = Number($("ibUnitCost").value);
+  var valid = !isNaN(addQty) && addQty > 0 && !isNaN(rawCost) && rawCost >= 0;
   $("ibSave").disabled = !valid;
   if (!valid) {
     $("ibNewStock").textContent = "—";
     $("ibNewAvg").textContent = "—";
     return;
   }
+  /* v7.5: 부대비용 배분 반영된 실효 단가 = 원가 + 개당 배분 */
+  var effectiveCost = rawCost + _ibAllocatedFeePerUnit;
   var r = _applyInbound(
     n(_inboundRec.current_stock),
     n(_inboundRec.avg_unit_price),
     n(_inboundRec.last_buy_price),
     addQty,
-    addCost
+    effectiveCost
   );
   $("ibNewStock").textContent = r.newQty.toLocaleString() + " 개";
   $("ibNewAvg").textContent = fmt(r.newAvg);
@@ -946,10 +1362,10 @@ function _updateInboundPreview() {
 function applyInboundSave() {
   if (!_inboundItemId) return;
   var addQty = Number($("ibAddQty").value);
-  var addCost = Number($("ibUnitCost").value);
+  var rawCost = Number($("ibUnitCost").value);  /* v7.5: raw = 사용자 입력 단가 */
 
   if (isNaN(addQty) || addQty <= 0) { _ibShowMsg("추가 입고 수량은 1 이상이어야 합니다."); return; }
-  if (isNaN(addCost) || addCost < 0) { _ibShowMsg("이번 매입 단가는 0 이상이어야 합니다."); return; }
+  if (isNaN(rawCost) || rawCost < 0) { _ibShowMsg("이번 매입 단가는 0 이상이어야 합니다."); return; }
 
   var inv = loadInv();
   var idx = -1;
@@ -958,27 +1374,36 @@ function applyInboundSave() {
   }
   if (idx < 0) { _ibShowMsg("재고 레코드를 찾을 수 없습니다."); return; }
 
+  /* v7.5: 실효 단가 = 원가 + 개당 부대비용 배분 */
+  var allocFeePerUnit = _ibAllocatedFeePerUnit;
+  var allocFeeTotal = _ibAllocatedFee;
+  var effectiveCost = rawCost + allocFeePerUnit;
+
   var before = JSON.parse(JSON.stringify(inv[idx]));
   var prevQty  = n(before.current_stock);
   var prevAvg  = n(before.avg_unit_price);
   var prevLast = n(before.last_buy_price);
 
-  var calc = _applyInbound(prevQty, prevAvg, prevLast, addQty, addCost);
+  var calc = _applyInbound(prevQty, prevAvg, prevLast, addQty, effectiveCost);
 
   /* 재고 갱신 */
   inv[idx].current_stock  = calc.newQty;
-  inv[idx].last_buy_price = addCost;            /* 요구사항: 입고 단가로 갱신 */
+  inv[idx].last_buy_price = effectiveCost;      /* v7.5: 부대비용 반영 단가 */
   inv[idx].avg_unit_price = calc.newAvg;
   inv[idx].updated_at     = now();
   saveInv(inv);
 
-  /* 입고 로그 저장 (확장판: prev/new 스냅샷 포함) */
+  /* v7.5: 입고 로그 — raw_unit_price / allocated_fee / unit_cost 3중 기록 */
   var logs = loadInbound();
   var logEntry = {
     id: crypto.randomUUID(),
     item_id: _inboundItemId,
     qty: addQty,
-    unit_cost: addCost,
+    raw_unit_price: rawCost,                /* 순수 매입 단가 (부대비용 전) */
+    allocated_fee: allocFeeTotal,           /* 이 품목에 배분된 부대비용 총액 */
+    allocated_fee_per_unit: allocFeePerUnit, /* 개당 배분 부대비용 */
+    unit_cost: effectiveCost,               /* 실효 단가 = raw + 개당 배분 (이동평균 반영용) */
+    linked_trade_id: _ibLinkedTrade ? _ibLinkedTrade.id : null,
     prev_stock: prevQty,
     prev_avg_unit_price: prevAvg,
     new_stock: calc.newQty,
@@ -994,7 +1419,9 @@ function applyInboundSave() {
     item_id: _inboundItemId,
     before: before,
     after: JSON.parse(JSON.stringify(inv[idx])),
-    inbound_log_id: logEntry.id
+    inbound_log_id: logEntry.id,
+    linked_trade_id: _ibLinkedTrade ? _ibLinkedTrade.id : null,
+    allocated_fee: allocFeeTotal
   });
 
   closeInboundModal();
@@ -1010,6 +1437,8 @@ $("btnCancel").addEventListener("click", closePanel);
 $("btnDelete").addEventListener("click", deleteRecord);
 document.addEventListener("keydown", function(e) {
   if (e.key === "Escape") {
+    /* v7.4: 히스토리 모달 최우선 */
+    if ($("historyBack").classList.contains("open")) { closeHistoryModal(); return; }
     if ($("inboundBack").classList.contains("open")) { closeInboundModal(); return; }
     if ($("sidePanel").classList.contains("open")) closePanel();
   }
@@ -1023,6 +1452,20 @@ $("inboundBack").addEventListener("click", function(e){
 });
 $("ibAddQty").addEventListener("input", _updateInboundPreview);
 $("ibUnitCost").addEventListener("input", _updateInboundPreview);
+/* v7.5: 거래 선택 변경 이벤트 */
+$("ibTradeSelect").addEventListener("change", _onTradeSelect);
+
+/* v7.4: 히스토리 모달 이벤트 바인딩 */
+$("hmClose").addEventListener("click", closeHistoryModal);
+$("hmClose2").addEventListener("click", closeHistoryModal);
+$("historyBack").addEventListener("click", function(e){
+  if (e.target === $("historyBack")) closeHistoryModal();
+});
+$("hmEdit").addEventListener("click", function(){
+  var id = _historyItemId;
+  closeHistoryModal();
+  if (id) openPanel(id);
+});
 
 /* 필터 이벤트 */
 $("fSearch").addEventListener("input", render);
