@@ -107,6 +107,9 @@
     table.list-table{width:100%;border-collapse:collapse;font-size:12px}
     table.list-table th{background:#f8fafc;color:var(--muted);text-align:left;padding:8px 6px;position:sticky;top:0;white-space:nowrap;z-index:2;border-bottom:1px solid var(--line);font-size:11px}
     table.list-table td{padding:8px 6px;border-bottom:1px solid rgba(0,0,0,.04);vertical-align:middle}
+    /* v7.6.1: 브랜드 열 폭 고정 — 헤더/데이터 열 정렬 통일 (tfoot 합계 행은 colspan이라 제외) */
+    table.list-table thead th:nth-child(1),
+    table.list-table tbody td:nth-child(1){width:80px;min-width:80px;max-width:80px;white-space:nowrap;overflow:hidden;text-overflow:ellipsis}
     table.list-table tr[data-id]{cursor:pointer;transition:background .1s}
     table.list-table tr[data-id]:hover{background:rgba(37,99,235,.03)}
     .num{text-align:right;font-variant-numeric:tabular-nums}
