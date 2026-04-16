@@ -220,6 +220,47 @@
     .norm-actions{display:flex;gap:4px}
     .norm-actions button{padding:5px 10px;font-size:11px}
     .empty-msg{text-align:center;padding:40px;color:var(--muted);font-size:13px;display:none}
+
+    /* ═══ v7.6: 납품 실적 리스트 ═══ */
+    .delivery-section{margin-bottom:20px}
+    .delivery-header{display:flex;align-items:center;justify-content:space-between;margin-bottom:10px;flex-wrap:wrap;gap:8px}
+    .delivery-header h2{margin:0;font-size:14px;font-weight:800;color:var(--text);padding-left:10px;border-left:3px solid var(--point);display:flex;align-items:center;gap:8px}
+    .delivery-search{display:flex;gap:8px;align-items:center;flex-wrap:wrap}
+    .delivery-search input{padding:7px 12px;border:1px solid var(--line);border-radius:8px;font-size:12px;width:200px;background:var(--chip)}
+    .delivery-search input:focus{border-color:var(--point);outline:none}
+    .delivery-filter-tag{display:inline-flex;align-items:center;gap:4px;padding:4px 10px;border-radius:6px;background:#eff6ff;color:var(--point);font-size:11px;font-weight:700;cursor:default}
+    .delivery-filter-tag .x{cursor:pointer;font-size:13px;color:var(--muted);margin-left:2px}
+    .delivery-filter-tag .x:hover{color:var(--bad)}
+    .delivery-table{width:100%;border-collapse:collapse;font-size:12px}
+    .delivery-table thead th{background:#f8fafc;color:var(--muted);padding:8px 10px;text-align:left;border-bottom:2px solid var(--line);font-size:11px;font-weight:700;white-space:nowrap}
+    .delivery-table thead th.r{text-align:right}
+    .delivery-table tbody td{padding:8px 10px;border-bottom:1px solid var(--line);vertical-align:middle}
+    .delivery-table tbody td.r{text-align:right;font-variant-numeric:tabular-nums}
+    .delivery-table tbody tr:hover{background:rgba(37,99,235,.03)}
+    .delivery-table .link-partner,.delivery-table .link-item{color:var(--point);cursor:pointer;font-weight:600;text-decoration:none}
+    .delivery-table .link-partner:hover,.delivery-table .link-item:hover{text-decoration:underline}
+    .delivery-table .status-badge{display:inline-block;padding:2px 8px;border-radius:6px;font-size:10px;font-weight:700}
+    .delivery-table .status-badge.st-완료{background:#dcfce7;color:#166534}
+    .delivery-table .status-badge.st-계산서{background:#dbeafe;color:#1e40af}
+    .delivery-table .status-badge.st-명세서{background:#fef3c7;color:#92400e}
+    .delivery-table .status-badge.st-발주{background:#e0e7ff;color:#3730a3}
+    .delivery-table .status-badge.st-견적{background:#f1f5f9;color:#64748b}
+    .delivery-table .status-badge.st-신규{background:#f1f5f9;color:#94a3b8}
+    .delivery-table .btn-go{padding:3px 8px;font-size:10px;font-weight:700;border:1px solid var(--line);border-radius:6px;background:var(--chip);color:var(--muted);cursor:pointer;white-space:nowrap}
+    .delivery-table .btn-go:hover{border-color:var(--point);color:var(--point)}
+    .delivery-more{text-align:center;padding:12px}
+    .delivery-more button{padding:8px 24px;border:1px solid var(--line);border-radius:8px;background:var(--card);color:var(--muted);font-size:12px;font-weight:600;cursor:pointer}
+    .delivery-more button:hover{border-color:var(--point);color:var(--point)}
+
+    /* ═══ v7.6: 품목 마스터 접힘 섹션 ═══ */
+    .master-collapse-bar{display:flex;align-items:center;gap:8px;padding:12px 14px;background:var(--card);border:1px solid var(--line);border-radius:10px;cursor:pointer;margin-bottom:10px;transition:background .15s}
+    .master-collapse-bar:hover{background:#f8fafc}
+    .master-collapse-bar h2{margin:0;font-size:13px;font-weight:700;color:var(--text);flex:1}
+    .master-collapse-bar .arrow{font-size:12px;color:var(--muted);transition:transform .2s}
+    .master-collapse-bar.open .arrow{transform:rotate(180deg)}
+    .master-body{display:none}
+    .master-body.open{display:block}
+
     /* Responsive (v6.7: 사이드바 220px만큼 +220 이동) */
     @media(max-width:1120px){
       .kpi-grid{grid-template-columns:1fr 1fr}
@@ -278,6 +319,45 @@
       <div class="sub" id="kUnlinkedSub">클릭하여 정규화</div>
     </div>
   </div>
+
+  <!-- ═══ v7.6: 상단 납품 실적 리스트 ═══ -->
+  <div class="delivery-section" id="deliverySection">
+    <div class="delivery-header">
+      <h2>납품 실적 <span class="badge" style="font-size:10px;font-weight:800;background:var(--point);color:#fff;border-radius:99px;min-width:20px;height:20px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center" id="dlvBadge">0</span></h2>
+      <div class="delivery-search">
+        <div id="dlvFilterTags" style="display:flex;gap:4px;flex-wrap:wrap"></div>
+        <input id="dlvSearch" placeholder="거래처, 품목 검색..." />
+      </div>
+    </div>
+    <div class="tableWrap">
+      <table class="delivery-table">
+        <thead>
+          <tr>
+            <th>날짜</th>
+            <th>거래처</th>
+            <th>품목</th>
+            <th class="r">수량</th>
+            <th class="r">단가</th>
+            <th class="r">매출액</th>
+            <th>상태</th>
+            <th style="text-align:right">원거래</th>
+          </tr>
+        </thead>
+        <tbody id="dlvBody"></tbody>
+      </table>
+    </div>
+    <div id="dlvEmpty" class="empty-msg" style="padding:20px">납품 실적이 없습니다.</div>
+    <div class="delivery-more" id="dlvMore" style="display:none">
+      <button id="dlvMoreBtn">더보기</button>
+    </div>
+  </div>
+
+  <!-- ═══ v7.6: 품목 마스터 (접힘 섹션) ═══ -->
+  <div class="master-collapse-bar" id="masterToggle">
+    <h2>📦 품목 마스터 <span class="badge" style="font-size:10px;font-weight:800;background:var(--item);color:#fff;border-radius:99px;min-width:20px;height:20px;padding:0 6px;display:inline-flex;align-items:center;justify-content:center" id="masterBadge">0</span></h2>
+    <span class="arrow">▼</span>
+  </div>
+  <div class="master-body" id="masterBody">
 
   <!-- v3.10: 폼 접힘 토글 -->
   <div class="form-toggle-bar" id="formToggleBar">
@@ -355,7 +435,6 @@
     <button class="filter-chip" data-cat="일반상품">일반상품</button>
     <span style="width:1px;height:20px;background:var(--line);margin:0 4px"></span>
     <button class="filter-chip" id="fHasTrade" data-toggle="trade">거래 있음</button>
-    <button class="filter-chip" id="fHasStock" data-toggle="stock">재고 있음</button>
   </div>
 
   <!-- v6.9.3: 품목 목록 섹션 타이틀 + 포인트 바 -->
@@ -378,7 +457,6 @@
           <th>최근 거래일</th>
           <th class="r">거래</th>
           <th class="r">총매출</th>
-          <th>재고</th>
           <th style="text-align:right">액션</th>
         </tr>
       </thead>
@@ -387,6 +465,8 @@
   </div>
   <div class="empty-msg" id="emptyMsg">등록된 품목이 없습니다.</div>
   <div style="margin-top:8px;font-size:11px;color:var(--muted)">총 <b id="listBadge">0</b>건</div>
+
+  </div><!-- /master-body -->
 </div>
   </main>
 </div>
@@ -420,10 +500,17 @@ var _expandedId = null;
 var _detailTab = "buyers";
 var _filterCat = "all";
 var _filterTrade = false;
-var _filterStock = false;
 var _quickStats = null;
 var _invMap = null;
 var _normHidden = {};
+
+/* v7.6: 납품 실적 상태 */
+var _dlvRows = null;       /* 전체 납품 행 (캐시) */
+var _dlvLimit = 100;       /* 현재 표시 건수 */
+var _dlvSearchQ = "";      /* 검색어 */
+var _dlvFilterPartner = ""; /* 거래처 필터 */
+var _dlvFilterItem = "";    /* 품목 필터 */
+var _dlvFilterItemName = ""; /* 품목 필터 표시명 */
 
 /* ══════════════════════════════════════
    KPI 계산
@@ -445,6 +532,153 @@ function computeKPI(){
   $("kLinked").textContent = Object.keys(linkedIds).length;
   $("kLinkedSub").textContent = "품목 수";
   $("kUnlinked").textContent = unlinkedCount;
+}
+
+/* ══════════════════════════════════════
+   v7.6: 납품 실적 데이터 빌드 + 렌더
+   ══════════════════════════════════════ */
+
+/* 거래 상태 매핑 */
+function _tradeStatus(d) {
+  if (d.payment_at) return "완료";
+  if (d.invoice_at) return "계산서";
+  if (d.delivery_note_at) return "명세서";
+  if (d.order_at) return "발주";
+  if (d.quote_at) return "견적";
+  return "신규";
+}
+
+/* 납품 행 캐시 빌드 — trade.items[]를 펼쳐서 품목 단위 row 생성, 최신순 정렬 */
+function _buildDlvRows() {
+  var trades = [];
+  try { trades = JSON.parse(GoLabStorage.getItem("golab_trade_v2") || "[]"); } catch(e) {}
+  var rows = [];
+  trades.forEach(function(deal) {
+    if (deal.deal_status === "cancelled" || deal.is_canceled === true) return;
+    var dt = deal.deal_date || (deal.quote_at || deal.created_at || "").substring(0,10);
+    var partner = deal.partner_name_snapshot || "";
+    var partnerId = deal.partner_id || "";
+    var status = _tradeStatus(deal);
+    (deal.items || []).forEach(function(it) {
+      var qty = Number(it.qty) || 0;
+      var unitPrice = Number(it.unit_price) || 0;
+      var supplyAmt = Number(it.supply_amount) || (qty * unitPrice);
+      rows.push({
+        date: dt,
+        partnerId: partnerId,
+        partner: partner,
+        itemId: it.item_id || "",
+        itemName: it.name || "",
+        qty: qty,
+        unitPrice: unitPrice,
+        supplyAmt: supplyAmt,
+        status: status,
+        tradeId: deal.id
+      });
+    });
+  });
+  /* 최신순 정렬 */
+  rows.sort(function(a, b) { return (b.date || "").localeCompare(a.date || ""); });
+  _dlvRows = rows;
+  return rows;
+}
+
+/* 납품 실적 렌더 */
+function renderDelivery() {
+  if (!_dlvRows) _buildDlvRows();
+  var rows = _dlvRows;
+
+  /* 필터 적용 */
+  var q = _dlvSearchQ.toLowerCase();
+  var filtered = rows.filter(function(r) {
+    if (_dlvFilterPartner && r.partnerId !== _dlvFilterPartner && r.partner !== _dlvFilterPartner) return false;
+    if (_dlvFilterItem && r.itemId !== _dlvFilterItem) return false;
+    if (q) {
+      var match = (r.partner || "").toLowerCase().indexOf(q) >= 0 ||
+                  (r.itemName || "").toLowerCase().indexOf(q) >= 0;
+      if (!match) return false;
+    }
+    return true;
+  });
+
+  /* 필터 태그 UI */
+  var tagHtml = "";
+  if (_dlvFilterPartner) {
+    var pLabel = _dlvFilterPartner;
+    /* 거래처명 찾기 */
+    for (var i = 0; i < rows.length; i++) {
+      if (rows[i].partnerId === _dlvFilterPartner || rows[i].partner === _dlvFilterPartner) { pLabel = rows[i].partner; break; }
+    }
+    tagHtml += '<span class="delivery-filter-tag">거래처: ' + esc(pLabel) + '<span class="x" data-clear="partner">&times;</span></span>';
+  }
+  if (_dlvFilterItem) {
+    tagHtml += '<span class="delivery-filter-tag">품목: ' + esc(_dlvFilterItemName || _dlvFilterItem) + '<span class="x" data-clear="item">&times;</span></span>';
+  }
+  $("dlvFilterTags").innerHTML = tagHtml;
+  /* 태그 삭제 이벤트 */
+  $("dlvFilterTags").querySelectorAll(".x").forEach(function(el) {
+    el.onclick = function() {
+      if (el.dataset.clear === "partner") _dlvFilterPartner = "";
+      if (el.dataset.clear === "item") { _dlvFilterItem = ""; _dlvFilterItemName = ""; }
+      renderDelivery();
+    };
+  });
+
+  $("dlvBadge").textContent = filtered.length;
+
+  if (filtered.length === 0) {
+    $("dlvBody").innerHTML = "";
+    $("dlvEmpty").style.display = "block";
+    $("dlvMore").style.display = "none";
+    return;
+  }
+  $("dlvEmpty").style.display = "none";
+
+  /* 제한 적용 */
+  var showing = filtered.slice(0, _dlvLimit);
+  var hasMore = filtered.length > _dlvLimit;
+
+  var html = "";
+  showing.forEach(function(r) {
+    var stClass = "st-" + r.status;
+    html += '<tr>' +
+      '<td class="muted">' + esc(r.date) + '</td>' +
+      '<td><span class="link-partner" data-pid="' + esc(r.partnerId || r.partner) + '">' + esc(r.partner || "—") + '</span></td>' +
+      '<td><span class="link-item" data-iid="' + esc(r.itemId) + '" data-iname="' + esc(r.itemName) + '">' + esc(r.itemName || "—") + '</span></td>' +
+      '<td class="r">' + (r.qty ? r.qty.toLocaleString() : "—") + '</td>' +
+      '<td class="r">' + (r.unitPrice ? fmtW(r.unitPrice) : "—") + '</td>' +
+      '<td class="r" style="font-weight:700">' + (r.supplyAmt ? fmtW(r.supplyAmt) : "—") + '</td>' +
+      '<td><span class="status-badge ' + stClass + '">' + esc(r.status) + '</span></td>' +
+      '<td style="text-align:right"><a class="btn-go" href="./deals.html?deal_id=' + esc(r.tradeId) + '">이동 →</a></td>' +
+      '</tr>';
+  });
+  $("dlvBody").innerHTML = html;
+
+  /* 더보기 버튼 */
+  if (hasMore) {
+    $("dlvMore").style.display = "";
+    $("dlvMore").querySelector("button").textContent = "더보기 (" + _dlvLimit + " / " + filtered.length + "건)";
+  } else {
+    $("dlvMore").style.display = "none";
+  }
+
+  /* 이벤트: 거래처 클릭 → 필터 */
+  $("dlvBody").querySelectorAll(".link-partner").forEach(function(el) {
+    el.onclick = function() {
+      _dlvFilterPartner = el.dataset.pid;
+      _dlvLimit = 100;
+      renderDelivery();
+    };
+  });
+  /* 이벤트: 품목 클릭 → 필터 */
+  $("dlvBody").querySelectorAll(".link-item").forEach(function(el) {
+    el.onclick = function() {
+      _dlvFilterItem = el.dataset.iid;
+      _dlvFilterItemName = el.dataset.iname;
+      _dlvLimit = 100;
+      renderDelivery();
+    };
+  });
 }
 
 /* ══════════════════════════════════════
@@ -576,7 +810,6 @@ function render(){
   if(!_quickStats) _buildQuickStats();
   if(!_invMap) _buildInvMap();
   if(_filterTrade) filtered = filtered.filter(function(it){ return !!_quickStats[it.item_id]; });
-  if(_filterStock) filtered = filtered.filter(function(it){ var inv = _invMap[it.item_id]; return inv && inv.qty > 0; });
 
   $("listBadge").textContent = filtered.length;
   if($("itemListBadge")) $("itemListBadge").textContent = filtered.length;
@@ -608,7 +841,6 @@ function render(){
       '<td class="muted">' + esc(qs.lastDate || "—") + '</td>' +
       '<td class="r">' + (qs.txCount ? qs.txCount + '건' : '<span class="muted">—</span>') + '</td>' +
       '<td class="r">' + (qs.totalRevenue ? fmtW(qs.totalRevenue) : '<span class="muted">—</span>') + '</td>' +
-      '<td>' + (inv && inv.qty > 0 ? '<span style="color:var(--accent);font-weight:700">' + fmtN(inv.qty) + '</span>' : '<span class="muted">—</span>') + '</td>' +
       '<td style="text-align:right;white-space:nowrap">' +
         '<button class="secondary" style="padding:5px 8px;font-size:11px" data-detail="' + item.item_id + '">상세</button> ' +
         '<button class="secondary" style="padding:5px 8px;font-size:11px" data-edit="' + item.item_id + '">수정</button> ' +
@@ -632,7 +864,7 @@ function buildItemStatusPanel(item){
   var stats = GoLabItemMaster.calcItemStats(item.item_id);
   var inv = _invMap[item.item_id];
 
-  var html = '<tr class="detail-row"><td colspan="14"><div class="ip-panel">';
+  var html = '<tr class="detail-row"><td colspan="13"><div class="ip-panel">';
 
   /* ═══ Hero 섹션 (v3.10 개선) ═══ */
   var qs = _quickStats[item.item_id] || {};
@@ -1061,7 +1293,6 @@ $("filterRow").addEventListener("click", function(e){
     render();
   }
   if(chip.dataset.toggle === "trade"){ _filterTrade = !_filterTrade; chip.classList.toggle("active", _filterTrade); render(); }
-  if(chip.dataset.toggle === "stock"){ _filterStock = !_filterStock; chip.classList.toggle("active", _filterStock); render(); }
 });
 $("kpiUnlinked").addEventListener("click", function(){
   var sec = $("normSection");
@@ -1069,9 +1300,34 @@ $("kpiUnlinked").addEventListener("click", function(){
 });
 $("normClose").addEventListener("click", function(){ $("normSection").style.display = "none"; });
 
+/* v7.6: 납품 실적 검색 */
+var _dlvTimer = null;
+$("dlvSearch").addEventListener("input", function() {
+  clearTimeout(_dlvTimer);
+  _dlvTimer = setTimeout(function() {
+    _dlvSearchQ = ($("dlvSearch").value || "").trim();
+    _dlvLimit = 100;
+    renderDelivery();
+  }, 200);
+});
+/* v7.6: 더보기 버튼 */
+$("dlvMoreBtn").addEventListener("click", function() {
+  _dlvLimit += 100;
+  renderDelivery();
+});
+/* v7.6: 품목 마스터 접힘/펼침 */
+$("masterToggle").addEventListener("click", function() {
+  var bar = $("masterToggle");
+  var body = $("masterBody");
+  bar.classList.toggle("open");
+  body.classList.toggle("open");
+});
+
 /* Init */
 computeKPI();
+renderDelivery();
 render();
+$("masterBadge").textContent = GoLabItemMaster.loadAll().length;
 </script>
 </body>
 </html>
