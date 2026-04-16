@@ -82,8 +82,8 @@
     .card{background:var(--card);border:1px solid var(--line);border-radius:10px;padding:20px;margin-bottom:16px;box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .card h2{margin:0 0 12px;font-size:13px;color:var(--inv);display:flex;align-items:center;gap:8px}
 
-    /* KPI */
-    .kpi-grid{display:grid;grid-template-columns:repeat(4,1fr);gap:10px;margin-bottom:12px}
+    /* KPI (v7.6 P2: 5 카드) */
+    .kpi-grid{display:grid;grid-template-columns:repeat(5,1fr);gap:10px;margin-bottom:12px}
     .kpi{padding:14px;border-radius:10px;border:1px solid var(--line);background:var(--card);box-shadow:0 1px 3px rgba(0,0,0,.04)}
     .kpi .t{font-size:11px;color:var(--muted)}
     .kpi .v{margin-top:6px;font-size:24px;font-weight:600;color:var(--inv)}
@@ -117,6 +117,13 @@
 
     /* 재고 부족 강조 */
     .stock-low{background:rgba(220,38,38,.08);color:var(--bad);font-weight:700}
+
+    /* v7.6 P2: 단가 미입력 / 장기 미출고 배지 + 거래 딥링크 */
+    .price-missing{display:inline-block;padding:1px 6px;border-radius:4px;background:#fef3c7;color:#92400e;font-size:10px;font-weight:700;margin-left:4px}
+    .stagnant-badge{display:inline-block;padding:1px 6px;border-radius:4px;background:#fee2e2;color:#991b1b;font-size:10px;font-weight:700;margin-left:4px}
+    .stagnant-row{background:rgba(220,38,38,.03)}
+    .trade-link{color:var(--point);font-size:10px;text-decoration:none;margin-left:4px;font-weight:700}
+    .trade-link:hover{text-decoration:underline}
 
     /* 사이드패널 */
     .panel-overlay{position:fixed;inset:0;background:rgba(0,0,0,.35);z-index:90;
@@ -289,11 +296,12 @@
   </aside>
   <main class="page-content">
 <div class="wrap">
-  <!-- KPI 카드 -->
+  <!-- KPI 카드 (v7.6 P2: 장기 미출고 추가) -->
   <div class="kpi-grid">
     <div class="kpi">
       <div class="t">총 보유 자산 가치</div>
       <div class="v" id="kAssetValue">₩0</div>
+      <div class="sub">평균 매입가 × 수량</div>
     </div>
     <div class="kpi">
       <div class="t">재고 보유 품목 수</div>
@@ -306,6 +314,10 @@
     <div class="kpi">
       <div class="t">총 가용 재고 수량</div>
       <div class="v" id="kAvailStock">0</div>
+    </div>
+    <div class="kpi" title="60일 이상 출고 이력이 없는 품목 수">
+      <div class="t">장기 미출고 <span style="font-size:9px;color:var(--muted)">(60일+)</span></div>
+      <div class="v" id="kStagnant" style="color:var(--bad)">0</div>
     </div>
   </div>
 
@@ -561,10 +573,56 @@ function saveInbound(list) {
   GoLabStorage.setItem(INBOUND_KEY, JSON.stringify(list));
 }
 
-/* v7.4: 매출 데이터 로더 (히스토리 전용, golab_sales_v1은 FIREBASE_KEYS 미포함이므로 localStorage 직접) */
+/* @deprecated v7.6 P2 — trade_v2로 대체됨. 호출 금지 */
 function loadSales() {
   try { return JSON.parse(localStorage.getItem("golab_sales_v1") || "[]"); }
   catch (e) { return []; }
+}
+
+/* ════════════════════════════════════════════════════════════
+   v7.6 Phase 2: 출고 인정 기준 + 출고일 + trade_v2 로더
+   ──────────────────────────────────────────────────────────
+   출고 인정: delivery_note_at / invoice_at / payment_at 중 하나라도 존재,
+              deal_status === "cancelled" 또는 is_canceled === true 는 제외
+   출고일 우선순위: delivery_note_at → invoice_at → payment_at
+   ════════════════════════════════════════════════════════════ */
+function _loadTradeV2() {
+  try { return JSON.parse(GoLabStorage.getItem("golab_trade_v2") || "[]"); }
+  catch (e) { return []; }
+}
+function _dealShipped(d) {
+  if (!d || d.deal_status === "cancelled" || d.is_canceled === true) return false;
+  return !!(d.delivery_note_at || d.invoice_at || d.payment_at);
+}
+function _dealShipDate(d) {
+  if (!d) return "";
+  return d.delivery_note_at || d.invoice_at || d.payment_at || "";
+}
+/* 품목별 최근 출고일 맵 */
+function _buildLastShipMap() {
+  var map = {};
+  var trades = _loadTradeV2();
+  trades.forEach(function(d) {
+    if (!_dealShipped(d)) return;
+    var dt = _dealShipDate(d);
+    if (!dt) return;
+    (d.items || []).forEach(function(it) {
+      if (!it.item_id) return;
+      if (!map[it.item_id] || dt > map[it.item_id]) {
+        map[it.item_id] = dt;
+      }
+    });
+  });
+  return map;
+}
+/* 60일 이상 미출고 여부 — lastShipMap 재사용 */
+function _isStagnant60(itemId, lastShipMap) {
+  var last = lastShipMap[itemId];
+  if (!last) return true;  /* 출고 이력 자체가 없음 = 장기 미출고로 간주 */
+  var lastMs = new Date(last + "T00:00:00").getTime();
+  if (!isFinite(lastMs)) return true;
+  var daysSince = (Date.now() - lastMs) / 86400000;
+  return daysSince >= 60;
 }
 
 /* v7.4: 통합 히스토리 빌드 — 입고(inbound_logs) + 출고(sales) 병합, 정규화, 정렬 */
@@ -586,20 +644,26 @@ function buildHistory(itemId) {
     });
   });
 
-  /* 출고 이벤트 */
-  var sales = loadSales();
-  sales.forEach(function(s) {
-    if (s.item_id !== itemId) return;
-    /* salesDate는 "YYYY-MM-DD" — ISO 변환 (정렬용) */
-    var atISO = s.salesDate ? s.salesDate + "T23:59:59" : (s.createdAt || "");
-    events.push({
-      at: atISO,
-      type: "out",
-      qty: n(s.qty),
-      unit_price: n(s.sellUnitPrice || s.sellPrice || 0),
-      partner_name: (s.client || s.clientName || "").trim(),
-      note: (s.memo || "").trim(),
-      source_id: s.id || ""
+  /* v7.6 P2: 출고 이벤트 — golab_trade_v2 완전 대체 (sales_v1 미사용)
+     출고 인정: _dealShipped(d) 충족 거래의 items[] 중 item_id 매칭
+     출고일:    _dealShipDate(d) (delivery_note_at → invoice_at → payment_at) */
+  var trades = _loadTradeV2();
+  trades.forEach(function(d) {
+    if (!_dealShipped(d)) return;
+    var shipDate = _dealShipDate(d);
+    if (!shipDate) return;
+    (d.items || []).forEach(function(it) {
+      if (it.item_id !== itemId) return;
+      events.push({
+        at: shipDate + "T23:59:59",
+        type: "out",
+        qty: n(it.qty),
+        unit_price: n(it.unit_price),
+        partner_name: d.partner_name_snapshot || "",
+        trade_id: d.id || "",
+        note: (it.memo || "").trim(),
+        source_id: d.id || ""
+      });
     });
   });
 
@@ -679,7 +743,12 @@ function openHistoryModal(itemId) {
       html += '<td class="num" style="font-weight:700;color:' + qtyColor + '">' + qtySign + ev.qty + '</td>';
       html += '<td class="num" style="font-weight:700">' + ev._balance + '</td>';
       html += '<td class="num">' + fmt(ev.unit_price) + '</td>';
-      html += '<td>' + esc(ev.partner_name || "—") + '</td>';
+      /* v7.6 P2: 출고 행은 거래처명 + 거래 딥링크 버튼 */
+      var partnerCell = esc(ev.partner_name || "—");
+      if (ev.type === "out" && ev.trade_id) {
+        partnerCell += ' <a href="./deals.html?deal_id=' + esc(ev.trade_id) + '" class="trade-link" target="_blank" rel="noopener">거래→</a>';
+      }
+      html += '<td>' + partnerCell + '</td>';
       html += '<td style="color:var(--muted);font-size:11px;max-width:120px;overflow:hidden;text-overflow:ellipsis;white-space:nowrap">' + esc(ev.note || "") + '</td>';
       html += '</tr>';
     });
@@ -790,15 +859,21 @@ function _getItemCategory(itemId) {
   return map[it.category] || it.category || "";
 }
 
-/* ── KPI 계산 ── */
+/* ── KPI 계산 (v7.6 P2: avg_unit_price 기준 + 장기 미출고 카운트) ── */
 function computeKPI() {
   var inv = loadInv();
-  var totalAsset = 0, itemCount = 0, totalStock = 0, totalAvail = 0;
+  var lastShipMap = _buildLastShipMap();
+  var totalAsset = 0, itemCount = 0, totalStock = 0, totalAvail = 0, stagnantCount = 0;
   inv.forEach(function(r) {
     var cs = n(r.current_stock);
     var rs = n(r.reserved_stock);
-    totalAsset += cs * n(r.last_buy_price);
-    if (cs > 0) itemCount++;
+    /* v7.6 P2: 자산가액 = avg_unit_price × 수량 (단가 없으면 0) */
+    totalAsset += cs * n(r.avg_unit_price);
+    if (cs > 0) {
+      itemCount++;
+      /* 재고 보유 품목 중 60일 미출고만 카운트 */
+      if (_isStagnant60(r.item_id, lastShipMap)) stagnantCount++;
+    }
     totalStock += cs;
     totalAvail += Math.max(0, cs - rs);
   });
@@ -806,6 +881,7 @@ function computeKPI() {
   $("kItemCount").textContent = itemCount.toLocaleString();
   $("kTotalStock").textContent = totalStock.toLocaleString();
   $("kAvailStock").textContent = totalAvail.toLocaleString();
+  $("kStagnant").textContent = stagnantCount.toLocaleString();
 }
 
 /* ── 테이블 렌더 ── */
@@ -841,32 +917,45 @@ function render() {
   var html = "";
   var sumStock = 0, sumReserved = 0, sumAvail = 0, sumValue = 0;
 
+  /* v7.6 P2: 품목별 최근 출고일 맵 (렌더 1회 빌드) */
+  var lastShipMap = _buildLastShipMap();
+
   filtered.forEach(function(r) {
     var cs = n(r.current_stock);
     var rs = n(r.reserved_stock);
     var avail = Math.max(0, cs - rs);
-    var bp = n(r.last_buy_price);
-    var holdVal = cs * bp;
+    var bp = n(r.last_buy_price);         /* "최근 매입가" 열 표시용 유지 */
+    var avg = n(r.avg_unit_price);        /* v7.6 P2: 자산가액 계산용 */
+    var holdVal = cs * avg;
     var ts = n(r.target_stock);
     var isLow = ts > 0 && cs < ts;
     var name = _getItemName(r.item_id);
     var brand = _getItemBrand(r.item_id);
     var cat = _getItemCategory(r.item_id);
+    /* v7.6 P2: 장기 미출고 판단 — 재고 보유 품목만 의미 있음 */
+    var isStagnant = cs > 0 && _isStagnant60(r.item_id, lastShipMap);
 
     sumStock += cs;
     sumReserved += rs;
     sumAvail += avail;
     sumValue += holdVal;
 
-    html += '<tr data-id="' + esc(r.item_id) + '">';
+    /* v7.6 P2: 장기 미출고 행 배경 강조 */
+    var rowClass = isStagnant ? ' class="stagnant-row"' : '';
+    html += '<tr data-id="' + esc(r.item_id) + '"' + rowClass + '>';
     html += '<td>' + (brand ? '<span style="font-weight:600">' + esc(brand) + '</span>' : '<span style="color:var(--muted)">—</span>') + '</td>';
-    html += '<td><b>' + esc(name) + '</b></td>';
+    /* v7.6 P2: 장기 미출고 배지는 품목명 옆에 노출 */
+    var stagnantTag = isStagnant ? ' <span class="stagnant-badge" title="60일 이상 출고 없음">🚨 장기 미출고</span>' : '';
+    html += '<td><b>' + esc(name) + '</b>' + stagnantTag + '</td>';
     html += '<td class="col-desk">' + (cat ? '<span class="cat-badge ' + esc(cat) + '">' + esc(cat) + '</span>' : '<span style="color:var(--muted)">—</span>') + '</td>';
     html += '<td class="num' + (isLow ? ' stock-low' : '') + '">' + cs + '</td>';
     html += '<td class="col-desk num">' + rs + '</td>';
     html += '<td class="num">' + avail + '</td>';
     html += '<td class="col-desk num">' + fmt(bp) + '</td>';
-    html += '<td class="num" style="font-weight:600">' + fmt(holdVal) + '</td>';
+    /* v7.6 P2: 단가(avg_unit_price) 미입력 + 재고 있음 → 배지 */
+    var holdCell = fmt(holdVal);
+    if (avg <= 0 && cs > 0) holdCell += ' <span class="price-missing" title="평균 매입가 미입력 — 입고 등록 시 자동 계산됨">단가 미입력</span>';
+    html += '<td class="num" style="font-weight:600">' + holdCell + '</td>';
     html += '<td class="col-desk num">' + (ts > 0 ? ts : '<span style="color:var(--muted)">—</span>') + '</td>';
     html += '<td class="col-desk">' + (r.memo_tag ? '<span style="color:var(--inv);font-size:11px">' + esc(r.memo_tag) + '</span>' : '') + '</td>';
     /* v7.4: 행 우측 수정+입고 버튼 */
