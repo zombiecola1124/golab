@@ -117,10 +117,15 @@
     .timeline{list-style:none}
     .tl-item{display:flex;gap:10px;padding:8px 0;border-bottom:1px solid var(--border)}
     .tl-item:last-child{border-bottom:none}
-    .tl-dot{width:7px;height:7px;border-radius:50%;margin-top:6px;flex-shrink:0}
+    .tl-dot{width:7px;height:7px;border-radius:50%;margin-top:6px;flex-shrink:0;background:var(--muted)}
     .tl-dot.purchase{background:var(--primary)}
     .tl-dot.sale{background:var(--orange)}
     .tl-dot.work{background:var(--purple)}
+    /* v7.7: 통합 사건 로그 그룹 색상 */
+    .tl-dot.trade{background:var(--primary)}
+    .tl-dot.step{background:var(--accent)}
+    .tl-dot.partner{background:var(--orange)}
+    .tl-dot.action{background:var(--purple)}
     .tl-body{flex:1;min-width:0}
     .tl-text{font-size:12px;color:var(--text)}
     .tl-text .vendor-link{color:var(--primary);cursor:pointer;font-weight:600}
@@ -672,6 +677,8 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/storage-adapter.js"></script>
+<script src="js/audit-log.js?v=7.7"></script>
+<script src="js/vat-judge.js?v=7.8"></script>
 <script src="js/auth-guard.js"></script>
 <script src="js/channel-master.js"></script>
 <script src="js/trade-engine.js?v=30"></script>
@@ -1021,6 +1028,18 @@ function toggleAction(id){
   a.updatedAt = new Date().toISOString();
   saveActions(actions);
   emitWorkAudit(a.status==="DONE"?"COMPLETE":"REOPEN", {id:a.id, text:a.title, vendor:a.vendorId});
+  /* v7.7: 통합 사건 로그 병렬 기록 */
+  if(window.GoLabAuditLog){
+    GoLabAuditLog.add(a.status==="DONE"?"ACTION_COMPLETE":"ACTION_REOPEN", {
+      action_id:    a.id,
+      title:        a.title,
+      partner_id:   a.vendorId || null,
+      partner_name: resolvePartnerName(a.vendorId) || "",
+      deal_id:      a.deal_id || null,
+      due_date:     a.dueDate || null,
+      priority:     a.priority || "NORMAL"
+    });
+  }
   renderAll();
 }
 
@@ -1028,6 +1047,16 @@ function deleteAction(id){
   const actions = loadActions();
   const a = actions.find(x => x.id === id);
   if(a) emitWorkAudit("DELETE", {id, text:a.title, vendor:a.vendorId});
+  /* v7.7: 통합 사건 로그 병렬 기록 (삭제 전 스냅샷) */
+  if(a && window.GoLabAuditLog){
+    GoLabAuditLog.add("ACTION_DELETE", {
+      action_id:    a.id,
+      title:        a.title,
+      partner_id:   a.vendorId || null,
+      partner_name: resolvePartnerName(a.vendorId) || "",
+      deal_id:      a.deal_id || null
+    });
+  }
   saveActions(actions.filter(x => x.id !== id));
   renderAll();
 }
@@ -1050,6 +1079,19 @@ function quickAdd(){
   actions.push(a);
   saveActions(actions);
   emitWorkAudit("CREATE", {id:a.id, text:title, vendor:""});
+  /* v7.7: 통합 사건 로그 병렬 기록 (Quick Add) */
+  if(window.GoLabAuditLog){
+    GoLabAuditLog.add("ACTION_CREATE", {
+      action_id:    a.id,
+      title:        a.title,
+      partner_id:   null,
+      partner_name: "",
+      deal_id:      null,
+      due_date:     a.dueDate || null,
+      priority:     a.priority || "NORMAL",
+      source:       "quick_add"
+    });
+  }
   $("quickInput").value = "";
   renderAll();
 }
@@ -1115,6 +1157,19 @@ function saveActionModal(){
     };
     actions.push(a);
     emitWorkAudit("CREATE", {id:a.id, text:title, vendor:vendorDisplay});
+    /* v7.7: 통합 사건 로그 병렬 기록 (Modal 신규 등록) */
+    if(window.GoLabAuditLog){
+      GoLabAuditLog.add("ACTION_CREATE", {
+        action_id:    a.id,
+        title:        a.title,
+        partner_id:   a.vendorId || null,
+        partner_name: vendorDisplay || "",
+        deal_id:      a.deal_id || null,
+        due_date:     a.dueDate || null,
+        priority:     a.priority || "NORMAL",
+        source:       "modal"
+      });
+    }
   }
   saveActions(actions);
   closeActionModal();
@@ -1127,6 +1182,16 @@ function deleteActionModal(){
   const actions = loadActions();
   const a = actions.find(x => x.id === editingActionId);
   if(a) emitWorkAudit("DELETE", {id:a.id, text:a.title, vendor:a.vendorId});
+  /* v7.7: 통합 사건 로그 병렬 기록 (Modal 삭제) */
+  if(a && window.GoLabAuditLog){
+    GoLabAuditLog.add("ACTION_DELETE", {
+      action_id:    a.id,
+      title:        a.title,
+      partner_id:   a.vendorId || null,
+      partner_name: resolvePartnerName(a.vendorId) || "",
+      deal_id:      a.deal_id || null
+    });
+  }
   saveActions(actions.filter(x => x.id !== editingActionId));
   closeActionModal();
   renderAll();
@@ -1185,56 +1250,113 @@ function emitWorkAudit(event,detail){
   }catch{}
 }
 
+/* v7.7: 통합 사건 로그(golab_audit_log_v1) 단일 소스로 빌드.
+   기존 TRADE_AUDIT / SALES_AUDIT / WORK_AUDIT 키는 살아 있되 타임라인 렌더에선 제외.
+   필터(tlFilter): all | trade | step | partner | action  (audit-log.js getMeta().group 기준) */
 function buildTimeline(){
-  const items = [];
-  try{JSON.parse(localStorage.getItem(TRADE_AUDIT)||"[]").forEach(a=>{
-    if(a.event==="IMPORTED") return;
-    items.push({type:"purchase",ts:a.ts,event:a.event,vendor:a.detail?.vendor||"",text:fmtAudit("구매",a.event,a.detail)});
-  });}catch{}
-  try{JSON.parse(localStorage.getItem(SALES_AUDIT)||"[]").forEach(a=>{
-    if(a.event==="IMPORTED") return;
-    items.push({type:"sale",ts:a.ts,event:a.event,vendor:a.detail?.client||"",text:fmtAudit("매출",a.event,a.detail)});
-  });}catch{}
-  try{JSON.parse(localStorage.getItem(WORK_AUDIT)||"[]").forEach(a=>{
-    items.push({type:"work",ts:a.ts,event:a.event,vendor:a.detail?.vendor||"",text:fmtWork(a.event,a.detail)});
-  });}catch{}
-  items.sort((a,b)=>b.ts.localeCompare(a.ts));
+  if(!window.GoLabAuditLog) return [];
+  const raw = GoLabAuditLog.getAll();
+  const items = raw.map(e=>{
+    const meta = GoLabAuditLog.getMeta(e.type);
+    return {
+      id:      e.id,
+      type:    e.type,
+      group:   meta.group,           /* trade | step | partner | action */
+      icon:    meta.icon,            /* 💰 / 📄 / 👥 / 📝 */
+      label:   meta.label,
+      ts:      e.ts,
+      payload: e.payload || {},
+      text:    fmtAuditEntry(e, meta)
+    };
+  });
+  items.sort((a,b)=>(b.ts||"").localeCompare(a.ts||""));
   return items;
 }
 
-function fmtAudit(m,ev,d){
-  const nm=esc(d?.itemName||"");
-  if(ev==="CREATE")return`${m} 등록 — ${nm}`;
-  if(ev==="UPDATE")return`${m} 수정 — ${nm}`;
-  if(ev==="DELETE")return`${m} 삭제 — ${nm}`;
-  return`${m} ${ev}`;
+/* v7.7: 사건 1건 → 타임라인 본문 문자열 (사람이 읽는 형식) */
+function fmtAuditEntry(e, meta){
+  const p = e.payload || {};
+  const partner = esc(p.partner_name || "");
+  const items   = esc(p.item_summary || "");
+  const dealId  = esc(p.deal_id || "");
+  const title   = esc(p.title || "");
+
+  switch(e.type){
+    case "TRADE_CREATE": {
+      const body = [partner, items].filter(Boolean).join(" / ") || dealId || "—";
+      return `${meta.label} — ${body}`;
+    }
+    case "TRADE_EDIT": {
+      const body = [partner, items].filter(Boolean).join(" / ") || dealId || "—";
+      return `${meta.label} — ${body}`;
+    }
+    case "TRADE_STEP": {
+      const stepLabel = esc(p.step_label || p.step || "");
+      const action    = p.action === "unstamp" ? "취소" : "완료";
+      const body = [partner, items].filter(Boolean).join(" / ");
+      return `${stepLabel} ${action} — ${body || dealId || "—"}`;
+    }
+    case "TRADE_PAYMENT": {
+      const kindMap = { supply:"공급가", vat:"VAT", supply_full:"공급가 완납", vat_full:"VAT 완납" };
+      const kindLabel = kindMap[p.pay_kind] || "입금";
+      const body = [partner, items].filter(Boolean).join(" / ") || dealId || "—";
+      return `${kindLabel} 변경 — ${body}`;
+    }
+    case "PARTNER_CREATE": return `${meta.label} — ${partner || "—"}`;
+    case "PARTNER_EDIT":   return `${meta.label} — ${partner || "—"}`;
+    case "ACTION_CREATE":
+    case "ACTION_COMPLETE":
+    case "ACTION_REOPEN":
+    case "ACTION_DELETE": {
+      const body = title || "—";
+      const tail = partner ? ` (${partner})` : "";
+      return `${meta.label} — ${body}${tail}`;
+    }
+    default: return `${meta.label}`;
+  }
 }
-function fmtWork(ev,d){
-  const tx=esc(d?.text||"");
-  if(ev==="CREATE")return`Action 등록 — ${tx}`;
-  if(ev==="COMPLETE")return`Action 완료 — ${tx}`;
-  if(ev==="REOPEN")return`Action 재개 — ${tx}`;
-  if(ev==="DELETE")return`Action 삭제 — ${tx}`;
-  return`Action ${ev}`;
+
+/* v7.7: 사건 → 클릭 시 이동할 URL (없으면 null) */
+function auditEntryHref(it){
+  const p = it.payload || {};
+  if(it.group === "trade" || it.group === "step"){
+    if(p.deal_id) return "deals.html?deal_id=" + encodeURIComponent(p.deal_id);
+  }
+  if(it.group === "partner"){
+    if(p.partner_id) return "partner-master.html?partner_id=" + encodeURIComponent(p.partner_id);
+  }
+  if(it.group === "action" && p.deal_id){
+    return "deals.html?deal_id=" + encodeURIComponent(p.deal_id);
+  }
+  return null;
 }
 
 function renderTimeline(){
   let items = buildTimeline();
-  if(tlFilter!=="all") items = items.filter(x=>x.type===tlFilter);
+  /* 필터 매핑: 기존 버튼(all/purchase/sale/work) → 신규 그룹(all/trade/partner/action) */
+  const filterMap = { all:null, purchase:"trade", sale:"trade", work:"action" };
+  const groupKey = (filterMap[tlFilter] !== undefined) ? filterMap[tlFilter] : tlFilter;
+  if(groupKey) items = items.filter(x => x.group === groupKey || (groupKey === "trade" && x.group === "step"));
   const shown = items.slice(0,TL_LIMIT);
   $("tlCount").textContent = items.length+"건";
   const ul = $("timeline"); ul.innerHTML = "";
   if(!shown.length){ ul.innerHTML='<li class="tl-item"><div class="tl-body"><div class="tl-text" style="color:var(--muted);padding:16px 0">활동 기록이 없습니다.</div></div></li>'; return; }
   shown.forEach(it=>{
     const li=document.createElement("li"); li.className="tl-item";
-    const vl=it.vendor?`<span class="vendor-link" data-vendor="${esc(it.vendor)}">[${esc(it.vendor)}]</span> `:"";
-    li.innerHTML=`<div class="tl-dot ${it.type}"></div><div class="tl-body"><div class="tl-text">${vl}${it.text}</div><div class="tl-time">${relTime(it.ts)}</div></div>`;
+    const href = auditEntryHref(it);
+    const cursor = href ? "cursor:pointer" : "";
+    const iconHtml = `<span class="tl-icon" style="font-size:14px;line-height:1">${it.icon}</span>`;
+    const textHtml = `<span class="tl-text-body">${it.text}</span>`;
+    li.innerHTML = `<div class="tl-dot ${it.group}"></div><div class="tl-body" data-aud="${esc(it.id)}" style="${cursor}"><div class="tl-text" style="display:flex;align-items:center;gap:6px">${iconHtml}${textHtml}</div><div class="tl-time">${relTime(it.ts)}</div></div>`;
+    if(href){
+      const body = li.querySelector("[data-aud]");
+      if(body) body.onclick = () => { window.location.href = href; };
+    }
     ul.appendChild(li);
   });
-  ul.querySelectorAll("[data-vendor]").forEach(el=>{el.onclick=()=>openDrawer(el.dataset.vendor);});
   document.querySelectorAll(".filter-btn").forEach(b=>b.classList.remove("active"));
-  const map={all:"btnTlAll",purchase:"btnTlPurchase",sale:"btnTlSale",work:"btnTlWork"};
-  if(map[tlFilter]) $(map[tlFilter]).classList.add("active");
+  const btnMap={all:"btnTlAll",purchase:"btnTlPurchase",sale:"btnTlSale",work:"btnTlWork"};
+  if(btnMap[tlFilter]) $(btnMap[tlFilter]).classList.add("active");
 }
 
 /* ══════════════════════════════════════════
@@ -1243,7 +1365,7 @@ function renderTimeline(){
 function renderPaymentDue(){
   const TE = GoLabTradeEngine;
   let deliveryNoteAmt=0, invoiceAmt=0, unpaidAmt=0, vatUnpaidAmt=0;
-  let deliveryNoteCnt=0, invoiceCnt=0; /* v6.0: 건수 카운터 */
+  let deliveryNoteCnt=0, invoiceCnt=0, vatUnpaidCnt=0; /* v7.8a: VAT 미입금 건수 추가 */
   /* v6.0: 전체 거래 기준 미수금 (대성금속 필터 제거) */
   const channelDue = new Map();
 
@@ -1257,7 +1379,16 @@ function renderPaymentDue(){
     /* 카테고리별 집계 */
     if(t.delivery_note_at && !t.invoice_at){ deliveryNoteAmt += calc.total_supply; deliveryNoteCnt++; }
     if(t.invoice_at && !t.payment_at){ invoiceAmt += calc.total_supply; invoiceCnt++; }
-    if(ps.code === "vat_pending") vatUnpaidAmt += calc.vat_amount - n(t.paid_vat);
+
+    /* v7.8b: VAT 미입금 — 엔진 단일 SSoT (calcPaymentStatus.code === "vat_pending")
+       deals.html?filter=vat-pending 과 항상 동일한 카운트/금액 보장.
+       엔진 정의: paid_supply >= total_supply && paid_vat < calc.vat_amount
+       trade.vat_amount 직접 참조 금지 → calc.vat_amount 사용 */
+    if(ps.code === "vat_pending"){
+      vatUnpaidAmt += n(calc.vat_amount) - n(t.paid_vat);
+      vatUnpaidCnt++;
+    }
+
     if(ps.code === "unpaid") unpaidAmt += calc.total_supply - n(t.paid_supply);
 
     /* 진행업체별 미수금 — memo에서 "진행:XXX" 추출 */
@@ -1275,7 +1406,7 @@ function renderPaymentDue(){
     <div class="ps-row" data-drill="nav:deals.html?stage=invoice-pending"><span class="ps-dot brown"></span>거래명세서<span class="ps-amt">${deliveryNoteCnt}건</span></div>
     <div class="ps-row" data-drill="nav:deals.html?stage=payment-pending"><span class="ps-dot red"></span>계산서<span class="ps-amt">${invoiceCnt}건</span></div>
     <div class="ps-row" data-drill="nav:deals.html?filter=unsettled"><span class="ps-dot gray"></span>미입금<span class="ps-amt">${fmt(unpaidAmt)}</span></div>
-    <div class="ps-row" data-drill="nav:deals.html?filter=vat-pending"><span class="ps-dot gray"></span>VAT 미입금<span class="ps-amt">${fmt(vatUnpaidAmt)}</span></div>
+    <div class="ps-row" data-drill="nav:deals.html?filter=vat-pending"><span class="ps-dot gray"></span>VAT 미입금<span class="ps-amt">${vatUnpaidCnt}건 / ${fmt(vatUnpaidAmt)}</span></div>
   </div>`;
 
   $("paymentDueCard").innerHTML = html;

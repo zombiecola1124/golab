@@ -253,6 +253,15 @@ window.GoLabPartnerMaster = (function () {
     all.unshift(partner);
     _save(all);
     emitAudit("CREATE", { partner_id: partner.partner_id, name: partner.name });
+    /* v7.7: 통합 사건 로그 병렬 기록 — 표시용 스냅샷 동봉 */
+    if (window.GoLabAuditLog) {
+      GoLabAuditLog.add("PARTNER_CREATE", {
+        partner_id:   partner.partner_id,
+        partner_name: partner.name,
+        type:         partner.type || "",
+        is_primary:   !!partner.is_primary
+      });
+    }
     return partner;
   }
 
@@ -300,6 +309,14 @@ window.GoLabPartnerMaster = (function () {
     _buildDerived(all[idx]);
     _save(all);
     emitAudit("UPDATE", { partner_id: partnerId, before: before, after: Object.assign({}, all[idx]) });
+    /* v7.7: 통합 사건 로그 병렬 기록 */
+    if (window.GoLabAuditLog) {
+      GoLabAuditLog.add("PARTNER_EDIT", {
+        partner_id:   partnerId,
+        partner_name: all[idx].name,
+        type:         all[idx].type || ""
+      });
+    }
     return all[idx];
   }
 

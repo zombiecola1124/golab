@@ -879,6 +879,7 @@
 <script src="https://www.gstatic.com/firebasejs/10.14.1/firebase-firestore-compat.js"></script>
 <script src="js/firebase-config.js"></script>
 <script src="js/storage-adapter.js"></script>
+<script src="js/audit-log.js?v=7.7"></script>
 <script src="js/auth-guard.js"></script>
 <script src="js/partner-master.js?v=3"></script>
 <script src="js/item-master.js?v=312"></script>
@@ -1013,6 +1014,31 @@ function closePanel() {
   });
 }
 
+/* v7.7: 입금 변경 사건 로그 헬퍼 — 표시용 스냅샷 동봉 */
+function _emitTradePaymentAudit(tid, kind, amount) {
+  if (!window.GoLabAuditLog) return;
+  var t = TE.getById(tid);
+  if (!t) return;
+  var calc;
+  try { calc = TE.calcTrade(t); } catch (e) { calc = null; }
+  var pay;
+  try { pay = TE.calcPaymentStatus(t); } catch (e) { pay = null; }
+  GoLabAuditLog.add("TRADE_PAYMENT", {
+    deal_id:       tid,
+    partner_id:    t.partner_id || null,
+    partner_name:  t.partner_name_snapshot || "",
+    item_summary:  GoLabAuditLog.summarizeItems(t.items || []),
+    pay_kind:      kind,                                       /* supply | vat | supply_full | vat_full */
+    amount:        Number(amount) || 0,
+    paid_supply:   Number(t.paid_supply) || 0,
+    paid_vat:      Number(t.paid_vat) || 0,
+    total_supply:  calc ? calc.total_supply : null,
+    vat_amount:    calc ? calc.vat_amount : null,
+    pay_status:    pay ? pay.code : null,
+    pay_progress:  pay ? pay.progress : null
+  });
+}
+
 /* 패널 View 섹션 렌더 (편집 시) */
 function _renderPanelView(tid) {
   var t = TE.getById(tid);
@@ -1039,8 +1065,24 @@ function _renderPanelView(tid) {
       var trade = TE.getById(tid);
       if (!trade) return;
       var field = TE.STEP_MAP[stepKey].field;
-      if (trade[field]) TE.unstampStep(tid, stepKey);
+      var _wasStamped = !!trade[field];
+      if (_wasStamped) TE.unstampStep(tid, stepKey);
       else TE.stampStep(tid, stepKey);
+      /* v7.7: 단계 변경 성공 직후 통합 로그 기록 */
+      if (window.GoLabAuditLog) {
+        var _afterTrade = TE.getById(tid);
+        var _stepLabel = (TE.STEP_MAP[stepKey] && TE.STEP_MAP[stepKey].label) || stepKey;
+        GoLabAuditLog.add("TRADE_STEP", {
+          deal_id:       tid,
+          partner_id:    _afterTrade ? (_afterTrade.partner_id || null) : null,
+          partner_name:  _afterTrade ? (_afterTrade.partner_name_snapshot || "") : "",
+          item_summary:  _afterTrade ? GoLabAuditLog.summarizeItems(_afterTrade.items || []) : "",
+          step:          stepKey,
+          step_label:    _stepLabel,
+          action:        _wasStamped ? "unstamp" : "stamp",
+          step_date:     _afterTrade ? (_afterTrade[field] || null) : null
+        });
+      }
       computeKPI(); render(); _renderPanelView(tid);
     };
   });
@@ -1077,14 +1119,24 @@ function _renderPanelView(tid) {
         if (pid === "spPaySupply") fields.paid_supply = Number(el.value) || 0;
         if (pid === "spPayVat") fields.paid_vat = Number(el.value) || 0;
         TE.update(tid, fields);
+        /* v7.7: 입금 변경 성공 직후 통합 로그 기록 */
+        _emitTradePaymentAudit(tid, pid === "spPaySupply" ? "supply" : "vat", fields[pid === "spPaySupply" ? "paid_supply" : "paid_vat"]);
         render(); _renderPanelView(tid);
       }, 500);
     });
   });
   var spfs = $("spPayFullSupply");
-  if (spfs) spfs.onclick = function() { TE.update(tid, { paid_supply: payCalc.total_supply }); render(); _renderPanelView(tid); };
+  if (spfs) spfs.onclick = function() {
+    TE.update(tid, { paid_supply: payCalc.total_supply });
+    _emitTradePaymentAudit(tid, "supply_full", payCalc.total_supply);
+    render(); _renderPanelView(tid);
+  };
   var spfv = $("spPayFullVat");
-  if (spfv) spfv.onclick = function() { TE.update(tid, { paid_vat: payCalc.vat_amount }); render(); _renderPanelView(tid); };
+  if (spfv) spfv.onclick = function() {
+    TE.update(tid, { paid_vat: payCalc.vat_amount });
+    _emitTradePaymentAudit(tid, "vat_full", payCalc.vat_amount);
+    render(); _renderPanelView(tid);
+  };
 
   /* v5.3: 차감 거래 연결 표시 */
   if (t.is_segyeong_save_deal && t.segyeong_save_tx_type === "deduction" && t.linked_deal_id) {
@@ -3692,6 +3744,20 @@ function saveTrade() {
       _savedTrade = TE.create(fields);
       /* v6: 신규 거래 저장 성공 후 재고 자동 차감 */
       if (_savedTrade) _applyStockDeduction(_savedTrade);
+    }
+    /* v7.7: 통합 사건 로그 병렬 기록 — 성공 직후 표시용 스냅샷 동봉 */
+    if (_savedTrade && window.GoLabAuditLog) {
+      var _auditCalc;
+      try { _auditCalc = TE.calcTrade(_savedTrade); } catch (e) { _auditCalc = null; }
+      GoLabAuditLog.add(editingId ? "TRADE_EDIT" : "TRADE_CREATE", {
+        deal_id:       _savedTrade.id,
+        partner_id:    _savedTrade.partner_id || null,
+        partner_name:  _savedTrade.partner_name_snapshot || "",
+        item_summary:  GoLabAuditLog.summarizeItems(_savedTrade.items || []),
+        total_supply:  _auditCalc ? _auditCalc.total_supply : null,
+        deal_date:     _savedTrade.deal_date || null,
+        category:      _savedTrade.category || null
+      });
     }
     /* v5.2: 패널 닫기 + 목록 갱신 */
     closePanel();
